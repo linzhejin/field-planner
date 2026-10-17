@@ -1,0 +1,129 @@
+{
+  "governance": [
+    [
+      "适用范围先于来源排序",
+      "先比对地区、作物、种植方式、生育期、干湿及灾害情境，再考虑来源原始性和发布日期。省级、较新都不是自动覆盖其他情境的理由。"
+    ],
+    [
+      "保留冲突与并列条件",
+      "同一主题的数字不做平均、不任意取严，也不为方便程序统一成一个阈值。适用条件无法区分时，输出冲突与待确认项。"
+    ],
+    [
+      "区分证据和项目设计",
+      "原文引用只记资料内容；候选任务、状态、合并检查、缺项追问等属于项目设计。所有卡片都保留人工适用性复核状态。"
+    ],
+    [
+      "扩展待办的接入边界",
+      "用户已确认的其他待办可以进入通用排程，但接收待办不等于系统验证农学正确性；不由本表自动产生药剂处方、精确施肥或复杂机械调度。"
+    ],
+    [
+      "阶段和日期分别记录",
+      "记录网页日期、落款及取用日期；同为2026年也不把1月越冬文件套成10月苗期规则。历史的“当前”保持历史背景。"
+    ],
+    [
+      "征求意见稿单独标注",
+      "C01至C06仅作监测研究参考；不宣称已实施标准。Z17明确该稿未规范干旱、渍害等灾害监测，不以苗情指标替代灾害诊断。"
+    ]
+  ],
+  "states": [
+    [
+      "适用性",
+      "applicability",
+      "applicable / not_applicable / pending",
+      "地区或阶段明确不符时不采用；未知时先核实。"
+    ],
+    [
+      "维护需求",
+      "necessity",
+      "required / no_need / unknown",
+      "已确认无需求不生成；未知可先检查；需求成立不代表当日能作业。"
+    ],
+    [
+      "逐日作业窗口",
+      "window",
+      "available / unavailable / pending",
+      "现场和天气作业条件均已确认可行才available；任一明确不行则unavailable；其余pending。这是工程约定。"
+    ],
+    [
+      "实际排程",
+      "schedule_status",
+      "scheduled / unscheduled / pending / not_generated / completed",
+      "人员、时间段、工时、期限和前置约束另行检查；人力少不改变农业适宜条件。"
+    ]
+  ],
+  "requirements": [
+    "共享字段：field_id、region、crop_type、stage；提出检查不强制预先填完检查对象。所有未知保留null，不改写成false。",
+    "排期还需task_id、estimated_minutes、available_intervals、deadline、dependencies及逐日site_workability、weather_workability。工时与期限来自用户或演示设定，不能冒充农学依据。",
+    "气象数据附地点、时间、实况／预报类型和有效性。未来预报不等于已经发生降雨；晴天不直接等于可以下田。",
+    "对同地同次检查合并清单，对同一维护需求去重；已完成记录锁定，按新反馈只调整相关未完成事项。",
+    "任务完成与处置效果分开。持续积水等紧迫情形保留现场核实与处置提示，不以普通延期排程代替现场判断。"
+  ],
+  "prototype_default_categories": [
+    "首版候选"
+  ],
+  "runtime_enabled_requires": "团队确认采用后再配置，默认全部false；字段不是自动执行程序",
+  "field_names": [
+    "bolting",
+    "canopy_closed",
+    "cold_event",
+    "completion_feedback",
+    "crop_type",
+    "crowding",
+    "daily_mean_temperature",
+    "density_per_mu",
+    "disease_incidence_pct",
+    "disease_region_status",
+    "disease_type",
+    "ditch_connectivity",
+    "ditch_dimensions",
+    "ditch_water",
+    "drainage_design_context",
+    "drainage_goal",
+    "field_area_m2",
+    "field_type",
+    "forecast_snapshot",
+    "height_difference_m",
+    "herbicide_history",
+    "inspection_requested",
+    "irrigation_confirmed",
+    "last_deep_tillage_date",
+    "leaf_count",
+    "maintenance_need_confirmed",
+    "measurement_method",
+    "measurement_unit",
+    "missing_seedlings",
+    "moisture",
+    "neck_elongation_pct",
+    "observed_at",
+    "outlet_status",
+    "pest_signs",
+    "plant_height_cm",
+    "planting_method",
+    "rainfall_location",
+    "rainfall_observation",
+    "rainfall_time",
+    "region",
+    "root_diameter_mm",
+    "sampling_record",
+    "seedling_condition",
+    "site_workability",
+    "soil_absolute_water_pct",
+    "soil_workability",
+    "sowing_date",
+    "stage",
+    "standing_water",
+    "target_density",
+    "temperature_method",
+    "terrain",
+    "thaw_confirmed",
+    "user_task",
+    "vigorous_growth",
+    "waterlogging_history",
+    "waterlogging_resolved",
+    "weather_location",
+    "weather_max_temperature",
+    "weather_observed_at",
+    "weed_severity",
+    "wet_sowing"
+  ]
+}

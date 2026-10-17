@@ -1,0 +1,359 @@
+{
+  "version": "0.1.0",
+  "as_of": "2026-10-17",
+  "scope": "湖北已进入苗期的冬油菜；巡田和既有沟渠检查维护",
+  "count_note": "12张知识与规则候选卡，不等于12条已验证硬性农学规则",
+  "cards": [
+    {
+      "id": "R01",
+      "title": "巡田覆盖苗情墒情虫情",
+      "task_type": "inspection",
+      "kind": "检查内容",
+      "evidence": [
+        {
+          "source_id": "S06",
+          "locator": "五、加强技术指导",
+          "pdf_page_1based": null,
+          "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+          "source_sha256": "7f45d02a4d60532a28fe81099946d67c96b943a9ad3a939bfce67ba00de8929d"
+        }
+      ],
+      "applicability": "湖北已确认进入苗期的冬油菜；由专业技术指导要求提炼用户巡田清单。",
+      "required_observations": [
+        "stage",
+        "inspection_requested",
+        "observed_at"
+      ],
+      "proposed_behavior": "检查单包含苗情、土壤干湿与积水、虫害迹象，并记录观察时间。将其作为小型种植户巡田清单是项目设计。",
+      "missing_behavior": "不知道苗情或积水，不妨碍提出检查任务；缺失作业条件时，具体日期待确认。",
+      "unsupported_inferences": "原文没有规定每天检查、每周几次或一次需要多少分钟；用户巡田不能等同专业监测。",
+      "condition_description": "scope_confirmed AND inspection_requested → create inspection candidate; target observations may be unknown",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R02",
+      "title": "记录叶龄和缺苗拥挤现象",
+      "task_type": "inspection",
+      "kind": "检查内容",
+      "evidence": [
+        {
+          "source_id": "S01",
+          "locator": "二、移密补稀",
+          "pdf_page_1based": null,
+          "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+          "source_sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd"
+        }
+      ],
+      "applicability": "原文为2025年湖北苗期指导，涉及3—5叶期；本卡仅提炼观察项目。",
+      "required_observations": [
+        "leaf_count",
+        "emergence_uniformity",
+        "missing_seedlings",
+        "crowding"
+      ],
+      "proposed_behavior": "记录叶龄、缺苗和拥挤苗的有无；发现异常先确认，不自动增加补苗、间苗任务。",
+      "missing_behavior": "叶龄未知就标记未知；观察项目可在已确认的检查任务中补充。",
+      "unsupported_inferences": "3—5叶是原文相关处置阶段，不是所有巡田必须满足的门槛；不能单凭叶片数判定一二三类苗。",
+      "condition_description": "inspection active → collect observations; abnormal findings → request confirmation, not automatic treatment",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R03",
+      "title": "观察虫情不直接生成用药处方",
+      "task_type": "inspection",
+      "kind": "检查内容",
+      "evidence": [
+        {
+          "source_id": "S01",
+          "locator": "三、科学用药，除草防病治虫",
+          "pdf_page_1based": null,
+          "quote": "密切监视虫情，及时喷药防治。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+          "source_sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd"
+        }
+      ],
+      "applicability": "湖北苗期；保留原文上下文，首版仅采用监视虫情这一部分。",
+      "required_observations": [
+        "pest_signs",
+        "observed_at",
+        "observer"
+      ],
+      "proposed_behavior": "记录是否有虫害迹象及用户描述；具体虫种、阈值和防治方案转交农技人员确认。",
+      "missing_behavior": "未知不能写成无虫；可先观察，也可提示补充描述。",
+      "unsupported_inferences": "本句不能推出任何具体药剂、剂量、防治阈值或必然诊断；药剂处方不属于首版。",
+      "condition_description": "pest_signs in [present,unknown] → record or ask; no automatic pesticide task",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R04",
+      "title": "检查田内沟系与田外排水沟连通",
+      "task_type": "inspection",
+      "kind": "检查内容",
+      "evidence": [
+        {
+          "source_id": "S02",
+          "locator": "三、稻田开好四沟",
+          "pdf_page_1based": null,
+          "quote": "水田油菜务必开好“四沟”，确保厢沟、腰沟、围沟和田外排水沟相通。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202610/t20261010_6030560.shtml",
+          "source_sha256": "174ec1fd52c88896dc608dfc17a222ae3ec200e5b2c9edecde4d6ff53e8ad072"
+        }
+      ],
+      "applicability": "湖北水田油菜；原文属于秋播整地意见，迁移为苗期检查清单需复核。",
+      "required_observations": [
+        "field_type",
+        "ditch_connectivity",
+        "outlet_status"
+      ],
+      "proposed_behavior": "检查清单覆盖厢沟、腰沟、围沟以及田外排水沟；分别记录连通、堵塞和出口情况。",
+      "missing_behavior": "田块类型或沟系未知先询问或检查；不能默认所有地块都采用同一沟系。",
+      "unsupported_inferences": "检查既有沟渠不等于要求苗期重新开挖；不把文中沟深沟宽直接变成所有田块的返工阈值。",
+      "condition_description": "field_type=水田 or 稻茬田 → offer four-ditch connectivity checklist",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R05",
+      "title": "湿度偏大时核查清沟降渍需求",
+      "task_type": "maintenance",
+      "kind": "条件性建议",
+      "evidence": [
+        {
+          "source_id": "S01",
+          "locator": "一、清沟降渍",
+          "pdf_page_1based": null,
+          "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”，厢沟深度达到20 cm以上，腰沟、围沟逐渐加深，确保沟沟相通、可排可灌，预防渍害，提高根系活力，促进油菜根系生长。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+          "source_sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd"
+        }
+      ],
+      "applicability": "湖北苗期且现场湿度偏大、沟系不畅等情况得到确认；“当前普遍”仅指2025年原文情境。",
+      "required_observations": [
+        "moisture",
+        "ditch_connectivity",
+        "maintenance_need_confirmed",
+        "observed_at"
+      ],
+      "proposed_behavior": "形成沟渠清理疏通候选建议；用户确认需求，并确认当日现场及天气作业条件后才能进入排程。",
+      "missing_behavior": "需要确认田间干湿、堵塞与维护需求；未知时仅建议核查，不输出确定清沟日期。",
+      "unsupported_inferences": "预报降雨不证明地块积水；“及时”没有固定小时数；沟深参数不在首版自动执行。",
+      "condition_description": "wet context AND impaired drainage AND need confirmed → maintenance candidate; scheduling requires separate workability checks",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R06",
+      "title": "低洼稻茬田关注积水和排水结果",
+      "task_type": "inspection",
+      "kind": "检查与反馈",
+      "evidence": [
+        {
+          "source_id": "S01",
+          "locator": "一、清沟降渍",
+          "pdf_page_1based": null,
+          "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+          "source_sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd"
+        }
+      ],
+      "applicability": "湖北苗期的稻茬田、低洼田或冷浸田；本卡关注积水观察和维护反馈。",
+      "required_observations": [
+        "field_type",
+        "standing_water",
+        "ditch_water",
+        "outlet_status"
+      ],
+      "proposed_behavior": "检查时记录田面与沟中积水；维护反馈记录通畅情况及积水是否仍存在，异常持续则请求人工处理。",
+      "missing_behavior": "维护完成与排水结果分别记录；无反馈不能声称已经达到排水效果。",
+      "unsupported_inferences": "“雨止田干”是管理目标，不是雨后立即机械判定达标的时限；首版不自动安排新开腰沟。",
+      "condition_description": "high-risk field → include water observation; task completed does not imply outcome confirmed",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R07",
+      "title": "丘陵易旱地块不能一律按排渍处理",
+      "task_type": "maintenance",
+      "kind": "适用边界",
+      "evidence": [
+        {
+          "source_id": "S03",
+          "locator": "一、开沟降渍",
+          "pdf_page_1based": null,
+          "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+          "source_sha256": "67936430a6e646a6b47a5803abfb66eed4350d3e9042a2b40571cfafad343dce"
+        }
+      ],
+      "applicability": "湖北丘陵岗地、土壤偏干或冬春易旱情境；来自2025年冬前意见。",
+      "required_observations": [
+        "terrain",
+        "moisture",
+        "standing_water",
+        "maintenance_need_confirmed"
+      ],
+      "proposed_behavior": "先核实干湿、排灌目标和堵塞事实。土壤偏干且排水正常时，不凭日历或降雨预报新增排水任务。",
+      "missing_behavior": "目标不清时询问保墒还是排水；复杂或冲突情况交人工判断。",
+      "unsupported_inferences": "不能推出“干旱时禁止一切沟渠维护”；连通维护与主动排水是不同动作。",
+      "condition_description": "dry AND no confirmed drainage issue → no automatic drainage task; confirmed repair need assessed separately",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R08",
+      "title": "旱情下先查墒情苗情",
+      "task_type": "inspection",
+      "kind": "适用边界",
+      "evidence": [
+        {
+          "source_id": "S05",
+          "locator": "二、灌水补墒",
+          "pdf_page_1based": null,
+          "quote": "对已出苗田块，视旱情和苗情，及时采取沟水渗厢等措施改善土壤墒情，抗旱保苗，促进菜苗生长。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202210/t20221013_4345025.shtml",
+          "source_sha256": "f26132021169da134f75ca7de8d2079162cc955a09d99b3007718468e57b6308"
+        }
+      ],
+      "applicability": "湖北已出苗油菜、确有旱情；历史2022年抗旱专项指导。",
+      "required_observations": [
+        "stage",
+        "moisture",
+        "seedling_condition",
+        "observed_at"
+      ],
+      "proposed_behavior": "记录旱情和苗情，必要时提示向农技人员确认补墒方案；首版保留观察提示。",
+      "missing_behavior": "仅有无雨预报而无现场信息时，先询问或检查。",
+      "unsupported_inferences": "不把历史干旱当作当前事实；不自动生成灌水量、时长或灌溉任务。",
+      "condition_description": "reported drought → collect moisture and seedling observations; treatment outside MVP",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R09",
+      "title": "晴好天气是清沟的参考偏好",
+      "task_type": "maintenance",
+      "kind": "软性时机参考",
+      "evidence": [
+        {
+          "source_id": "S10",
+          "locator": "油菜苗前期会商，印刷页16",
+          "pdf_page_1based": 19,
+          "quote": "利用晴好天气彻底清理田内“三沟“，同时加深地头沟，确保沟沟相通，排灌畅通，预防后期渍害；",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://www.natesc.org.cn/admin/UeditorUploadFiles/file/20241202/6386874332028125002797527.pdf",
+          "source_sha256": "55080160d8fbf352f9e6d6b8cb544768322073da97038ac0bce784059a45f395"
+        }
+      ],
+      "applicability": "2024年全国苗前期会商中的方向性建议；当地适用性需核查。",
+      "required_observations": [
+        "forecast_snapshot",
+        "weather_workability_by_date",
+        "site_workability_by_date"
+      ],
+      "proposed_behavior": "可向用户提示优先考虑适宜天气；日期确定仍须有可核实天气数据及现场作业条件。",
+      "missing_behavior": "没有足够天气或现场信息时，日期保持待确认。",
+      "unsupported_inferences": "“晴好”没有在该文定义数值阈值；不推出下雨一律禁止或晴天一定能下田；加深地头沟不纳入自动任务。",
+      "condition_description": "favourable weather → advisory preference only; no numerical eligibility threshold",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R10",
+      "title": "出苗不匀时结合天气间隙查苗",
+      "task_type": "inspection",
+      "kind": "软性时机参考",
+      "evidence": [
+        {
+          "source_id": "S10",
+          "locator": "油菜苗前期会商，印刷页16",
+          "pdf_page_1based": 19,
+          "quote": "对于出苗不匀的田块，利用降雨前后空隙抓紧查苗补苗匀苗；",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://www.natesc.org.cn/admin/UeditorUploadFiles/file/20241202/6386874332028125002797527.pdf",
+          "source_sha256": "55080160d8fbf352f9e6d6b8cb544768322073da97038ac0bce784059a45f395"
+        }
+      ],
+      "applicability": "已确认出苗不匀的冬油菜；2024年全国会商情境。",
+      "required_observations": [
+        "emergence_uniformity",
+        "inspection_requested",
+        "weather_workability_by_date"
+      ],
+      "proposed_behavior": "可提出查苗候选任务，提示结合可作业天气间隙安排。补苗和匀苗处置不自动进入首版。",
+      "missing_behavior": "出苗状况未知可先一般检查；具体时机未知则追问。",
+      "unsupported_inferences": "不规定雨前或雨后多少小时；没有“每场雨后必查”频次规则。",
+      "condition_description": "uneven emergence confirmed → inspection candidate; treatment requires separate confirmation",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R11",
+      "title": "苗情量化指标仅作可选记录参考",
+      "task_type": "inspection",
+      "kind": "征求意见参考",
+      "evidence": [
+        {
+          "source_id": "S09",
+          "locator": "5.1.1监测内容",
+          "pdf_page_1based": 4,
+          "quote": "包括密度、株高、单株绿叶数、根颈粗、缩颈段伸长率等5个指标，各指标监测及计算方法见表1。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://www.natesc.org.cn/admin/UeditorUploadFiles/file/20260423/6391255806111816406975175.pdf",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "甘蓝型油菜专业监测；文件为征求意见稿，首版只借鉴可选记录项。",
+      "required_observations": [
+        "measurement_method",
+        "measurement_unit",
+        "sampling_notes"
+      ],
+      "proposed_behavior": "如记录叶片数或株高，应保留方法和单位；不要求普通用户完成全部专业取样项目。",
+      "missing_behavior": "未测量保留未知，不由模型补齐。",
+      "unsupported_inferences": "不能声称执行已实施国家或行业标准；普通巡田记录不等于规范取样或苗情等级鉴定。",
+      "condition_description": "optional measurement supplied → store method and unit; never force draft classification",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    },
+    {
+      "id": "R12",
+      "title": "苗情规范不能支持灾害诊断阈值",
+      "task_type": "reference_only",
+      "kind": "征求意见边界",
+      "evidence": [
+        {
+          "source_id": "S11",
+          "locator": "十、其他应当说明事项",
+          "pdf_page_1based": 9,
+          "quote": "未对干旱、渍害等影响油菜生长的主要自然灾害监测进行规范。",
+          "quote_verified_by": "原件文本匹配，仅忽略空白",
+          "url": "https://www.natesc.org.cn/admin/UeditorUploadFiles/file/20260423/6391255807078613282125671.pdf",
+          "source_sha256": "e3b78cb0bde9f59dfcbdd9c945ee6338596ebeed8377e08fd03fd90173640f27"
+        }
+      ],
+      "applicability": "仅说明S09征求意见文件的覆盖范围；S11不是独立田管规则。",
+      "required_observations": [
+        "claimed_rule_source"
+      ],
+      "proposed_behavior": "阻止把S09的苗情指标解释成渍害诊断、旱情诊断或作业安全阈值。",
+      "missing_behavior": "遇到该类请求，说明资料不足并请求独立依据或专业确认。",
+      "unsupported_inferences": "不把S09与S11计作两份独立实证；不建立未经支持的灾害等级模型。",
+      "condition_description": "source=S09 AND requested conclusion=disaster threshold → unsupported",
+      "review_status": "原文已核对；农业适用性及工程解释待队员复核",
+      "deployment": "候选规则；原型可演示，不能据此宣称农业专业验证"
+    }
+  ]
+}

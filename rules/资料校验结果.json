@@ -1,0 +1,111 @@
+{
+  "status": "pass",
+  "checked_at": "2026-10-17T12:56:09.169414+08:00",
+  "scope": "当前两套资料交付包及其依赖来源；不含tmp历史生成脚本、实际Agent或农业适用性测试",
+  "packages": [
+    {
+      "package": "农时窗口_规则与验证交付包_20261017",
+      "status": "pass",
+      "scope": "资料与人工参考算例内部一致性；不是实际Agent或农业有效性测试",
+      "rule_cards": 12,
+      "plan_versions": 3,
+      "development_case_groups_authored": 12,
+      "agent_cases_executed": 0,
+      "independent_human_reviews": 0,
+      "agronomic_expert_reviews": 0,
+      "checks": [
+        {
+          "item": "11份来源文件哈希与可读取性",
+          "result": "pass"
+        },
+        {
+          "item": "11份网页PDF阅读路径、文本可读取性及原PDF副本一致性",
+          "result": "pass"
+        },
+        {
+          "item": "12张卡片原文片段与位置匹配（忽略空白）",
+          "result": "pass"
+        },
+        {
+          "item": "规则卡字段与输入约定逐项对应",
+          "result": "pass"
+        },
+        {
+          "item": "规则编号及开发案例交叉引用",
+          "result": "pass"
+        },
+        {
+          "item": "V1至V3容量、时段、需求、窗口、期限、前置与完成记录一致性",
+          "result": "pass"
+        },
+        {
+          "item": "反例检查 容量冲突",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "反例检查 完成记录被改写",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "反例检查 未知现场条件被安排",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "反例检查 前置任务尚未完成",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "反例检查 维护需求未知",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "反例检查 重复排程",
+          "result": "correctly_rejected"
+        },
+        {
+          "item": "模拟天气与开发案例属性标记",
+          "result": "pass"
+        }
+      ],
+      "checked_at": "2026-10-17T12:56:04.221954+08:00",
+      "returncode": 0
+    },
+    {
+      "package": "农时窗口_规则卡片_融合修订版_20261017",
+      "status": "pass",
+      "scope": "本地来源、引用及文档一致性；不是实际Agent、农业专业或新增排版验证",
+      "cards": 31,
+      "sources": 16,
+      "quoted_fragments": 35,
+      "supplementary_fragments": 3,
+      "new_review_fragments": 9,
+      "new_expected_case_groups_authored": 8,
+      "categories": {
+        "监测研究参考": 6,
+        "扩展处置参考": 13,
+        "首版候选": 7,
+        "参数与背景参考": 5
+      },
+      "agent_cases_executed": 0,
+      "agronomic_reviews": 0,
+      "checks": [
+        "16份包内PDF存在、可读且与已记录SHA-256一致",
+        "31张卡编号、分类、输入字段及默认关闭状态正确",
+        "35段卡片引文及3段补充依据均与指定PDF页匹配",
+        "31张卡的标题、范围、条件、知识、行为、缺项和边界均在Word中匹配",
+        "12组边界案例及R01至R12映射的编号和C卡引用有效（未运行Agent）",
+        "4份新增资料审查、9段指定页引文、关联卡片及说明文字一致",
+        "8组新增边界预期案例编号与引用有效；补充资料未自动启用（未运行Agent）",
+        "Word及规则JSON与原内容/排版复核基线一致；本次未重新目视检查",
+        "反例已拦截：错引原文",
+        "反例已拦截：非法页码",
+        "反例已拦截：引用指纹错误",
+        "反例已拦截：未知来源",
+        "反例已拦截：补充资料被自动启用",
+        "反例已拦截：补充资料引用不存在的卡片"
+      ],
+      "checked_at": "2026-10-17T12:56:09.137250+08:00",
+      "returncode": 0
+    }
+  ]
+}

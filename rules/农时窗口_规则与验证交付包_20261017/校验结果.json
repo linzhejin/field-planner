@@ -1,0 +1,65 @@
+{
+  "status": "pass",
+  "scope": "资料与人工参考算例内部一致性；不是实际Agent或农业有效性测试",
+  "rule_cards": 12,
+  "plan_versions": 3,
+  "development_case_groups_authored": 12,
+  "agent_cases_executed": 0,
+  "independent_human_reviews": 0,
+  "agronomic_expert_reviews": 0,
+  "checks": [
+    {
+      "item": "11份来源文件哈希与可读取性",
+      "result": "pass"
+    },
+    {
+      "item": "11份网页PDF阅读路径、文本可读取性及原PDF副本一致性",
+      "result": "pass"
+    },
+    {
+      "item": "12张卡片原文片段与位置匹配（忽略空白）",
+      "result": "pass"
+    },
+    {
+      "item": "规则卡字段与输入约定逐项对应",
+      "result": "pass"
+    },
+    {
+      "item": "规则编号及开发案例交叉引用",
+      "result": "pass"
+    },
+    {
+      "item": "V1至V3容量、时段、需求、窗口、期限、前置与完成记录一致性",
+      "result": "pass"
+    },
+    {
+      "item": "反例检查 容量冲突",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "反例检查 完成记录被改写",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "反例检查 未知现场条件被安排",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "反例检查 前置任务尚未完成",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "反例检查 维护需求未知",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "反例检查 重复排程",
+      "result": "correctly_rejected"
+    },
+    {
+      "item": "模拟天气与开发案例属性标记",
+      "result": "pass"
+    }
+  ],
+  "checked_at": "2026-10-17T12:56:04.221954+08:00"
+}

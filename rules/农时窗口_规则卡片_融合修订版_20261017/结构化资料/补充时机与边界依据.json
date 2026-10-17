@@ -1,0 +1,35 @@
+{
+  "evidence": [
+    {
+      "source_id": "Z18",
+      "quote": "利用晴好天气彻底清理田内“三沟“，同时加深地头沟，确保沟沟相通，排灌畅通，预防后期渍害；",
+      "locator": "油菜苗前期会商 印刷页16",
+      "pdf_pages": [
+        19
+      ],
+      "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+      "source_sha256": "55080160d8fbf352f9e6d6b8cb544768322073da97038ac0bce784059a45f395"
+    },
+    {
+      "source_id": "Z18",
+      "quote": "对于出苗不匀的田块，利用降雨前后空隙抓紧查苗补苗匀苗；",
+      "locator": "油菜苗前期会商 印刷页16",
+      "pdf_pages": [
+        19
+      ],
+      "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+      "source_sha256": "55080160d8fbf352f9e6d6b8cb544768322073da97038ac0bce784059a45f395"
+    },
+    {
+      "source_id": "Z17",
+      "quote": "未对干旱、渍害等影响油菜生长的主要自然灾害监测进行规范。",
+      "locator": "十 其他应当说明事项",
+      "pdf_pages": [
+        9
+      ],
+      "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+      "source_sha256": "e3b78cb0bde9f59dfcbdd9c945ee6338596ebeed8377e08fd03fd90173640f27"
+    }
+  ],
+  "use": "天气偏好与范围说明，不增设统一雨量阈值、固定时限或自动补苗任务"
+}

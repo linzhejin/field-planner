@@ -1,0 +1,347 @@
+{
+  "version": "0.1.0",
+  "timezone": "Asia/Shanghai",
+  "requiredness": "按任务和当前动作判断必填，禁止把所有字段设为全局必填",
+  "unknown": "JSON null；不得用false、0或空字符串替代未知",
+  "enums": {
+    "necessity": [
+      "required",
+      "no_need",
+      "unknown"
+    ],
+    "window": [
+      "available",
+      "unavailable",
+      "pending",
+      null
+    ],
+    "schedule_status": [
+      "scheduled",
+      "unscheduled",
+      "pending",
+      "not_generated",
+      "completed"
+    ],
+    "truth": [
+      true,
+      false,
+      null
+    ]
+  },
+  "fields": [
+    [
+      "field_id",
+      "string",
+      "全部",
+      "地块唯一编号"
+    ],
+    [
+      "province",
+      "string|null",
+      "范围判断",
+      "湖北/其他/未知"
+    ],
+    [
+      "stage",
+      "seedling|other|null",
+      "范围判断",
+      "用户确认阶段，不能仅由日期推断"
+    ],
+    [
+      "field_type",
+      "string|null",
+      "维护依据判断",
+      "稻茬田/旱地等"
+    ],
+    [
+      "observed_at",
+      "ISO8601|null",
+      "现场判断",
+      "保留到分钟和时区"
+    ],
+    [
+      "inspection_requested",
+      "boolean|null",
+      "检查候选",
+      "用户确认的检查请求或对候选建议的确认"
+    ],
+    [
+      "leaf_count",
+      "number|null",
+      "可选观察",
+      "未测即未知，不作为所有巡田的前置条件"
+    ],
+    [
+      "moisture",
+      "dry|normal|wet|null",
+      "维护判断",
+      "田间观察，不从预报推断"
+    ],
+    [
+      "ditch_connectivity",
+      "clear|impaired|null",
+      "维护判断",
+      "现场沟系情况"
+    ],
+    [
+      "standing_water",
+      "boolean|null",
+      "维护与反馈",
+      "田面积水"
+    ],
+    [
+      "maintenance_need_confirmed",
+      "boolean|null",
+      "维护候选",
+      "与适用依据和现场问题共同判断"
+    ],
+    [
+      "site_workability_by_date",
+      "map<date,bool|null>",
+      "逐日窗口",
+      "现场人员确认；情境变化后重新确认"
+    ],
+    [
+      "weather_workability_by_date",
+      "map<date,bool|null>",
+      "逐日窗口",
+      "用户确认或未来经过复核的天气判定器；首版不设无来源阈值"
+    ],
+    [
+      "duration_minutes",
+      "positive integer|null",
+      "排程",
+      "单人连续作业分钟数，缺失不猜测"
+    ],
+    [
+      "crew_size",
+      "integer=1",
+      "首版简化",
+      "本示例仅单人；多人协同另建资源模型"
+    ],
+    [
+      "splittable",
+      "boolean=false",
+      "排程",
+      "示例不可跨日拆分"
+    ],
+    [
+      "resource_minutes_by_date",
+      "map<date,integer>=0",
+      "排程",
+      "明确可用工时；示例单工人"
+    ],
+    [
+      "earliest_date",
+      "date|null",
+      "排程",
+      "用户可用日期"
+    ],
+    [
+      "latest_date",
+      "date|null",
+      "排程",
+      "用户目标日期，不称农学截止期"
+    ],
+    [
+      "depends_on",
+      "array<task_id>",
+      "排程",
+      "显式前置；已确认田况不必重复巡田"
+    ],
+    [
+      "source_ids",
+      "array<string>",
+      "依据展示",
+      "对应来源清单"
+    ],
+    [
+      "rule_ids",
+      "array<string>",
+      "解释与检查",
+      "对应R/D编号"
+    ],
+    [
+      "completed_at",
+      "ISO8601|null",
+      "状态保留",
+      "完成事实锁定"
+    ],
+    [
+      "data_origin",
+      "observed|user_estimate|synthetic|official",
+      "全部记录",
+      "演示数据与实测数据分开"
+    ],
+    [
+      "emergence_uniformity",
+      "uniform|uneven|null",
+      "可选观察",
+      "出苗是否均匀"
+    ],
+    [
+      "missing_seedlings",
+      "boolean|null",
+      "可选观察",
+      "是否缺苗"
+    ],
+    [
+      "crowding",
+      "boolean|null",
+      "可选观察",
+      "是否存在拥挤苗"
+    ],
+    [
+      "pest_signs",
+      "present|absent|null",
+      "可选观察",
+      "虫害迹象，未知为null"
+    ],
+    [
+      "observer",
+      "string|null",
+      "观察记录",
+      "脱敏观察者编号"
+    ],
+    [
+      "outlet_status",
+      "clear|blocked|null",
+      "沟渠检查",
+      "田外排水出口状态"
+    ],
+    [
+      "ditch_water",
+      "boolean|null",
+      "沟渠检查",
+      "沟内是否积水"
+    ],
+    [
+      "terrain",
+      "string|null",
+      "适用性",
+      "平原/丘陵等"
+    ],
+    [
+      "seedling_condition",
+      "string|null",
+      "可选观察",
+      "长势描述，不自动分级"
+    ],
+    [
+      "forecast_snapshot",
+      "object|null",
+      "天气背景",
+      "数据来源、时间、单位和是否模拟"
+    ],
+    [
+      "measurement_method",
+      "string|null",
+      "量化观察",
+      "实际采用的方法"
+    ],
+    [
+      "measurement_unit",
+      "string|null",
+      "量化观察",
+      "与数值匹配的单位"
+    ],
+    [
+      "sampling_notes",
+      "string|null",
+      "量化观察",
+      "取样说明，未规范取样不得声称符合标准"
+    ],
+    [
+      "claimed_rule_source",
+      "string|null",
+      "内部检索元数据",
+      "R12来源范围核对；不作为农户必填项"
+    ]
+  ],
+  "task_types": {
+    "inspection": "巡田苗情与沟渠检查，可合并一次走田避免重复工时",
+    "maintenance": "既有沟渠清理疏通；不包含重新开挖设计或灾害应急处置"
+  },
+  "daily_truth_table": [
+    [
+      "true",
+      "true",
+      "available"
+    ],
+    [
+      "false",
+      "任意",
+      "unavailable"
+    ],
+    [
+      "任意",
+      "false",
+      "unavailable"
+    ],
+    [
+      "null",
+      "true/null",
+      "pending"
+    ],
+    [
+      "true",
+      "null",
+      "pending"
+    ]
+  ],
+  "evaluation_order": [
+    "范围不匹配：out_of_scope，不生成确定处置",
+    "范围未知：pending，先追问",
+    "需求no_need：not_generated，window=null",
+    "维护需求unknown：pending；检查可以单独成立",
+    "检查来源与适用条件，无法匹配则pending",
+    "逐日检查现场和天气条件",
+    "再检查工时、资源、期限和前置条件",
+    "完成锁定与版本差异记录"
+  ],
+  "priorities": "人力不足不改变window。已知不适宜与信息缺失同时存在时，window=unavailable，并同时保留缺项列表。",
+  "input_output_examples": {
+    "input": {
+      "field_id": "A",
+      "province": "湖北",
+      "stage": "seedling",
+      "moisture": "wet",
+      "ditch_connectivity": "impaired",
+      "maintenance_need_confirmed": true,
+      "site_workability_by_date": {
+        "2026-10-20": true
+      },
+      "weather_workability_by_date": {
+        "2026-10-20": true
+      },
+      "duration_minutes": 90,
+      "crew_size": 1,
+      "resource_minutes_by_date": {
+        "2026-10-20": 30
+      },
+      "data_origin": "synthetic"
+    },
+    "output": {
+      "necessity": "required",
+      "window_by_date": {
+        "2026-10-20": "available"
+      },
+      "schedule_status": "unscheduled",
+      "reason": "单项90分钟超过该日30分钟容量；不可拆分",
+      "rule_ids": [
+        "R05",
+        "D05",
+        "D06"
+      ],
+      "source_ids": [
+        "S01"
+      ],
+      "follow_up": "在其他已确认可作业日期内重新排程；若没有则保留未排入"
+    }
+  },
+  "rule_card_mapping": {
+    "inspection": "巡田及沟渠检查",
+    "maintenance": "既有沟渠维护",
+    "reference_only": "知识边界卡，不生成作业任务"
+  }
+}

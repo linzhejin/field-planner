@@ -1,0 +1,1034 @@
+{
+  "version": "0.1.0",
+  "classification": "完全模拟的工程参考算例；不是实地记录或农业处方",
+  "dates": [
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-24",
+    "2026-10-25"
+  ],
+  "assumptions": [
+    "单名工人串行作业，crew_size=1，所有任务不可拆分。",
+    "时长包含演示中的步行准备时间；不使用面积乘统一劳动定额。",
+    "地块、叶龄、日期、天气、用户期限和可作业确认全部为synthetic。",
+    "原型只做候选建议、用户确认、约束排程和反馈；现场改变后重新确认。",
+    "A地无积水、无急迫渍害，不能将延期示例用于应急排涝。",
+    "七天是展示范围，不是农学规定；空白日期不自动填任务。"
+  ],
+  "fields": [
+    {
+      "id": "A",
+      "province": "湖北",
+      "stage": "seedling",
+      "field_type": "低洼稻茬田",
+      "area_mu": 3,
+      "leaf_count": 4,
+      "moisture": "wet",
+      "ditch_connectivity": "impaired",
+      "standing_water": false,
+      "maintenance_need_confirmed": true,
+      "observed_at": "2026-10-18T16:00:00+08:00",
+      "note": "已确认少量淤堵，田面无积水、无紧急渍害；检查任务是用户额外要求的苗情记录，不是维护的强制前置。"
+    },
+    {
+      "id": "B",
+      "province": "湖北",
+      "stage": "seedling",
+      "field_type": "稻茬田",
+      "area_mu": 2,
+      "leaf_count": null,
+      "moisture": null,
+      "ditch_connectivity": null,
+      "standing_water": null,
+      "maintenance_need_confirmed": null,
+      "observed_at": null,
+      "note": "已确认进入苗期，但无近期沟渠和苗情记录；先检查，不预设需要维护。"
+    },
+    {
+      "id": "C",
+      "province": "湖北",
+      "stage": "seedling",
+      "field_type": "丘陵旱地",
+      "area_mu": 2,
+      "leaf_count": 3,
+      "moisture": "dry",
+      "ditch_connectivity": "clear",
+      "standing_water": false,
+      "maintenance_need_confirmed": false,
+      "observed_at": "2026-10-18T16:30:00+08:00",
+      "note": "用户确认暂无维护需求；可检查苗情和墒情，不自动安排排水或灌溉。"
+    }
+  ],
+  "tasks": {
+    "A-I": {
+      "id": "A-I",
+      "field": "A",
+      "type": "inspection",
+      "duration_minutes": 30,
+      "earliest_date": "2026-10-19",
+      "latest_date": "2026-10-19",
+      "depends_on": [],
+      "rule_ids": [
+        "R01",
+        "R02",
+        "R03",
+        "R04",
+        "R06"
+      ],
+      "crew_size": 1,
+      "splittable": false,
+      "duration_origin": "synthetic_user_estimate",
+      "deadline_origin": "synthetic_user_preference"
+    },
+    "C-I": {
+      "id": "C-I",
+      "field": "C",
+      "type": "inspection",
+      "duration_minutes": 30,
+      "earliest_date": "2026-10-19",
+      "latest_date": "2026-10-19",
+      "depends_on": [],
+      "rule_ids": [
+        "R01",
+        "R07",
+        "R08"
+      ],
+      "crew_size": 1,
+      "splittable": false,
+      "duration_origin": "synthetic_user_estimate",
+      "deadline_origin": "synthetic_user_preference"
+    },
+    "B-I": {
+      "id": "B-I",
+      "field": "B",
+      "type": "inspection",
+      "duration_minutes": 30,
+      "earliest_date": "2026-10-20",
+      "latest_date": "2026-10-21",
+      "depends_on": [],
+      "rule_ids": [
+        "R01",
+        "R04"
+      ],
+      "crew_size": 1,
+      "splittable": false,
+      "duration_origin": "synthetic_user_estimate",
+      "deadline_origin": "synthetic_user_preference"
+    },
+    "A-M": {
+      "id": "A-M",
+      "field": "A",
+      "type": "maintenance",
+      "duration_minutes": 90,
+      "earliest_date": "2026-10-20",
+      "latest_date": "2026-10-22",
+      "depends_on": [],
+      "rule_ids": [
+        "R05",
+        "R06"
+      ],
+      "crew_size": 1,
+      "splittable": false,
+      "duration_origin": "synthetic_user_estimate",
+      "deadline_origin": "synthetic_user_preference"
+    },
+    "B-M": {
+      "id": "B-M",
+      "field": "B",
+      "type": "maintenance",
+      "duration_minutes": 60,
+      "earliest_date": "2026-10-20",
+      "latest_date": "2026-10-23",
+      "depends_on": [
+        "B-I"
+      ],
+      "rule_ids": [
+        "R05",
+        "R06"
+      ],
+      "crew_size": 1,
+      "splittable": false,
+      "duration_origin": "synthetic_user_estimate",
+      "deadline_origin": "synthetic_user_preference"
+    }
+  },
+  "weather_snapshot": [
+    {
+      "date": "2026-10-19",
+      "summary": "多云",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-20",
+      "summary": "晴",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-21",
+      "summary": "多云",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-22",
+      "summary": "阴",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-23",
+      "summary": "多云",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-24",
+      "summary": "小雨",
+      "precipitation_mm": 3,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    },
+    {
+      "date": "2026-10-25",
+      "summary": "晴",
+      "precipitation_mm": 0,
+      "origin": "synthetic",
+      "generated_for": "离线演示，非真实天气预报",
+      "operability_inferred_from_numeric_weather": false
+    }
+  ],
+  "versions": [
+    {
+      "version": "V1",
+      "as_of": "2026-10-18T18:00:00+08:00",
+      "parent": null,
+      "capacity_minutes": {
+        "2026-10-19": 120,
+        "2026-10-20": 120,
+        "2026-10-21": 120,
+        "2026-10-22": 120,
+        "2026-10-23": 60,
+        "2026-10-24": 0,
+        "2026-10-25": 0
+      },
+      "availability": {
+        "2026-10-19": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-20": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-21": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-22": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-23": [
+          [
+            "09:00",
+            "10:00"
+          ]
+        ],
+        "2026-10-24": [],
+        "2026-10-25": []
+      },
+      "workability": {
+        "A": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "B": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "C": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        }
+      },
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "date": "2026-10-19",
+          "start": "09:00",
+          "end": "09:30",
+          "duration_minutes": 30,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        },
+        {
+          "task_id": "C-I",
+          "date": "2026-10-19",
+          "start": "09:30",
+          "end": "10:00",
+          "duration_minutes": 30,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        },
+        {
+          "task_id": "B-I",
+          "date": "2026-10-20",
+          "start": "10:30",
+          "end": "11:00",
+          "duration_minutes": 30,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        },
+        {
+          "task_id": "A-M",
+          "date": "2026-10-20",
+          "start": "09:00",
+          "end": "10:30",
+          "duration_minutes": 90,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        }
+      ],
+      "pending": [
+        {
+          "task_id": "B-M",
+          "necessity": "unknown",
+          "window": "pending",
+          "reason": "无现场沟渠和维护需求确认，尚非可执行任务"
+        }
+      ],
+      "not_generated": [
+        {
+          "field_id": "C",
+          "task_type": "maintenance",
+          "necessity": "no_need",
+          "window": null,
+          "reason": "用户确认暂无维护需求，保留观察"
+        }
+      ],
+      "event": "初始计划；全部未来日期、工时与田况均为演示设定"
+    },
+    {
+      "version": "V2",
+      "as_of": "2026-10-19T18:00:00+08:00",
+      "parent": "V1",
+      "capacity_minutes": {
+        "2026-10-19": 120,
+        "2026-10-20": 30,
+        "2026-10-21": 120,
+        "2026-10-22": 120,
+        "2026-10-23": 60,
+        "2026-10-24": 0,
+        "2026-10-25": 0
+      },
+      "availability": {
+        "2026-10-19": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-20": [
+          [
+            "10:30",
+            "11:00"
+          ]
+        ],
+        "2026-10-21": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-22": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-23": [
+          [
+            "09:00",
+            "10:00"
+          ]
+        ],
+        "2026-10-24": [],
+        "2026-10-25": []
+      },
+      "workability": {
+        "A": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "B": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "C": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        }
+      },
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "date": "2026-10-19",
+          "start": "09:00",
+          "end": "09:30",
+          "duration_minutes": 30,
+          "status": "completed",
+          "completed_at": "2026-10-19T09:30:00+08:00",
+          "conditions_at_completion": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_execution_feedback"
+          }
+        },
+        {
+          "task_id": "C-I",
+          "date": "2026-10-19",
+          "start": "09:30",
+          "end": "10:00",
+          "duration_minutes": 30,
+          "status": "completed",
+          "completed_at": "2026-10-19T10:00:00+08:00",
+          "conditions_at_completion": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_execution_feedback"
+          }
+        },
+        {
+          "task_id": "B-I",
+          "date": "2026-10-20",
+          "start": "10:30",
+          "end": "11:00",
+          "duration_minutes": 30,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        },
+        {
+          "task_id": "A-M",
+          "date": "2026-10-21",
+          "start": "09:00",
+          "end": "10:30",
+          "duration_minutes": 90,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        }
+      ],
+      "pending": [
+        {
+          "task_id": "B-M",
+          "necessity": "unknown",
+          "window": "pending",
+          "reason": "无现场沟渠和维护需求确认，尚非可执行任务"
+        }
+      ],
+      "not_generated": [
+        {
+          "field_id": "C",
+          "task_type": "maintenance",
+          "necessity": "no_need",
+          "window": null,
+          "reason": "用户确认暂无维护需求，保留观察"
+        }
+      ],
+      "event": "A-I、C-I已完成；10月20日可用时间从09:00—11:00减至10:30—11:00。其他现场及天气条件未改变。",
+      "changes": [
+        {
+          "task_id": "A-M",
+          "old": [
+            "2026-10-20",
+            "09:00",
+            "10:30"
+          ],
+          "new": [
+            "2026-10-21",
+            "09:00",
+            "10:30"
+          ],
+          "reason": "90分钟不可拆分；20日容量30分钟。21日条件仍已确认且有120分钟容量。"
+        },
+        {
+          "task_id": "B-I",
+          "old": [
+            "2026-10-20",
+            "10:30",
+            "11:00"
+          ],
+          "new": [
+            "2026-10-20",
+            "10:30",
+            "11:00"
+          ],
+          "reason": "原时段仍可行，保留；不是因为农学优先级高于A-M。"
+        }
+      ]
+    },
+    {
+      "version": "V3",
+      "as_of": "2026-10-20T11:05:00+08:00",
+      "parent": "V2",
+      "capacity_minutes": {
+        "2026-10-19": 120,
+        "2026-10-20": 30,
+        "2026-10-21": 120,
+        "2026-10-22": 120,
+        "2026-10-23": 60,
+        "2026-10-24": 0,
+        "2026-10-25": 0
+      },
+      "availability": {
+        "2026-10-19": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-20": [
+          [
+            "10:30",
+            "11:00"
+          ]
+        ],
+        "2026-10-21": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-22": [
+          [
+            "09:00",
+            "11:00"
+          ]
+        ],
+        "2026-10-23": [
+          [
+            "09:00",
+            "10:00"
+          ]
+        ],
+        "2026-10-24": [],
+        "2026-10-25": []
+      },
+      "workability": {
+        "A": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "B": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": false,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": null,
+            "weather": null,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": null,
+            "weather": null,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": null,
+            "weather": null,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": null,
+            "weather": null,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": null,
+            "weather": null,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        },
+        "C": {
+          "2026-10-19": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-20": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-21": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-22": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-23": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-24": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          },
+          "2026-10-25": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_user_confirmation",
+            "recheck_on_execution": true
+          }
+        }
+      },
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "date": "2026-10-19",
+          "start": "09:00",
+          "end": "09:30",
+          "duration_minutes": 30,
+          "status": "completed",
+          "completed_at": "2026-10-19T09:30:00+08:00",
+          "conditions_at_completion": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_execution_feedback"
+          }
+        },
+        {
+          "task_id": "C-I",
+          "date": "2026-10-19",
+          "start": "09:30",
+          "end": "10:00",
+          "duration_minutes": 30,
+          "status": "completed",
+          "completed_at": "2026-10-19T10:00:00+08:00",
+          "conditions_at_completion": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_execution_feedback"
+          }
+        },
+        {
+          "task_id": "B-I",
+          "date": "2026-10-20",
+          "start": "10:30",
+          "end": "11:00",
+          "duration_minutes": 30,
+          "status": "completed",
+          "completed_at": "2026-10-20T11:00:00+08:00",
+          "conditions_at_completion": {
+            "site": true,
+            "weather": true,
+            "origin": "synthetic_execution_feedback"
+          }
+        },
+        {
+          "task_id": "A-M",
+          "date": "2026-10-21",
+          "start": "09:00",
+          "end": "10:30",
+          "duration_minutes": 90,
+          "status": "scheduled",
+          "completed_at": null,
+          "conditions_at_completion": null
+        }
+      ],
+      "pending": [
+        {
+          "task_id": "B-M",
+          "necessity": "required",
+          "window": "pending",
+          "reason": "已确认需求；20日现场不可作业，21—25日现场/天气适宜性需重新确认，暂不给日期。",
+          "window_by_date": {
+            "2026-10-20": "unavailable",
+            "2026-10-21": "pending",
+            "2026-10-22": "pending",
+            "2026-10-23": "pending",
+            "2026-10-24": "pending",
+            "2026-10-25": "pending"
+          }
+        }
+      ],
+      "not_generated": [
+        {
+          "field_id": "C",
+          "task_type": "maintenance",
+          "necessity": "no_need",
+          "window": null,
+          "reason": "用户确认暂无维护需求，保留观察"
+        }
+      ],
+      "event": "B-I于11:00完成，反馈B地湿度偏大且出口局部淤堵，确认需要维护；11:05收到进田道路施工封闭信息，此后暂不可通行，后续日期可作业情况未知。A地条件未变化。",
+      "changes": [
+        {
+          "task_id": "B-M",
+          "old": "需求未知",
+          "new": "需求确认、日期待确认",
+          "reason": "新现场证据支持维护候选；道路问题使既有可作业确认失效。"
+        },
+        {
+          "task_id": "A-M",
+          "old": [
+            "2026-10-21",
+            "09:00",
+            "10:30"
+          ],
+          "new": [
+            "2026-10-21",
+            "09:00",
+            "10:30"
+          ],
+          "reason": "A地未受影响，保留21日安排。"
+        }
+      ],
+      "field_updates": {
+        "B": {
+          "moisture": "wet",
+          "ditch_connectivity": "impaired",
+          "maintenance_need_confirmed": true,
+          "observed_at": "2026-10-20T11:00:00+08:00",
+          "data_origin": "synthetic"
+        }
+      }
+    }
+  ],
+  "alternative_valid_plans": "只要满足已冻结约束和公开排序约定即可；本手工计划是一个可复核参考，不宣称农业唯一正确或最优。"
+}

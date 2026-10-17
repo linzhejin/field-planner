@@ -1,0 +1,31 @@
+{
+  "status": "pass",
+  "cards": 31,
+  "categories": {
+    "首版候选": 7,
+    "监测研究参考": 6,
+    "参数与背景参考": 5,
+    "扩展处置参考": 13
+  },
+  "quoted_fragments": 35,
+  "supplementary_fragments": 3,
+  "sources": 12,
+  "checks": [
+    "31个编号唯一且保留原C01至C30",
+    "所有原文片段在所指本地来源中可匹配",
+    "全部卡片有条件、范围、行为、缺项、限制和关联字段",
+    "所有来源文件SHA-256已记录",
+    "默认关闭自动启用；未虚称专业验证或实际Agent测试"
+  ],
+  "actual_agent_cases_executed": 0,
+  "agronomic_reviews": 0,
+  "final_status": "pass",
+  "word_pages": 29,
+  "visual_review": "全部29页已渲染并目视检查，未见文字重叠、表格截断或缺字。",
+  "table_transcription_check": "附录A 16行、B 5行、C 10行均与Z05指定页面原表文字逐行匹配。",
+  "word_json_consistency": "31张卡的标题、范围、条件、知识、行为、缺项、边界与Word正文逐项一致。",
+  "original_fields_removed": "检索用JSON不包含第2版已被纠正的旧条件字段，避免误检索；修订原因保留。",
+  "docx_sha256": "f4f000122bf5e99a3adaa72bb88e6d367130831abea38417439db70d6fcd9ed1",
+  "json_sha256": "25a087be07c879ab08d9e5eb4f20b84ac43ef399264a2db53260707b84f9d568",
+  "render_method": "本机Word后台导出临时PDF后逐页检查；默认LibreOffice渲染器不可用。"
+}

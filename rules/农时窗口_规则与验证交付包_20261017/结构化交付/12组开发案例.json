@@ -1,0 +1,274 @@
+{
+  "status": "预期行为已编写；尚未对实际Agent执行",
+  "not_holdout": true,
+  "note": "12组开发案例，其中T12含3个子场景；不能当作12次实测通过，也不能再当未见留出集。",
+  "cases": [
+    {
+      "id": "T01",
+      "name": "正常检查",
+      "description": "A地、湖北苗期、用户请求检查；观察目标未知但现场和天气可作业、工时资源齐全。",
+      "input": {
+        "scope": "matched",
+        "inspection_requested": true,
+        "leaf_count": null,
+        "site": true,
+        "weather": true,
+        "duration": 30,
+        "capacity": 60
+      },
+      "expected": {
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled"
+      },
+      "rule_ids": [
+        "R01",
+        "D03"
+      ],
+      "review_point": "不能因叶龄未知拒绝一般巡田。"
+    },
+    {
+      "id": "T02",
+      "name": "已确认维护",
+      "description": "湖北湿度偏大稻茬田、沟系受阻、维护需求确认、现场天气可作业。",
+      "input": {
+        "scope": "matched",
+        "need": true,
+        "issue": "impaired",
+        "site": true,
+        "weather": true,
+        "duration": 90,
+        "capacity": 120
+      },
+      "expected": {
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled"
+      },
+      "rule_ids": [
+        "R05",
+        "D04"
+      ],
+      "review_point": "输出来源和条件；不能追加开沟设计。"
+    },
+    {
+      "id": "T03",
+      "name": "无维护需求",
+      "description": "C地用户确认排水正常、暂无维护需求。",
+      "input": {
+        "need": false,
+        "site": true,
+        "weather": true
+      },
+      "expected": {
+        "necessity": "no_need",
+        "window": null,
+        "schedule_status": "not_generated"
+      },
+      "rule_ids": [
+        "R07",
+        "D02"
+      ],
+      "review_point": "不能为填满日历自动生成清沟任务。"
+    },
+    {
+      "id": "T04",
+      "name": "阶段缺失",
+      "description": "省份湖北，但只提供播种日期，未确认当前阶段。",
+      "input": {
+        "province": "湖北",
+        "stage": null
+      },
+      "expected": {
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "stage"
+        ]
+      },
+      "rule_ids": [
+        "D01"
+      ],
+      "review_point": "不能按日历推算已经苗期。"
+    },
+    {
+      "id": "T05",
+      "name": "维护需求未知",
+      "description": "B地沟渠和积水情况未知。",
+      "input": {
+        "need": null,
+        "ditch_connectivity": null
+      },
+      "expected": {
+        "necessity": "unknown",
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "ditch_connectivity",
+          "maintenance_need_confirmed"
+        ]
+      },
+      "rule_ids": [
+        "R04",
+        "R05",
+        "D04"
+      ],
+      "review_point": "维护待确认，但可独立提出检查候选。"
+    },
+    {
+      "id": "T06",
+      "name": "明确不能作业",
+      "description": "需求已确认，现场道路不通，天气信息还未知。",
+      "input": {
+        "need": true,
+        "site": false,
+        "weather": null
+      },
+      "expected": {
+        "window": "unavailable",
+        "schedule_status": "unscheduled",
+        "ask": [
+          "weather_workability"
+        ]
+      },
+      "rule_ids": [
+        "D05"
+      ],
+      "review_point": "已有明确阻碍时为暂不可安排，同时保留缺项；不把道路问题描述为农学禁止。"
+    },
+    {
+      "id": "T07",
+      "name": "可作业信息不足",
+      "description": "需求已确认，天气允许但现场可作业情况未知。",
+      "input": {
+        "need": true,
+        "site": null,
+        "weather": true
+      },
+      "expected": {
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "site_workability"
+        ]
+      },
+      "rule_ids": [
+        "D05"
+      ],
+      "review_point": "晴天不能推出可下田。"
+    },
+    {
+      "id": "T08",
+      "name": "人力不足",
+      "description": "A-M为90分钟不可拆分，当天只有30分钟，其余条件满足。",
+      "input": {
+        "need": true,
+        "site": true,
+        "weather": true,
+        "duration": 90,
+        "capacity": 30
+      },
+      "expected": {
+        "window": "available",
+        "schedule_status": "unscheduled",
+        "reason": "capacity"
+      },
+      "rule_ids": [
+        "D06"
+      ],
+      "review_point": "窗口仍可安排；检查其他日期，无可行日则保留未排入。"
+    },
+    {
+      "id": "T09",
+      "name": "工时缺失",
+      "description": "任务条件满足，但用户未估计工时。",
+      "input": {
+        "need": true,
+        "site": true,
+        "weather": true,
+        "duration": null
+      },
+      "expected": {
+        "window": "available",
+        "schedule_status": "pending",
+        "ask": [
+          "duration_minutes"
+        ]
+      },
+      "rule_ids": [
+        "D06"
+      ],
+      "review_point": "排程缺项不改变窗口，不按亩数编工时。"
+    },
+    {
+      "id": "T10",
+      "name": "完成保留和重排",
+      "description": "使用V1与19日晚事件生成V2。",
+      "input": {
+        "scenario": "V1_to_V2"
+      },
+      "expected": {
+        "completed_unchanged": [
+          "A-I",
+          "C-I"
+        ],
+        "moved": {
+          "A-M": "2026-10-21"
+        },
+        "retained": [
+          "B-I"
+        ]
+      },
+      "rule_ids": [
+        "D07",
+        "D09"
+      ],
+      "review_point": "保留真实完成日期；不把已完成任务再次排入。"
+    },
+    {
+      "id": "T11",
+      "name": "现场反馈变化",
+      "description": "使用V2与20日B地反馈生成V3。",
+      "input": {
+        "scenario": "V2_to_V3"
+      },
+      "expected": {
+        "B-M": {
+          "necessity": "required",
+          "20日": "unavailable",
+          "后续": "pending"
+        },
+        "A-M": "retained"
+      },
+      "rule_ids": [
+        "D10",
+        "R05"
+      ],
+      "review_point": "不沿用B地原有现场可作业true；A地计划不无故移动。"
+    },
+    {
+      "id": "T12",
+      "name": "来源与天气异常",
+      "description": "三个子场景：征求意见稿被当已实施标准；资料仅适用于花期；天气接口失败且没有独立作业确认。",
+      "input": {
+        "subcases": [
+          "draft_as_final",
+          "flowering_only_source",
+          "weather_failure_without_confirmation"
+        ]
+      },
+      "expected": {
+        "draft_as_final": "更正文件状态且不执行分级",
+        "flowering_only_source": "拒绝该依据支撑苗期处置",
+        "weather_failure_without_confirmation": "天气标不可用，相关日期pending，保留完成记录"
+      },
+      "rule_ids": [
+        "R11",
+        "R12",
+        "D08",
+        "D12"
+      ],
+      "review_point": "不能编造标准地位、农事依据或天气；这三个子场景分别运行。"
+    }
+  ]
+}

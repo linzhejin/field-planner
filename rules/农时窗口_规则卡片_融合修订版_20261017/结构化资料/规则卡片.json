@@ -1,0 +1,1114 @@
+{
+  "version": "融合修订版1.0",
+  "as_of": "2026-10-17",
+  "status": "供复核与开发接入；未完成农业专业验证",
+  "cards": [
+    {
+      "id": "C01",
+      "original_title": "苗情分级标准（长江中游·苗期·直播）",
+      "title": "长江中游直播苗期分级",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "单株绿叶数（片） 6～8 4～6 <4 根颈粗（mm） 6～10 4～6 <4 株高（cm） 15～25 10～15 <10",
+          "locator": "附录A 表A.1 长江中游苗期直播行；完整数值见附录A",
+          "pdf_pages": [
+            7
+          ],
+          "verification": "附录表A逐行核对；苗期直播在PDF第7页",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "甘蓝型油菜、长江中游、直播、播种后约1个月；专业监测条件须满足。",
+      "condition": "已核实种植方式和监测时期，并有合格样点记录。",
+      "source_supported_knowledge": "绿叶数6～8／4～6／<4片；根颈粗6～10／4～6／<4mm；株高15～25／10～15／<10cm。结合C03及密度指标综合判断。",
+      "prototype_behavior": "仅展示参考区间和测量说明；首版不自动生成一二三类苗结论。",
+      "missing_behavior": "缺种植方式、阶段、样点或主要指标时不分级，保留原始观察。",
+      "limits": "征求意见稿。共享端点、超出列示上界及目标密度未定的情况须另定解释，不擅自外推。",
+      "input_fields": [
+        "crop_type",
+        "region",
+        "stage",
+        "planting_method",
+        "sampling_record",
+        "leaf_count",
+        "root_diameter_mm",
+        "plant_height_cm",
+        "target_density"
+      ],
+      "revision": "保留数值与方法，撤下主用分级身份，补足端点和超界处理。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C02",
+      "original_title": "苗情分级标准（长江中游·越冬前·直播）",
+      "title": "长江中游直播越冬前分级",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "单株绿叶数（片） 9～12 6～9 <6 根颈粗（mm） 10～15 8～10 <8 株高（cm） 20～30 15～20 <15",
+          "locator": "附录A 表A.1 长江中游越冬前直播行；完整数值见附录A",
+          "pdf_pages": [
+            8
+          ],
+          "verification": "附录表A逐行核对；越冬前直播在PDF第8页",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "甘蓝型油菜、长江中游、直播；冬至前3～5天的专业监测。",
+      "condition": "阶段与实际监测日期核实；C04取样条件已满足。",
+      "source_supported_knowledge": "绿叶数9～12／6～9／<6片；根颈粗10～15／8～10／<8mm；株高20～30／15～20／<15cm。",
+      "prototype_behavior": "作为越冬前研究参考，不用10月苗期数据直接套用。",
+      "missing_behavior": "缺日期、种植方式或指标则不分级。",
+      "limits": "征求意见稿；移栽使用另行对应行。分级边界仍需解释。",
+      "input_fields": [
+        "crop_type",
+        "region",
+        "stage",
+        "planting_method",
+        "observed_at",
+        "sampling_record",
+        "leaf_count",
+        "root_diameter_mm",
+        "plant_height_cm",
+        "target_density"
+      ],
+      "revision": "补足阶段与种植方式，保留区间但不默认启用。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C03",
+      "original_title": "苗情综合判定规则",
+      "title": "苗情综合判定方法",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "主要指标全部达到的最高类别，且株高和密度至少有一个达到该类别，即确定为该田块的等级类别，否则下降一个类别判断。",
+          "locator": "5.1.3 第1项",
+          "pdf_pages": [
+            4
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "长江上中下游专业监测；湖北按长江中游对应表。",
+      "condition": "三个合格样点平均值齐全，参考类别与指标单位一致。",
+      "source_supported_knowledge": "绿叶数与根颈粗为主要指标；还须株高或密度至少一项满足。",
+      "prototype_behavior": "保留综合判断依据；若后续实现分级，需先明确端点、缺项和超界处理。",
+      "missing_behavior": "主要指标缺失不能仅凭叶龄分级；辅助指标缺失不得默认满足。",
+      "limits": "不把“下降一个类别判断”写成只下降一次后无条件通过。",
+      "input_fields": [
+        "sampling_record",
+        "leaf_count",
+        "root_diameter_mm",
+        "plant_height_cm",
+        "density_per_mu",
+        "target_density"
+      ],
+      "revision": "保留原文“判断”，避免把降级流程写成无条件结果。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C04",
+      "original_title": "巡田取样方法",
+      "title": "专业监测取样条件",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "采取对角线取样，每个地块选择3个有代表性的样点，每个样点应不少于3m2。取样点应距离树林、建筑物、道路、水面20 m以上，无遮阴。",
+          "locator": "4.2 取样方法",
+          "pdf_pages": [
+            4
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "同一生长周期固定的甘蓝型油菜专业监测地块；4.1要求连片规模不少于3340m²。",
+      "condition": "开展符合该稿要求的专业监测，而非每次普通巡田。",
+      "source_supported_knowledge": "3个代表样点，每个不少于3m²；距所列边界20m以上且无遮阴。",
+      "prototype_behavior": "作为可选方法说明；小块演示田照实记录面积及方法偏离。",
+      "missing_behavior": "面积、位置或取样信息不明，不能宣称符合规范。",
+      "limits": "演示设定不能弥补真实取样条件不足；普通巡田无需完成全部专业监测。",
+      "input_fields": [
+        "field_area_m2",
+        "sampling_record",
+        "observed_at"
+      ],
+      "revision": "把“每次苗情检查”收窄为专业监测；取消用演示标签替代合规取样。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C05",
+      "original_title": "巡田观察的5项指标及测法",
+      "title": "五项指标及测量方法",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "包括密度、株高、单株绿叶数、根颈粗、缩颈段伸长率等5个指标，各指标监测及计算方法见表1。",
+          "locator": "5.1.1及表1；完整表见附录B",
+          "pdf_pages": [
+            4
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "甘蓝型油菜专业监测；湖北不以缩颈段伸长率为主要分级指标。",
+      "condition": "选择开展专业监测时。",
+      "source_supported_knowledge": "每样点3m²计密度；株高、绿叶数、根颈粗连续取10株；缩颈段伸长率连续取30株。",
+      "prototype_behavior": "普通巡田可选记录叶龄等；保留方法和单位，不强制每次测全五项。",
+      "missing_behavior": "未测写未知，禁止模型补测量值。",
+      "limits": "参考表中的方法不能自动转换成巡田频率或工时。",
+      "input_fields": [
+        "sampling_record",
+        "measurement_method",
+        "measurement_unit",
+        "leaf_count",
+        "root_diameter_mm",
+        "plant_height_cm",
+        "density_per_mu",
+        "neck_elongation_pct"
+      ],
+      "revision": "把每次巡田必测改为可选专业监测，完整保留原表。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C06",
+      "original_title": "越冬期起始判定（温度触发）",
+      "title": "越冬期起始的气温参考",
+      "category": "监测研究参考",
+      "evidence": [
+        {
+          "source_id": "Z05",
+          "quote": "冬前连续5日平均气温稳定≤5℃",
+          "locator": "表2 越冬期行；完整表见附录C",
+          "pdf_pages": [
+            5
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "6e0198e51c384c8c76f02b55789735dc7ea18fc9aed93e4618df294509aa0c87"
+        }
+      ],
+      "applicability": "该稿适用范围内的冬油菜物候监测。",
+      "condition": "冬前且取得当地连续5日可核查气温记录；日均计算口径需固定。",
+      "source_supported_knowledge": "表2列示“冬前连续5日平均气温稳定≤5℃”。",
+      "prototype_behavior": "可提出阶段核实提示；首版不凭五日预报自动切换管理规则。",
+      "missing_behavior": "缺历史日均值、地点、日期或计算方法时标记待确认。",
+      "limits": "征求意见稿；单日最低气温、五日总体平均和连续五日日均不是可随意互换的数据。",
+      "input_fields": [
+        "daily_mean_temperature",
+        "weather_location",
+        "weather_observed_at",
+        "temperature_method",
+        "stage"
+      ],
+      "revision": "撤销“可由天气工具自动判定，不必人工输入”的直接执行表述。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C07",
+      "original_title": "早播旺长苗控旺条件",
+      "title": "旺长苗控旺的条件参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "油菜叶龄8片叶及以上且亩密度超过4万株，可通过减施氮肥、亩用5%烯效唑45g或15%多效唑60克兑水40公斤喷雾控旺，避免高脚苗和早薹早花。",
+          "locator": "四 综合调控 壮苗越冬",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前旺长苗管理情境；跨年适用待复核。",
+      "condition": "叶龄≥8片且密度>4万株/亩；还须确认当前阶段及旺长事实。",
+      "source_supported_knowledge": "原文提供控旺建议和处方；原文保留供核对，处方不进入首版输出。",
+      "prototype_behavior": "仅提示请农技人员确认处置；不自动新增化控或减肥任务。",
+      "missing_behavior": "叶龄、密度或阶段缺失时先补充观察，不推定旺长。",
+      "limits": "孝感文件另含10月上旬前播种条件，不能称所有条件完全一致或算独立验证。",
+      "input_fields": [
+        "stage",
+        "leaf_count",
+        "density_per_mu",
+        "vigorous_growth",
+        "sowing_date"
+      ],
+      "revision": "保留≥8与>4万边界；纠正孝感文件完全一致的表述。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C08",
+      "original_title": "已起薹旺长苗禁止化控、改摘薹",
+      "title": "起薹旺长苗的不宜化控提示",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "9片叶以上开始起薹的旺长苗，正值花蕾发育关键期，不宜再用药剂控苗，可在冬前采用摘薹的方式控旺，实现“一菜两用”，摘薹后亩追施5-7.5公斤尿素促进分枝发育。",
+          "locator": "四 综合调控 壮苗越冬",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前已起薹旺长苗。",
+      "condition": "按原文叶龄9片以上、开始起薹且旺长；实际情况经确认。",
+      "source_supported_knowledge": "原文为“不宜”再用药剂控苗，“可”冬前摘薹。",
+      "prototype_behavior": "若用户提出化控待办，展示不宜提示并请求专业复核，不自动改排摘薹。",
+      "missing_behavior": "缺起薹或旺长记录时不作确定处置结论。",
+      "limits": "不把不宜一律升级为绝对禁止，也不把可摘薹改成必须摘薹。",
+      "input_fields": [
+        "stage",
+        "leaf_count",
+        "bolting",
+        "vigorous_growth",
+        "user_task"
+      ],
+      "revision": "修正禁止型标题和自动替代处置。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C09",
+      "original_title": "封行田块化控条件",
+      "title": "封行田块化控的条件参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "叶龄5片且亩密度5万株以上已封行的田块亩用5%烯效唑30g或15%多效唑40克兑水40公斤喷雾，抑制地上部生长，促进根系发育，增加抗寒性、抗倒性。",
+          "locator": "四 综合调控 壮苗越冬",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前意见对应田况；需复核跨年适用性。",
+      "condition": "叶龄=5片、密度≥5万株/亩、已经封行。",
+      "source_supported_knowledge": "保留原文三个条件；5万株以上包含恰好5万株。",
+      "prototype_behavior": "仅检索展示条件参考；不生成药剂处方或自动化控任务。",
+      "missing_behavior": "任何条件未知时不判定命中；不把已知不满足写成未知。",
+      "limits": "不将5片擅改为≥5片，也不把其他文件6～9叶条件合并。",
+      "input_fields": [
+        "stage",
+        "leaf_count",
+        "density_per_mu",
+        "canopy_closed"
+      ],
+      "revision": "将>5万修正为≥5万；保留其他条件与范围。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C10",
+      "original_title": "间苗留苗密度（叶龄触发）",
+      "title": "冬前留苗密度的分档参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "当前单株叶片达8片以上的田块亩留苗3万株以内，多余的油菜苗可以移栽到迟播田或渍害田，实现间密补稀；间苗后可喷施多效唑降低株高，控制早薹早花。单株叶片4-6片的二类苗亩留苗4万株左右。单株叶片3片以下的三类苗亩留苗5万株左右。",
+          "locator": "三 间密补稀",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前、原文所述苗情背景。",
+      "condition": "已知叶龄及田况；只使用原文列出的分档。",
+      "source_supported_knowledge": "8片以上≤3万株/亩；4～6片约4万；3片以下约5万。",
+      "prototype_behavior": "作为用户已确认间苗待办的背景参考，不从叶龄自动派生间苗。",
+      "missing_behavior": "7片或未覆盖的平均叶龄不自行插值；“左右”不改成精确验收阈值。",
+      "limits": "不得与2025年11月中旬苗期文件的密度口径拼成一套普遍分档。",
+      "input_fields": [
+        "stage",
+        "leaf_count",
+        "density_per_mu",
+        "observed_at",
+        "user_task"
+      ],
+      "revision": "保留数值，同时补上未覆盖叶龄、模糊区间与日期情境；恢复第2版引文中被省去但未标省略的中间句。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C11",
+      "original_title": "间苗时机与做法",
+      "title": "巡田记录缺苗和拥挤现象",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z15",
+          "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+          "locator": "二 移密补稀",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+        },
+        {
+          "source_id": "Z09",
+          "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+          "locator": "三 间密补稀 优化群体",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+      "condition": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+      "source_supported_knowledge": "观察叶龄、窝堆苗、拥挤和缺苗现象；处置建议保留为知识背景。",
+      "prototype_behavior": "把上述项目加入巡田记录；发现异常再确认是否需要额外待办。",
+      "missing_behavior": "叶龄或拥挤情况未知不阻止检查；具体排期仍遵循共同条件。",
+      "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+      "input_fields": [
+        "stage",
+        "inspection_requested",
+        "leaf_count",
+        "crowding",
+        "missing_seedlings",
+        "observed_at"
+      ],
+      "revision": "由报道换为省厅原文；将冬前前置关系单列来源，首版动作限于检查记录。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C12",
+      "original_title": "化学除草的条件与禁止",
+      "title": "化学除草条件和晚播限制",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "叶龄5叶以上草害较重的田块，可喷施烯草酮、草除灵等进行防治；晚播苗由于幼苗小，冬前不建议采用化学除草。",
+          "locator": "四 综合调控 壮苗越冬",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前意见中的油菜田。",
+      "condition": "主源条件为叶龄5叶以上且草害较重；晚播幼苗小的情况另行限制。",
+      "source_supported_knowledge": "原文建议具有条件性，不是达到叶龄就必须除草。",
+      "prototype_behavior": "仅展示参考与冲突提示；晴天中午条件若采用须另列来源和适用条件。",
+      "missing_behavior": "叶龄、草害或晚播情况缺失先补充信息，不能直接给处置日期。",
+      "limits": "本卡不含晴天中午触发项；取消正文与备注的自相矛盾，不自动输出药剂。",
+      "input_fields": [
+        "stage",
+        "leaf_count",
+        "weed_severity",
+        "sowing_date",
+        "seedling_condition"
+      ],
+      "revision": "从触发条件中移除只作为其他来源备注的天气描述。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C13",
+      "original_title": "封闭除草时间窗口",
+      "title": "播后封闭除草的时点参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z01",
+          "quote": "在播种后2—3天内立即进行封闭除草，力争实现全覆盖；对没有封闭除草的田块，可在3—5叶期进行选择性除草。",
+          "locator": "三（二）防治病虫草害",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+        }
+      ],
+      "applicability": "2026年全国生产意见的播后与苗期草害管理；已进入苗期的地块不能回排播后任务。",
+      "condition": "核实实际播种日期、是否已封闭除草和实际叶龄。",
+      "source_supported_knowledge": "原文列有播后2～3天内与未封闭田块3～5叶期的处置时点。",
+      "prototype_behavior": "保留检索参考，首版不自动生成除草任务或仅凭天气给可作业结论。",
+      "missing_behavior": "缺播种日期或既往作业记录时不推算已完成或已逾期。",
+      "limits": "所列主源无“喷施后4小时不下雨”；删去该条，不能当作通用天气阈值。",
+      "input_fields": [
+        "sowing_date",
+        "stage",
+        "leaf_count",
+        "herbicide_history"
+      ],
+      "revision": "删除未经该主源支持的4小时无雨条件；保留已核实原文时点。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C14",
+      "original_title": "霜霉病、黑腐病防治阈值",
+      "title": "特定病害防治的参考条件",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z01",
+          "quote": "霜霉病和黑腐病偏重地区，可在发病率10%左右时进行防治。",
+          "locator": "三（二）防治病虫草害",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+        }
+      ],
+      "applicability": "长江流域生产意见所涉霜霉病、黑腐病偏重地区。",
+      "condition": "病害种类、地区情况、调查方法和发病率经确认。",
+      "source_supported_knowledge": "原文为发病率10%左右“可”防治。",
+      "prototype_behavior": "展示原文并建议专业判断；不把通用异常照片或用户描述自动诊断为这两种病。",
+      "missing_behavior": "无病种或调查数据不计算阈值命中。",
+      "limits": "“左右”不等于精确≥10%；不生成具体药剂处方。",
+      "input_fields": [
+        "disease_type",
+        "disease_region_status",
+        "disease_incidence_pct",
+        "sampling_record"
+      ],
+      "revision": "保留约数与可选语气，防止变成精确自动防治阈值。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C15",
+      "original_title": "根肿病区监控条件",
+      "title": "根肿病地区监控与气温参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z15",
+          "quote": "有根肿病发生地区应注意监控，可在全天最高温度低于15℃时，施用生根剂促进生根，减轻危害。",
+          "locator": "三 科学用药",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+        }
+      ],
+      "applicability": "2025年湖北苗期意见中有根肿病发生的地区；需确认具体地块情境。",
+      "condition": "先核实病害地区背景；原文处置温度参考为全天最高温度<15℃。",
+      "source_supported_knowledge": "气温只是原文处置的一项条件，不能替代病害和田况确认。",
+      "prototype_behavior": "保留监控提示及气温出处，不用未来预报单独触发施用生根剂任务。",
+      "missing_behavior": "无地区病害记录或气温时间地点时保持待确认。",
+      "limits": "不把整个江汉平原、鄂中北笼统判成已发生根肿病的地块。",
+      "input_fields": [
+        "disease_region_status",
+        "weather_max_temperature",
+        "weather_location",
+        "weather_observed_at",
+        "observed_at"
+      ],
+      "revision": "采用省厅原文，取消仅凭气温自动判处置的描述。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C16",
+      "original_title": "三沟深度规格（水田／稻田）",
+      "title": "水田沟系尺寸参考",
+      "category": "参数与背景参考",
+      "evidence": [
+        {
+          "source_id": "Z07",
+          "quote": "一般厢沟深20-25厘米、宽25厘米左右，腰沟深25-30厘米、宽30厘米左右，围沟深30-35厘米、宽35厘米左右。",
+          "locator": "三 稻田开好四沟",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "2a23ffd2afc4ee01122b8c05bf2eb085967b2bf36188ec635b61ddab8bfc54bd"
+        }
+      ],
+      "applicability": "2026年湖北秋播整地、水田油菜；不是所有苗期地块改沟标准。",
+      "condition": "水田类型及耕整播种情境已确认。",
+      "source_supported_knowledge": "保留三类沟深沟宽；田内三沟应与田外排水沟相通。",
+      "prototype_behavior": "苗期可按需要记录既有沟况；尺寸用于背景比对，不因偏离数值自动返工。",
+      "missing_behavior": "缺田型、现状或建设背景时只询问，不套用尺寸。",
+      "limits": "“一般”“左右”不是统一硬性验收界限；同主题差异须按情境保留。",
+      "input_fields": [
+        "field_type",
+        "stage",
+        "ditch_dimensions",
+        "ditch_connectivity",
+        "drainage_design_context"
+      ],
+      "revision": "取消沟渠规格一律以单一文件为准，限定为秋播水田参数参考。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C17",
+      "original_title": "三沟深度规格（旱地）",
+      "title": "湿涝背景下旱地沟深参考",
+      "category": "参数与背景参考",
+      "evidence": [
+        {
+          "source_id": "Z04",
+          "quote": "对旱地，分别达到15—20厘米、20—25厘米、20—25厘米。",
+          "locator": "（一）抢排水降渍害",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+        }
+      ],
+      "applicability": "2025年抗渍涝文件；长江中下游等受持续阴雨影响的播栽情境。",
+      "condition": "确认旱地田型，并核实偏湿或渍涝管理背景。",
+      "source_supported_knowledge": "厢沟、腰沟、围沟对应深度15～20、20～25、20～25cm。",
+      "prototype_behavior": "作为抗渍涝情境的参考，不给所有旱地自动开沟。",
+      "missing_behavior": "田型或干湿不明先补充现场信息。",
+      "limits": "不与C18叠加成所有旱地也必须厢沟≥20cm；干旱保墒另看C20。",
+      "input_fields": [
+        "field_type",
+        "moisture",
+        "standing_water",
+        "ditch_dimensions",
+        "stage"
+      ],
+      "revision": "补上抗渍涝背景，并显式处理与冬前清沟参数的潜在冲突。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C18",
+      "original_title": "厢沟最低深度底线",
+      "title": "冬前沟渠现状检查",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "及时清理“三沟”，尤其前期因抢播整田质量较差、沟系配套不到位的田块，厢沟深度要达到20cm以上，腰沟、围沟逐渐加深，确保沟沟相通",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前意见，尤其抢播整田质量差、沟系配套不足的田块。",
+      "condition": "当前地块苗期已确认，且存在沟渠检查需求；是否适用冬前参数另行确认。",
+      "source_supported_knowledge": "记录厢沟、腰沟、围沟及外排出口是否连通；20cm以上是该情境参数。",
+      "prototype_behavior": "生成检查清单；发现堵塞或排水异常转C23核实维护需求。",
+      "missing_behavior": "未知沟深可不测，但必须如实标记；未知连通情况可通过检查补齐。",
+      "limits": "不把20cm设为所有田型通用底线，不凭尺寸自动加深开挖。",
+      "input_fields": [
+        "stage",
+        "field_type",
+        "ditch_connectivity",
+        "outlet_status",
+        "ditch_dimensions",
+        "inspection_requested"
+      ],
+      "revision": "把通用最低底线改为情境参数；首版保留连通检查价值。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C19",
+      "original_title": "稻茬田、低洼田、冷浸田加密布沟",
+      "title": "低洼田积水检查与维护反馈",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+      "condition": "相关田型已确认，存在检查需求或维护后反馈。",
+      "source_supported_knowledge": "保留厢宽≤2m、每30m加腰沟的布沟参考；首版重点是田面和沟中积水情况。",
+      "prototype_behavior": "检查积水、出口和维护后通畅情况；任务完成与排水效果分别记录。",
+      "missing_behavior": "缺反馈不宣称达到雨止田干；积水持续或加重请求现场处置判断。",
+      "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+      "input_fields": [
+        "field_type",
+        "terrain",
+        "standing_water",
+        "ditch_water",
+        "outlet_status",
+        "completion_feedback"
+      ],
+      "revision": "保留布沟知识，首版落实为积水观察与结果反馈。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C20",
+      "original_title": "丘陵岗地放宽（不适用情况）",
+      "title": "易旱丘陵的保墒与排水边界",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "applicability": "湖北相关丘陵岗地，土壤湿度相对较小、冬春易旱。",
+      "condition": "核实地形、干湿、沟系现状及排灌目的。",
+      "source_supported_knowledge": "厢宽3～4m为该情境参考；并非统一追求彻底排水。",
+      "prototype_behavior": "偏干且无排水异常时不新增排水任务；仍可检查沟渠并处理经确认的堵塞需求。",
+      "missing_behavior": "保墒与排水目标不明先询问，不把未知判成干旱。",
+      "limits": "不是“干旱禁止全部维护”；田型与地形不能仅靠互斥标签处理。",
+      "input_fields": [
+        "terrain",
+        "moisture",
+        "ditch_connectivity",
+        "standing_water",
+        "drainage_goal",
+        "maintenance_need_confirmed"
+      ],
+      "revision": "把笼统“不适用规则”改为目标和田况判断；合入原R07、R08的边界处理。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C21",
+      "original_title": "田外排水沟与高差要求",
+      "title": "外排沟连通及高差参考",
+      "category": "参数与背景参考",
+      "evidence": [
+        {
+          "source_id": "Z01",
+          "quote": "确保外排沟与田间围沟的高差不低于0.5米，实现排灌畅通，减轻渍害。",
+          "locator": "二（二）提升整地质量",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+        }
+      ],
+      "applicability": "2026年全国生产意见的精细整地与沟系配套环节。",
+      "condition": "需要开展沟系配套设计时，确认地形、水位与现有设施条件。",
+      "source_supported_knowledge": "原文要求高差不低于0.5m；另有田内外连通要求。",
+      "prototype_behavior": "连通性纳入首版检查；0.5m保存为建设背景参数，测量基准和适用性需另行确认。",
+      "missing_behavior": "缺测量基准或建设情境时，不据数值判定必须改造。",
+      "limits": "不能因程序需要数值就用0.5m替换另一文件的“高差明显”。",
+      "input_fields": [
+        "ditch_connectivity",
+        "outlet_status",
+        "height_difference_m",
+        "measurement_method",
+        "drainage_design_context"
+      ],
+      "revision": "保留数值依据，删除以程序需要量化作为统一口径理由。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C22",
+      "original_title": "低洼田埂排水口规格",
+      "title": "抗渍涝排水口尺寸参考",
+      "category": "参数与背景参考",
+      "evidence": [
+        {
+          "source_id": "Z04",
+          "quote": "在低洼田埂处开挖排水口（宽35—40厘米、深40—45厘米），降低田外沟渠水位，确保厢沟积水顺利排除。",
+          "locator": "（一）抢排水降渍害",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+        }
+      ],
+      "applicability": "2025年抗渍涝文件的低洼田埂与排水受阻情境。",
+      "condition": "核实湿涝、排水出口及现场需要。",
+      "source_supported_knowledge": "排水口宽35～40cm、深40～45cm是原文处置参考。",
+      "prototype_behavior": "首版记录出口状况；新开排水口属于另行确认的工程处置，不自动安排。",
+      "missing_behavior": "排水受阻原因不明先检查或人工评估。",
+      "limits": "新开口与清理既有沟渠不是同一任务；不能当作所有维护的通用验收尺寸。",
+      "input_fields": [
+        "terrain",
+        "standing_water",
+        "outlet_status",
+        "drainage_design_context"
+      ],
+      "revision": "从主用验收项调整为限定情境的开挖参数参考。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C23",
+      "original_title": "播种后清除沟内杂物",
+      "title": "沟渠清理需求确认与候选任务",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z01",
+          "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+          "locator": "三（一）防范气象灾害",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+        },
+        {
+          "source_id": "Z15",
+          "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+          "locator": "一 清沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+        }
+      ],
+      "applicability": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+      "condition": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+      "source_supported_knowledge": "重点保持外排沟及田内沟系畅通；湿度偏大时原文另有及时清沟建议。",
+      "prototype_behavior": "自动提出维护候选并展示依据；需求确认后再检查人员、工时、期限和逐日作业条件。",
+      "missing_behavior": "需求未知先检查或询问；已确认无需求不生成维护任务。",
+      "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+      "input_fields": [
+        "stage",
+        "observed_at",
+        "moisture",
+        "ditch_connectivity",
+        "outlet_status",
+        "maintenance_need_confirmed"
+      ],
+      "revision": "删除未经支持的全局前置关系；合入原R05和任务需求三态处理。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C24",
+      "original_title": "雨后积水检查",
+      "title": "雨后积水检查候选",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z04",
+          "quote": "降雨后要及时检查田间积水情况，发现问题及时处理，做到积水不过夜，最大程度降低土壤水分。",
+          "locator": "（一）抢排水降渍害",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+        }
+      ],
+      "applicability": "2025年持续阴雨、土壤偏湿的抗渍涝管理情境；应用到当前地块须核实。",
+      "condition": "当地确有降雨记录或现场报告，并确认相关田况；预报降雨仅作提前提示。",
+      "source_supported_knowledge": "雨后检查积水；积水不过夜是原文情境的及时处置要求。",
+      "prototype_behavior": "提出雨后巡沟候选；若实际积水持续或恶化，提示立即联系现场人员判断处置，不用普通七天排程掩盖紧迫性。",
+      "missing_behavior": "缺实况不写成已降雨；缺下田条件则日期待确认，并保留紧急核实提示。",
+      "limits": "不设任意雨量阈值或固定24小时截止；不据降雨自动认定积水或可下田。",
+      "input_fields": [
+        "rainfall_observation",
+        "rainfall_location",
+        "rainfall_time",
+        "moisture",
+        "standing_water",
+        "site_workability"
+      ],
+      "revision": "区分实况与预报，保留及时性，避免自动生成确定处置时间。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C25",
+      "original_title": "降水前后清沟（防冻害叠加）",
+      "title": "越冬寒潮降水前后的清沟参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z13",
+          "quote": "一是清沟排水降渍。降水前后及时清理三沟，防止冷水泡田，冻害害叠加。",
+          "locator": "一 加强油菜田间管理",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "40bd8a2ed3da437a3b1cf8aa71152ce45a4b29859b966393883fea1271a13d27"
+        }
+      ],
+      "applicability": "2026年1月荆州越冬期寒潮情境；不是2026年10月苗期的直接天气规则。",
+      "condition": "核实越冬阶段、当地寒潮降水背景及沟渠现状。",
+      "source_supported_knowledge": "保留降水前后清沟建议及防止冻害叠加的背景。",
+      "prototype_behavior": "后续拓展越冬场景时作为候选来源；首版不按2026年份就直接启用。",
+      "missing_behavior": "阶段或天气背景不明只展示适用限制。",
+      "limits": "原文“冻害害叠加”照录；不得把该次预报最低温当普遍冻害阈值。",
+      "input_fields": [
+        "stage",
+        "cold_event",
+        "forecast_snapshot",
+        "ditch_connectivity"
+      ],
+      "revision": "从主用降为越冬扩展参考，区分同年不同季节。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C26",
+      "original_title": "渍害后中耕松土",
+      "title": "排渍后的中耕参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "抗湿播种的田块应在清沟排渍的基础上及时中耕松土，防止土壤板结，提高土壤通透性。",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        },
+        {
+          "source_id": "Z04",
+          "quote": "对受渍油菜，待渍涝解除后适时开展中耕松土作业",
+          "locator": "（四）提早管理促壮苗",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+        }
+      ],
+      "applicability": "2025年湖北冬前抗湿播种田块；另有受渍油菜的资料分支。",
+      "condition": "分支一：抗湿播种且已具备排渍基础；分支二：受渍且渍涝已解除。",
+      "source_supported_knowledge": "原文支持排渍在先、中耕在后的条件关系。",
+      "prototype_behavior": "只对用户已确认的中耕待办记录前置状态；确认排渍效果及现场可作业后再考虑日期。",
+      "missing_behavior": "任务标完成不等于渍涝解除；缺结果或土壤条件继续待确认。",
+      "limits": "不把“已发生渍害”直接当成可以中耕；中耕不属于自动沟渠维护。",
+      "input_fields": [
+        "wet_sowing",
+        "waterlogging_history",
+        "waterlogging_resolved",
+        "soil_workability",
+        "user_task"
+      ],
+      "revision": "拆开来源不同的两条条件分支，补足渍涝解除前提。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C27",
+      "original_title": "培土壅根（含时机与深度）",
+      "title": "寒潮中耕培土的参考时机",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z06",
+          "quote": "寒流来临前或来临时，中耕除草、培土壅蔸，提高根系抗冻能力",
+          "locator": "（一）中耕培土 覆盖抗寒",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "ade2d777b0da1516696161df4982487e99bc89c21077e144feddc6969d365cb0"
+        },
+        {
+          "source_id": "Z06",
+          "quote": "培土以培至第一片叶基部为宜，既能直接保护根部，又能预防后期倒伏。",
+          "locator": "（一）中耕培土 覆盖抗寒",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "ade2d777b0da1516696161df4982487e99bc89c21077e144feddc6969d365cb0"
+        }
+      ],
+      "applicability": "2023年长江流域越冬期低温冻害指导。",
+      "condition": "寒流背景、阶段、植株和现场条件经确认。",
+      "source_supported_knowledge": "原文建议培土至第一片叶基部；没有在所引段落规定“封行前”。",
+      "prototype_behavior": "保留越冬处置资料；仅对用户已确认待办考虑后续排程。",
+      "missing_behavior": "缺天气背景或田况不生成确定培土时间。",
+      "limits": "不从寒流来临就推断现场可以作业；不纳入首版自动任务。",
+      "input_fields": [
+        "stage",
+        "cold_event",
+        "seedling_condition",
+        "site_workability",
+        "user_task"
+      ],
+      "revision": "删除未在主源核实的封行前条件，保留2023年越冬范围。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C28",
+      "original_title": "解冻后清沟",
+      "title": "解冻后的清沟参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z06",
+          "quote": "田块解冻后，应及时清理疏通厢沟、腰沟、围沟“三沟”，达到沟沟相通、排渍畅通，降低田间湿度，减少次生灾害，促进油菜根系生长。",
+          "locator": "（一）中耕培土 覆盖抗寒",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "ade2d777b0da1516696161df4982487e99bc89c21077e144feddc6969d365cb0"
+        }
+      ],
+      "applicability": "2023年长江流域越冬冻害后管理。",
+      "condition": "现场确认田块已解冻，而非仅气温预报升高。",
+      "source_supported_knowledge": "解冻后检查疏通三沟，关注排渍与次生灾害。",
+      "prototype_behavior": "保留越冬扩展候选；未拓展首版阶段前仅展示参考。",
+      "missing_behavior": "解冻或现场可作业条件未知时不定日期。",
+      "limits": "温度回升不等于土壤解冻；不把历史冻害视作当前事实。",
+      "input_fields": [
+        "stage",
+        "thaw_confirmed",
+        "ditch_connectivity",
+        "site_workability"
+      ],
+      "revision": "补充真实解冻确认，保持越冬扩展身份。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C29",
+      "original_title": "灌水原则（沟水不上厢）",
+      "title": "灌水后的明水处理参考",
+      "category": "扩展处置参考",
+      "evidence": [
+        {
+          "source_id": "Z14",
+          "quote": "灌水要坚持沟水不上厢、明水不过夜原则，厢面湿润及时排出明水。",
+          "locator": "三 肥水管理",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "49a360598b7628781a8470f829a22dd924efd5f390da123ff0559e2722312059"
+        }
+      ],
+      "applicability": "2025年孝感冬前管理，弱苗或缺墒田块的水肥结合情境。",
+      "condition": "灌溉需求与方案已获确认，现场观察到厢面湿润或明水。",
+      "source_supported_knowledge": "保留沟水不上厢、明水不过夜及湿润后排明水原则。",
+      "prototype_behavior": "对已确认灌溉待办保留后续观察与条件性排水提示；首版不自动生成灌溉方案。",
+      "missing_behavior": "缺现场反馈时不能宣称灌溉结束或排水达标。",
+      "limits": "这是条件性先后关系，不是灌溉与排水互斥，也不是无条件必须另排一次排水。",
+      "input_fields": [
+        "irrigation_confirmed",
+        "moisture",
+        "standing_water",
+        "completion_feedback",
+        "user_task"
+      ],
+      "revision": "纠正互斥约束说法；日期分别记录网页显示、文件落款和网址目录。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C30",
+      "original_title": "周期性深翻",
+      "title": "播前周期深翻背景",
+      "category": "参数与背景参考",
+      "evidence": [
+        {
+          "source_id": "Z07",
+          "quote": "水稻收获后，根据土壤墒情开展深翻，一般田块可每2-3年深翻一次，深度不低于30厘米，打破土壤紧实板结。茬口宽松的田块可先翻耕，在土壤绝对含水率为25%-40%的情况下播种作业",
+          "locator": "四 适时开展深翻",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "2a23ffd2afc4ee01122b8c05bf2eb085967b2bf36188ec635b61ddab8bfc54bd"
+        }
+      ],
+      "applicability": "2026年湖北秋播前稻茬整地；首版田块已进入苗期。",
+      "condition": "水稻已收获、尚待备耕且墒情等条件明确。",
+      "source_supported_knowledge": "2～3年一次、深度≥30cm对应深翻；25%～40%土壤绝对含水率对应播种作业。",
+      "prototype_behavior": "作为背景保留，不给已出苗地块安排深翻。",
+      "missing_behavior": "缺上次深翻年份不猜测周期到期。",
+      "limits": "不采用的原因是阶段和任务范围不符，而不是周期长就绝不可能落在未来七天。",
+      "input_fields": [
+        "stage",
+        "last_deep_tillage_date",
+        "soil_absolute_water_pct",
+        "sowing_date"
+      ],
+      "revision": "拆清深翻与播种参数，修正周期长等于不能七天排程的理由。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    },
+    {
+      "id": "C31",
+      "original_title": "新增 统合原R01至R03巡田基础项",
+      "title": "普通巡田的苗情墒情虫情记录",
+      "category": "首版候选",
+      "evidence": [
+        {
+          "source_id": "Z16",
+          "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+          "locator": "五 加强技术指导",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e"
+        }
+      ],
+      "applicability": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+      "condition": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+      "source_supported_knowledge": "检查苗情、土壤干湿及积水、虫害迹象；记录观察时间。",
+      "prototype_behavior": "提出巡田候选，整合C11、C18、C19的检查项；同地同次巡田不重复创建多项任务。",
+      "missing_behavior": "苗情、墒情、虫情未知可通过检查采集；地域阶段未知先核实范围。",
+      "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+      "input_fields": [
+        "stage",
+        "region",
+        "inspection_requested",
+        "observed_at",
+        "seedling_condition",
+        "moisture",
+        "standing_water",
+        "pest_signs"
+      ],
+      "revision": "新增基础巡田卡，补齐不依赖专业分级的两类任务入口。",
+      "review_status": "原文已核对；跨情境适用性与工程解释待人工复核",
+      "runtime_enabled": false
+    }
+  ]
+}
