@@ -2,7 +2,7 @@
 
 ## Project Scope & Structure
 
-This repository develops **农时窗口**, a rapeseed seedling-stage farm-task planner. The implementation provides configuration loading and environment diagnostics; weather integration, scheduling, model calls, and the product UI remain pending.
+This repository develops **农时窗口**, a rapeseed seedling-stage farm-task planner. A local offline demonstration now covers structured inputs, condition screening, deterministic seven-day scheduling, feedback, SQLite plan history, and a Streamlit page. Its rules and weather are labeled simulations; live weather and model calls remain pending.
 
 Project materials live in `AIC claude code/`:
 
@@ -20,12 +20,13 @@ Use Python 3.12 and uv from the repository root:
 ```powershell
 uv sync --locked
 uv run python -m nongshi.check_env
+uv run streamlit run src/nongshi/app.py
 uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
 ```
 
-These install locked dependencies, check imports and temporary SQLite persistence, run tests, and check style. `uv run python -m streamlit hello` starts the framework demo, not the farm-planning application. Use `.venv`; avoid installing project packages into system or GIS environments.
+These install locked dependencies, check imports and temporary SQLite persistence, run the offline app, run tests, and check style. Use `.venv`; avoid installing project packages into system or GIS environments.
 
 ## Style & Naming Conventions
 
@@ -35,9 +36,9 @@ Use four-space indentation, type hints, `snake_case` functions/modules, and `Pas
 
 ## Testing & Validation
 
-Use pytest with `test_*.py` files and `test_*` functions. No coverage percentage is mandated. Tests use `.pytest_cache/tmp` to avoid shared temporary-directory permissions. For document changes, verify sources, preserve required fields, and inspect rendered pages.
+Use pytest with `test_*.py` files and `test_*` functions. No coverage percentage is mandated. Tests use `.pytest_tmp/` so fresh checkouts can run them. For document changes, verify sources, preserve required fields, and inspect rendered pages.
 
-Future business validation follows the project brief: missing-input clarification, scheduling constraints, citations, weather failures, and preservation of completed tasks. Configuration tests do not establish agronomic correctness.
+Business validation follows the project brief: missing-input clarification, scheduling constraints, citations, weather failures, and preservation of completed tasks. Passing simulation tests does not establish agronomic correctness.
 
 ## Commit & Pull Request Guidelines
 

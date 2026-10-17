@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "ruff>=0.14,<1"]
+dev = ["pypdf>=6.10,<7", "pytest>=8,<10", "ruff>=0.14,<1"]
 
 [build-system]
 requires = ["hatchling>=1.26"]
@@ -22,11 +22,12 @@ packages = ["src/nongshi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--basetemp=.pytest_cache/tmp"
+addopts = "--basetemp=.pytest_tmp"
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["rules/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

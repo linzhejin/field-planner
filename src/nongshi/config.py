@@ -20,3 +20,4 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_base_url: str = ""
     llm_api_key: SecretStr = SecretStr("")
+    database_path: Path = PROJECT_ROOT / "data" / "local" / "plans.sqlite3"

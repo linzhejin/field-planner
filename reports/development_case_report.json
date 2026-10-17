@@ -1,0 +1,569 @@
+{
+  "report_version": "1.0",
+  "classification": "本地开发验证；不是独立留出评测或农业适用性结论",
+  "ruleset_version": "融合修订版1.0",
+  "legacy_rule_version": "0.1.0",
+  "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+  "engineering_rules_version": "0.1.0",
+  "engineering_rule_ids": [
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "D05",
+    "D06",
+    "D07",
+    "D08",
+    "D09",
+    "D10",
+    "D11",
+    "D12"
+  ],
+  "selected_rule_ids": [
+    "C11",
+    "C18",
+    "C19",
+    "C20",
+    "C23",
+    "C24",
+    "C31"
+  ],
+  "development_cases": [
+    {
+      "id": "T01",
+      "name": "正常检查",
+      "status": "executed",
+      "expected": {
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled"
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled",
+        "missing_fields": [],
+        "reason_code": "scheduled"
+      }
+    },
+    {
+      "id": "T02",
+      "name": "已确认维护",
+      "status": "executed",
+      "expected": {
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled"
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "scheduled",
+        "missing_fields": [],
+        "reason_code": "scheduled"
+      }
+    },
+    {
+      "id": "T03",
+      "name": "无维护需求",
+      "status": "executed",
+      "expected": {
+        "necessity": "no_need",
+        "window": null,
+        "schedule_status": "not_generated"
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "no_need",
+        "window": null,
+        "schedule_status": "not_generated",
+        "missing_fields": [],
+        "reason_code": "no_need"
+      }
+    },
+    {
+      "id": "T04",
+      "name": "阶段缺失",
+      "status": "executed",
+      "expected": {
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "stage"
+        ]
+      },
+      "actual": {
+        "applicability": "pending",
+        "necessity": "required",
+        "window": "pending",
+        "schedule_status": "pending",
+        "missing_fields": [
+          "stage"
+        ],
+        "reason_code": "scope_pending"
+      }
+    },
+    {
+      "id": "T05",
+      "name": "维护需求未知",
+      "status": "executed",
+      "expected": {
+        "necessity": "unknown",
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "ditch_connectivity",
+          "maintenance_need_confirmed"
+        ]
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "unknown",
+        "window": "pending",
+        "schedule_status": "pending",
+        "missing_fields": [
+          "ditch_connectivity",
+          "standing_water",
+          "maintenance_need_confirmed"
+        ],
+        "reason_code": "necessity_pending"
+      }
+    },
+    {
+      "id": "T06",
+      "name": "明确不能作业",
+      "status": "executed",
+      "expected": {
+        "window": "unavailable",
+        "schedule_status": "unscheduled",
+        "ask": [
+          "weather_workability"
+        ]
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "unavailable",
+        "schedule_status": "unscheduled",
+        "missing_fields": [
+          "2026-10-17:weather_workability",
+          "2026-10-18:weather_workability",
+          "2026-10-19:weather_workability",
+          "2026-10-20:weather_workability",
+          "2026-10-21:weather_workability",
+          "2026-10-22:weather_workability",
+          "2026-10-23:weather_workability"
+        ],
+        "reason_code": "no_available_window"
+      }
+    },
+    {
+      "id": "T07",
+      "name": "可作业信息不足",
+      "status": "executed",
+      "expected": {
+        "window": "pending",
+        "schedule_status": "pending",
+        "ask": [
+          "site_workability"
+        ]
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "pending",
+        "schedule_status": "pending",
+        "missing_fields": [
+          "2026-10-17:site_workability",
+          "2026-10-18:site_workability",
+          "2026-10-19:site_workability",
+          "2026-10-20:site_workability",
+          "2026-10-21:site_workability",
+          "2026-10-22:site_workability",
+          "2026-10-23:site_workability"
+        ],
+        "reason_code": "workability_pending"
+      }
+    },
+    {
+      "id": "T08",
+      "name": "人力不足",
+      "status": "executed",
+      "expected": {
+        "window": "available",
+        "schedule_status": "unscheduled",
+        "reason": "capacity"
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "unscheduled",
+        "missing_fields": [],
+        "reason_code": "capacity"
+      }
+    },
+    {
+      "id": "T09",
+      "name": "工时缺失",
+      "status": "executed",
+      "expected": {
+        "window": "available",
+        "schedule_status": "pending",
+        "ask": [
+          "duration_minutes"
+        ]
+      },
+      "actual": {
+        "applicability": "matched",
+        "necessity": "required",
+        "window": "available",
+        "schedule_status": "pending",
+        "missing_fields": [
+          "duration_minutes"
+        ],
+        "reason_code": "missing_duration"
+      }
+    },
+    {
+      "id": "T10",
+      "name": "完成保留和重排",
+      "status": "executed",
+      "actual": {
+        "completed": [
+          "A-I",
+          "C-I"
+        ],
+        "B-I": "2026-10-20T10:30:00+08:00",
+        "A-M": "2026-10-21T09:00:00+08:00"
+      }
+    },
+    {
+      "id": "T11",
+      "name": "现场反馈变化",
+      "status": "executed",
+      "actual": {
+        "B-M": {
+          "necessity": "required",
+          "2026-10-20": "unavailable",
+          "later": [
+            "pending"
+          ]
+        },
+        "A-M": "2026-10-21T09:00:00+08:00"
+      }
+    },
+    {
+      "id": "T12-draft-as-final",
+      "name": "T12-draft-as-final",
+      "status": "executed",
+      "actual": "7张候选卡保持runtime_enabled=false"
+    },
+    {
+      "id": "T12-flowering-source",
+      "name": "T12-flowering-source",
+      "status": "executed",
+      "actual": "开花期输入保持超出苗期范围"
+    },
+    {
+      "id": "T12-weather-failure",
+      "name": "T12-weather-failure",
+      "status": "executed",
+      "actual": "天气未确认时保持待确认并保留完成记录"
+    }
+  ],
+  "boundary_cases": [
+    {
+      "id": "V01",
+      "input": "叶龄5片、密度恰好5万、封行",
+      "expected": "C09条件参考包含等于边界；仍不自动生成化控任务。",
+      "status": "executed",
+      "actual": {
+        "A-I": "not_generated",
+        "A-M": "not_generated"
+      }
+    },
+    {
+      "id": "V02",
+      "input": "其他条件同C12，但天气未知",
+      "expected": "C12没有偷偷加入晴天中午硬条件；若排任何已确认作业，仍需独立核实作业天气。",
+      "status": "executed",
+      "actual": {
+        "window": "pending",
+        "schedule_status": "pending"
+      }
+    },
+    {
+      "id": "V03",
+      "input": "已有沟渠维护任务和无依赖的巡田任务",
+      "expected": "C23不自动给所有田间作业添加清沟前置。",
+      "status": "executed",
+      "actual": {
+        "inspection": "scheduled",
+        "maintenance": "scheduled",
+        "maintenance_prerequisites": []
+      }
+    },
+    {
+      "id": "V04",
+      "input": "已灌溉、湿润但有无明水未知",
+      "expected": "C29追问结果；不直接生成排水，不设置灌溉与排水互斥。",
+      "status": "reference_only_not_executed",
+      "actual": "缺少C29灌溉与排水互作处置模型，属于知识范围外案例"
+    },
+    {
+      "id": "V05",
+      "input": "明天预报下雨，今天无降雨实况",
+      "expected": "C24只能提前提示，不写成雨后事实。",
+      "status": "executed",
+      "actual": {
+        "inspection": "scheduled",
+        "evidence_ids": [
+          "C11",
+          "C19",
+          "C31"
+        ]
+      }
+    },
+    {
+      "id": "V06",
+      "input": "已确认苗期，叶龄和虫情都未知，用户请求检查",
+      "expected": "C31可提出检查候选；缺现场或天气条件时暂不定日期。",
+      "status": "executed",
+      "actual": {
+        "inspection": "scheduled",
+        "leaf_count": null
+      }
+    },
+    {
+      "id": "V07",
+      "input": "丘陵田偏干、沟渠通畅，无维护需求",
+      "expected": "C20不新增排水任务；也不设置所有维护一律禁止。",
+      "status": "executed",
+      "actual": {
+        "necessity": "no_need",
+        "schedule_status": "not_generated"
+      }
+    },
+    {
+      "id": "V08",
+      "input": "旱地、偏湿，C17与C18参数被同时检索",
+      "expected": "保留各自情境，不能无条件叠加为厢沟深度≥20cm。",
+      "status": "reference_only_not_executed",
+      "actual": "需要比较C17与C18的参数适用场景，属于农艺知识解释"
+    },
+    {
+      "id": "V09",
+      "input": "7片叶，需要查询C10留苗数量",
+      "expected": "提示原文分档未覆盖，不插值猜测。",
+      "status": "reference_only_not_executed",
+      "actual": "C10叶龄分档未纳入候选规则，属于知识查询与插值边界"
+    },
+    {
+      "id": "V10",
+      "input": "未来五日日均预报≤5℃",
+      "expected": "C06不把预报当已观测的连续五日，不自动切换全部管理规则。",
+      "status": "reference_only_not_executed",
+      "actual": "温度预报与低温触发不在本轮字段和规则范围"
+    },
+    {
+      "id": "V11",
+      "input": "中耕前置排渍任务已点完成，但仍有积水",
+      "expected": "C26继续核实排渍效果和可作业性，不因完成按钮就认为条件满足。",
+      "status": "executed",
+      "actual": {
+        "completed": true,
+        "standing_water": true
+      }
+    },
+    {
+      "id": "V12",
+      "input": "同一地块C11、C18、C19、C31均命中",
+      "expected": "合并为一次检查的多个项目，避免四次重复巡田。",
+      "status": "executed",
+      "actual": {
+        "inspection_count": 1,
+        "evidence_ids": [
+          "C11",
+          "C18",
+          "C19",
+          "C31"
+        ]
+      }
+    }
+  ],
+  "supplemental_cases": [
+    {
+      "id": "A01",
+      "input": "播种日期未知，却询问哪天查苗",
+      "expected": "不推算播后5—7天；先核实播种日期与当前阶段；普通检查需求可单独确认。",
+      "status": "executed",
+      "actual": {
+        "inspection": "scheduled"
+      }
+    },
+    {
+      "id": "A02",
+      "input": "湖北其他城市直接套当阳播后5—7天",
+      "expected": "保留地方来源身份，跨地区适用性待复核，不自动套用。",
+      "status": "reference_only_not_executed",
+      "actual": "地块市级行政区未纳入结构化输入，跨地区来源复核需人工完成"
+    },
+    {
+      "id": "A03",
+      "input": "未来4小时无雨，要求据此安排巡田",
+      "expected": "施药条款不转换为巡田可作业条件；独立核实天气与现场。",
+      "status": "executed",
+      "actual": {
+        "window_by_date": {
+          "2026-10-19": "pending",
+          "2026-10-20": "pending",
+          "2026-10-21": "pending",
+          "2026-10-22": "pending",
+          "2026-10-23": "pending",
+          "2026-10-24": "pending",
+          "2026-10-25": "pending"
+        }
+      }
+    },
+    {
+      "id": "A04",
+      "input": "不同来源沟深为20厘米以上或25厘米以上，要求取更严者",
+      "expected": "按地区、田型、时期与场景分别展示，不自动取最大值或返工。",
+      "status": "reference_only_not_executed",
+      "actual": "需比较不同来源沟深参数，超出已选候选卡执行范围"
+    },
+    {
+      "id": "A05",
+      "input": "套用三类苗表给四类苗分档",
+      "expected": "不得强行对应；缺少完整指标，保留待专业解释。",
+      "status": "reference_only_not_executed",
+      "actual": "苗情分档解释和专业评估不属于本轮任务生成"
+    },
+    {
+      "id": "A06",
+      "input": "苗发黄，要求直接诊断根腐病并用药",
+      "expected": "名单不足以诊断；记录异常，转专业核实，不生成药剂任务。",
+      "status": "executed",
+      "actual": {
+        "task_types": [
+          "inspection",
+          "maintenance"
+        ]
+      }
+    },
+    {
+      "id": "A07",
+      "input": "同一堵沟已有维护候选，又检索到宜昌文件",
+      "expected": "只补充来源，合并同一需求，不重复创建维护任务。",
+      "status": "executed",
+      "actual": {
+        "maintenance_candidates": 1
+      }
+    },
+    {
+      "id": "A08",
+      "input": "预报三天后寒潮，系统声称受冻后应下田",
+      "expected": "预报不等于已发生或已受冻；保留提前提示，事后核实苗情与作业条件。",
+      "status": "reference_only_not_executed",
+      "actual": "寒潮预报及冻害后处置不在本轮字段与规则范围"
+    }
+  ],
+  "reference_replay": {
+    "V1": {
+      "id": "252aad14-2e9f-4e6c-a201-23715fce3d3a",
+      "created_at": "2026-10-18T18:00:00+08:00",
+      "synthetic": true,
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "start_at": "2026-10-19T09:00:00+08:00",
+          "end_at": "2026-10-19T09:30:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "A-M",
+          "start_at": "2026-10-20T09:00:00+08:00",
+          "end_at": "2026-10-20T10:30:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "B-I",
+          "start_at": "2026-10-20T10:30:00+08:00",
+          "end_at": "2026-10-20T11:00:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "C-I",
+          "start_at": "2026-10-19T09:30:00+08:00",
+          "end_at": "2026-10-19T10:00:00+08:00",
+          "status": "scheduled"
+        }
+      ]
+    },
+    "V2": {
+      "id": "4daa1ffa-2476-4ee7-8ecf-d5b8e67285a5",
+      "created_at": "2026-10-19T18:00:00+08:00",
+      "synthetic": true,
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "start_at": "2026-10-19T09:00:00+08:00",
+          "end_at": "2026-10-19T09:30:00+08:00",
+          "status": "completed"
+        },
+        {
+          "task_id": "A-M",
+          "start_at": "2026-10-21T09:00:00+08:00",
+          "end_at": "2026-10-21T10:30:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "B-I",
+          "start_at": "2026-10-20T10:30:00+08:00",
+          "end_at": "2026-10-20T11:00:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "C-I",
+          "start_at": "2026-10-19T09:30:00+08:00",
+          "end_at": "2026-10-19T10:00:00+08:00",
+          "status": "completed"
+        }
+      ]
+    },
+    "V3": {
+      "id": "f575ac03-96cb-4b98-b764-16c15b8f8dce",
+      "created_at": "2026-10-20T11:05:00+08:00",
+      "synthetic": true,
+      "assignments": [
+        {
+          "task_id": "A-I",
+          "start_at": "2026-10-19T09:00:00+08:00",
+          "end_at": "2026-10-19T09:30:00+08:00",
+          "status": "completed"
+        },
+        {
+          "task_id": "A-M",
+          "start_at": "2026-10-21T09:00:00+08:00",
+          "end_at": "2026-10-21T10:30:00+08:00",
+          "status": "scheduled"
+        },
+        {
+          "task_id": "B-I",
+          "start_at": "2026-10-20T10:30:00+08:00",
+          "end_at": "2026-10-20T11:00:00+08:00",
+          "status": "completed"
+        },
+        {
+          "task_id": "C-I",
+          "start_at": "2026-10-19T09:30:00+08:00",
+          "end_at": "2026-10-19T10:00:00+08:00",
+          "status": "completed"
+        }
+      ]
+    }
+  }
+}
