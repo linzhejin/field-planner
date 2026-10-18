@@ -1,4 +1,4 @@
-"""从项目根目录的 .env 或进程环境读取配置，默认不绑定服务商。"""
+"""从根目录 .env 或进程环境读取服务配置；DeepSeek 默认可改配。"""
 
 from pathlib import Path
 
@@ -16,8 +16,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    llm_provider: str = ""
-    llm_model: str = ""
-    llm_base_url: str = ""
+    llm_provider: str = "deepseek"
+    llm_model: str = "deepseek-flash"
+    llm_base_url: str = "https://api.deepseek.com"
     llm_api_key: SecretStr = SecretStr("")
+    llm_timeout_seconds: float = 20.0
+    weather_timeout_seconds: float = 8.0
     database_path: Path = PROJECT_ROOT / "data" / "local" / "plans.sqlite3"

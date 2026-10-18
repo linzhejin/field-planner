@@ -9,7 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from nongshi.repository import PlanStoreV2
 
-APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
+APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app_v2.py"
 
 
 def _set_daily_confirmations(app: AppTest) -> None:

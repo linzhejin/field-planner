@@ -26,6 +26,8 @@ def request_v2(**field_overrides: object) -> PlanRequestV2:
         "name": "模拟地块A",
         "province": "湖北",
         "province_confirmed": True,
+        "crop": "油菜",
+        "crop_confirmed": True,
         "stage": "苗期",
         "stage_confirmed": True,
         "field_type": "lowland_rice_stubble",
@@ -109,6 +111,15 @@ def test_unknown_scope_and_unknown_daily_workability_remain_distinct() -> None:
     assert inspection.window_by_date[START + timedelta(days=1)] == "available"
 
 
+def test_crop_must_be_confirmed_and_non_rapeseed_is_out_of_scope() -> None:
+    missing = items(build_plan_v2(request_v2(crop=None, crop_confirmed=False)))["A-I"]
+    assert missing.applicability == "pending"
+    assert "crop" in missing.missing_fields
+
+    other_crop = items(build_plan_v2(request_v2(crop="小麦", crop_confirmed=True)))["A-I"]
+    assert other_crop.applicability == "out_of_scope"
+
+
 def test_unknown_scope_does_not_erase_user_demand_and_out_of_scope_stays_unplanned() -> None:
     unknown = items(build_plan_v2(request_v2(stage=None)))
     assert unknown["A-I"].necessity == "required"
@@ -172,6 +183,28 @@ def test_minute_scheduler_places_contiguous_tasks_without_overlap_and_respects_p
     assert by_id["A-I"].end_at <= by_id["A-M"].start_at
     scheduled = sorted((i.start_at, i.end_at) for i in plan.items if i.start_at and i.end_at)
     assert all(left[1] <= right[0] for left, right in zip(scheduled, scheduled[1:], strict=False))
+
+
+def test_new_confirmed_maintenance_issue_gets_a_new_id_after_prior_work_is_completed() -> None:
+    first = build_plan_v2(request_v2(maintenance_due_date=None))
+    completed_at = datetime(2026, 10, 19, 11, tzinfo=LOCAL_ZONE)
+    completed = apply_feedback_v2(
+        first,
+        FeedbackV2(kind="completed", at=completed_at, task_id="A-M"),
+    )
+    request = request_v2(
+        maintenance_due_date=None,
+        maintenance_task_id="A-M-issue-2",
+        completed_maintenance_task_ids=["A-M"],
+        completed_at={"A-M": completed_at},
+    )
+
+    updated = build_plan_v2(request, previous=completed)
+    by_id = items(updated)
+
+    assert by_id["A-M"].completed is True
+    assert by_id["A-M-issue-2"].completed is False
+    assert by_id["A-M-issue-2"].schedule_status in {"scheduled", "unscheduled"}
 
 
 def test_feedback_never_backdates_and_invalidates_only_affected_plot_day() -> None:

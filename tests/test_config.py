@@ -19,11 +19,12 @@ def load_config_module() -> ModuleType:
     return importlib.import_module("nongshi.config")
 
 
-def test_empty_configuration_is_offline_ready() -> None:
+def test_deepseek_defaults_are_ready_but_credentials_remain_empty() -> None:
     config_module = load_config_module()
     settings = config_module.Settings(_env_file=None)
-    assert settings.llm_provider == ""
-    assert settings.llm_model == ""
+    assert settings.llm_provider == "deepseek"
+    assert settings.llm_model == "deepseek-flash"
+    assert settings.llm_base_url == "https://api.deepseek.com"
     assert settings.llm_api_key.get_secret_value() == ""
 
 

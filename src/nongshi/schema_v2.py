@@ -83,6 +83,8 @@ class FieldProfile(BaseModel):
     name: str = Field(min_length=1)
     province: str | None = None
     province_confirmed: bool = False
+    crop: str | None = None
+    crop_confirmed: bool = False
     stage: str | None = None
     stage_confirmed: bool = False
     field_type: Literal["lowland_rice_stubble", "dry_hilly", "other"] | None = None
@@ -106,6 +108,8 @@ class FieldProfile(BaseModel):
     maintenance_earliest_date: date | None = None
     maintenance_due_date: date | None = None
     maintenance_prerequisites: list[str] = Field(default_factory=list)
+    maintenance_task_id: str | None = None
+    completed_maintenance_task_ids: list[str] = Field(default_factory=list)
     observed_at: AwareDatetime | None = None
     observation_source: Literal["observed", "user_estimate", "synthetic", "official"] = "synthetic"
 
@@ -157,7 +161,15 @@ class PlanRequestV2(BaseModel):
             raise ValueError("规则编号不能重复")
         if set(self.engineering_rule_ids) != {f"D{i:02}" for i in range(1, 13)}:
             raise ValueError("工程约定必须独立保留D01—D12编号")
-        task_ids = {f"{plot.id}-I" for plot in self.plots} | {f"{plot.id}-M" for plot in self.plots}
+        task_ids: set[str] = set()
+        for plot in self.plots:
+            task_ids.add(f"{plot.id}-I")
+            task_ids.add(plot.maintenance_task_id or f"{plot.id}-M")
+            task_ids.update(plot.completed_maintenance_task_ids)
+        if len(task_ids) != sum(
+            2 + len(plot.completed_maintenance_task_ids) for plot in self.plots
+        ):
+            raise ValueError("当前和已完成任务编号不能重复")
         if any(
             task_id not in task_ids
             for plot in self.plots

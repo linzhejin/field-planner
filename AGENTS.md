@@ -2,16 +2,16 @@
 
 ## Project Scope & Structure
 
-This repository develops **农时窗口**, a rapeseed seedling-stage farm-task planner. A local offline demonstration now covers structured inputs, condition screening, deterministic seven-day scheduling, feedback, SQLite plan history, and a Streamlit page. Its rules and weather are labeled simulations; live weather and model calls remain pending.
+This repository develops **农时窗口**, a rapeseed seedling-stage farm-task planner. The primary Streamlit workbench supports blank-first field setup, a versioned SQLite draft and event history, condition-aware rule evidence, Open-Meteo weather snapshots, seven-day minute scheduling, a DeepSeek tool-calling assistant, and preview-and-adopt plan revisions. Model and weather integrations must degrade cleanly to structured inputs when unavailable.
 
-Project materials live in `AIC claude code/`:
+Project materials and source data live in:
 
-- `农时窗口_项目说明_20261016.docx`: scope, decisions, responsibilities, acceptance criteria, and submission requirements. Read this first.
-- `农时窗口_任务清单_优化版_20261016.docx`: current task checklist.
+- `AIC claude code/`: project brief, task checklist, and submission requirements.
 - `附件/`: official competition PDFs; preserve originals.
 - `模板/`: official `.doc` original and editable `.docx` report template.
+- `rules/`: C rule cards, source index, legacy R mappings, D engineering conventions, and reference cases. Do not merge their identifiers or change source files casually.
 
-Keep Python code in `src/nongshi/` and tests in `tests/`. Root `README.md` documents setup; `pyproject.toml` and `uv.lock` define dependencies. Do not recreate the deleted historical proposals or duplicate the task checklist.
+Keep Python code in `src/nongshi/` and tests in `tests/`. Root `README.md` documents setup; `pyproject.toml` and `uv.lock` define dependencies. The main app is `src/nongshi/app.py`; `app_v2.py` remains available for offline regression checks. Do not recreate deleted historical proposals or duplicate the team task checklist.
 
 ## Build, Test & Development Commands
 
@@ -38,7 +38,7 @@ Use four-space indentation, type hints, `snake_case` functions/modules, and `Pas
 
 Use pytest with `test_*.py` files and `test_*` functions. No coverage percentage is mandated. Tests use `.pytest_tmp/` so fresh checkouts can run them. For document changes, verify sources, preserve required fields, and inspect rendered pages.
 
-Business validation follows the project brief: missing-input clarification, scheduling constraints, citations, weather failures, and preservation of completed tasks. Passing simulation tests does not establish agronomic correctness.
+Business validation follows the project brief: missing-input clarification, scheduling constraints, source citations, weather failures, persistence conflicts, and preservation of completed tasks. Keep C11, C18, C19, C20, C23, C24, and C31 marked as development candidates pending review. Passing simulated tests does not establish agronomic correctness or live-service availability.
 
 ## Commit & Pull Request Guidelines
 
@@ -48,4 +48,4 @@ PRs should describe the change, affected documents/modules, validation evidence,
 
 ## Evidence & Configuration
 
-Keep credentials in ignored `.env` files; distribute only `.env.example`. Preserve source dates and applicability conditions. Never invent weather, agronomic rules, surveys, or evaluation results. Remove school, college, and adviser identifiers from submissions.
+Keep credentials in ignored `.env` files; distribute only `.env.example`. The DeepSeek default is configurable and an empty key must leave structured workflows usable. Preserve source dates and applicability conditions. Never invent weather, agronomic rules, surveys, or evaluation results. Remove school, college, and adviser identifiers from submissions.

@@ -26,13 +26,17 @@ def _scope(plot: FieldProfile) -> tuple[str, list[str], str]:
         missing.append("province")
     elif not plot.province_confirmed:
         missing.append("province_confirmation")
+    if plot.crop is None:
+        missing.append("crop")
+    elif not plot.crop_confirmed:
+        missing.append("crop_confirmation")
     if plot.stage is None:
         missing.append("stage")
     elif not plot.stage_confirmed:
         missing.append("stage_confirmation")
     if missing:
-        return "pending", missing, "待确认地块地区和生育期"
-    if plot.province != "湖北" or plot.stage != "苗期":
+        return "pending", missing, "待确认地区、作物和生育期"
+    if plot.province != "湖北" or plot.crop != "油菜" or plot.stage != "苗期":
         return "out_of_scope", [], "不在首版湖北油菜苗期范围内"
     return "matched", [], ""
 
@@ -136,7 +140,9 @@ def _base_item(
     days: list[DayWindow],
 ) -> PlanItemV2:
     applicability, necessity, missing = _task_state(plot, task_type)
-    task_id = f"{plot.id}-{'I' if task_type == 'inspection' else 'M'}"
+    task_id = (
+        f"{plot.id}-I" if task_type == "inspection" else plot.maintenance_task_id or f"{plot.id}-M"
+    )
     duration = (
         plot.inspection_duration_minutes
         if task_type == "inspection"
@@ -379,6 +385,15 @@ def build_plan_v2(
         items.append(_base_item(plot, "inspection", catalog, request.days))
         items.append(_base_item(plot, "maintenance", catalog, request.days))
     previous_items = {item.task_id: item for item in previous.items} if previous else {}
+    current_ids = {item.task_id for item in items}
+    if previous:
+        for old in previous.items:
+            if (
+                old.completed
+                and old.task_id in request.completed_at
+                and old.task_id not in current_ids
+            ):
+                items.append(old.model_copy(deep=True))
 
     floor = datetime.combine(request.start_date, time.min, tzinfo=LOCAL_ZONE)
     if previous and previous.not_before:

@@ -65,6 +65,17 @@ class PlanStore:
             ).fetchone()
         return PlanVersion.model_validate_json(row[0]) if row else None
 
+    def heads(self) -> list[PlanVersion]:
+        """Return the newest version of each independent legacy plan history."""
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = connection.execute(
+                "SELECT parent.payload FROM plan_versions AS parent "
+                "WHERE NOT EXISTS ("
+                "SELECT 1 FROM plan_versions AS child WHERE child.parent_id = parent.id"
+                ") ORDER BY parent.rowid DESC"
+            ).fetchall()
+        return [PlanVersion.model_validate_json(row[0]) for row in rows]
+
     def history(self, version_id: str) -> list[PlanVersion]:
         versions: list[PlanVersion] = []
         current: str | None = version_id
