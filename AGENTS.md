@@ -6,12 +6,12 @@ This repository develops **农时窗口**, a rapeseed seedling-stage farm-task p
 
 Project materials and source data live in:
 
-- `AIC claude code/`: project brief, task checklist, and submission requirements.
-- `附件/`: official competition PDFs; preserve originals.
-- `模板/`: official `.doc` original and editable `.docx` report template.
+- `产品设计v1/`: current product behavior and interface design.
+- `任务清单_20261018_2.51am/`: current V2.0 task plan and ownership.
+- `AIC claude code/`: historical brief and checklist, requirements research, official PDFs in `附件/`, and report templates in `模板/`. Preserve the official originals.
 - `rules/`: C rule cards, source index, legacy R mappings, D engineering conventions, and reference cases. Do not merge their identifiers or change source files casually.
 
-Keep Python code in `src/nongshi/` and tests in `tests/`. Root `README.md` documents setup; `pyproject.toml` and `uv.lock` define dependencies. The main app is `src/nongshi/app.py`; `app_v2.py` remains available for offline regression checks. Do not recreate deleted historical proposals or duplicate the team task checklist.
+Keep Python code in `src/nongshi/` and tests in `tests/`. Root `README.md` documents setup; `pyproject.toml` and `uv.lock` define dependencies. The main app is `src/nongshi/app.py`; `app_v2.py` remains available for offline regression checks. Do not recreate deleted historical proposals or maintain the 2026-10-16 checklist as a second active task list.
 
 ## Build, Test & Development Commands
 
