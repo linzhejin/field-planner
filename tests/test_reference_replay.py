@@ -39,3 +39,10 @@ def test_case_audit_registers_fourteen_development_scenarios_and_limits_claims()
     assert sum(row["status"] == "executed" for row in report["supplemental_cases"]) == 4
     assert not any(row["status"] == "failed" for row in report["boundary_cases"])
     assert not any(row["status"] == "failed" for row in report["supplemental_cases"])
+
+
+def test_case_audit_reference_replay_is_deterministic() -> None:
+    first = build_case_audit()["reference_replay"]
+    second = build_case_audit()["reference_replay"]
+
+    assert first == second

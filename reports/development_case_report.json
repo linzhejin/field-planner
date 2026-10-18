@@ -473,7 +473,6 @@
   ],
   "reference_replay": {
     "V1": {
-      "id": "252aad14-2e9f-4e6c-a201-23715fce3d3a",
       "created_at": "2026-10-18T18:00:00+08:00",
       "synthetic": true,
       "assignments": [
@@ -504,7 +503,6 @@
       ]
     },
     "V2": {
-      "id": "4daa1ffa-2476-4ee7-8ecf-d5b8e67285a5",
       "created_at": "2026-10-19T18:00:00+08:00",
       "synthetic": true,
       "assignments": [
@@ -535,7 +533,6 @@
       ]
     },
     "V3": {
-      "id": "f575ac03-96cb-4b98-b764-16c15b8f8dce",
       "created_at": "2026-10-20T11:05:00+08:00",
       "synthetic": true,
       "assignments": [

@@ -755,7 +755,6 @@ def build_case_audit() -> dict[str, Any]:
         ],
         "reference_replay": {
             version: {
-                "id": plan.id,
                 "created_at": plan.created_at.isoformat(),
                 "synthetic": plan.request.synthetic,
                 "assignments": [

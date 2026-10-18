@@ -22,6 +22,8 @@ uv run streamlit run src/nongshi/app.py
 
 天气使用 Open-Meteo 地名搜索和七天预报。搜索结果需由用户选择；县级查询点会明确标记。天气快照保存请求位置、返回网格、单位、来源、时间和覆盖日期，并缓存六小时。缺日期或过期数据不会替代现场确认。
 
+若本机系统代理导致天气接口出现 TLS 连接错误、而直连可用，可在启动应用的 PowerShell 会话中设置 `$env:NO_PROXY="open-meteo.com,.open-meteo.com"`；这只让天气请求绕过系统代理，模型请求仍按系统代理设置访问。
+
 将 `.env.example` 复制为 `.env`，在本机填入新生成的 DeepSeek API 密钥。默认模型为 `deepseek-flash`，接口地址可通过 `NONGSHI_LLM_BASE_URL` 覆盖。密钥不要提交或贴到聊天记录。模型只能调用本地校验过的读取、检索、天气和计划预览工具；档案或事实修改须经用户确认。模型不可用时可继续使用结构化表单。
 
 应用数据保存在 Git 忽略的 `data/local/plans.sqlite3`。设置 `NONGSHI_DATABASE_PATH` 可更改路径；独立模拟示例使用旁路数据库，避免混入真实地块。旧版计划保留只读，并可明确复制为新草稿；未知信息不会被补造。

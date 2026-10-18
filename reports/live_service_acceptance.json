@@ -1,0 +1,36 @@
+{
+  "report_version": "1.0",
+  "tested_at": "2026-10-18T07:36:24Z",
+  "classification": "Live service smoke test; DeepSeek authentication remains unverified",
+  "weather": {
+    "status": "passed",
+    "provider": "Open-Meteo",
+    "flow": [
+      "search_locations",
+      "explicit city candidate selection",
+      "fetch_forecast"
+    ],
+    "location": "Wuhan, China",
+    "timezone": "Asia/Shanghai",
+    "coverage_start": "2026-10-19",
+    "coverage_end": "2026-10-25",
+    "days_returned": 7,
+    "stale": false,
+    "network_note": "Direct request succeeded with NO_PROXY for open-meteo.com; Windows system proxy returned TLS EOF.",
+    "coordinates_recorded": false
+  },
+  "deepseek": {
+    "status": "not_run",
+    "model_configured": "deepseek-flash",
+    "reason": "No local API key is configured. A previously exposed credential was not reused.",
+    "credential_recorded": false
+  },
+  "local_validation": {
+    "environment_check": "passed",
+    "pytest": "114 passed",
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "case_report_runs": 2,
+    "case_report_output_stable": true
+  }
+}
