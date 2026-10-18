@@ -1,7 +1,7 @@
 {
   "report_version": "1.0",
-  "tested_at": "2026-10-18T07:36:24Z",
-  "classification": "Live service smoke test; DeepSeek authentication remains unverified",
+  "tested_at": "2026-10-18T07:44:40Z",
+  "classification": "Live service acceptance; Open-Meteo weather and DeepSeek Agent tool call verified",
   "weather": {
     "status": "passed",
     "provider": "Open-Meteo",
@@ -20,10 +20,28 @@
     "coordinates_recorded": false
   },
   "deepseek": {
-    "status": "not_run",
+    "status": "passed",
+    "provider": "DeepSeek Chat Completions",
     "model_configured": "deepseek-flash",
-    "reason": "No local API key is configured. A previously exposed credential was not reused.",
-    "credential_recorded": false
+    "endpoint": "https://api.deepseek.com/chat/completions",
+    "test": "Natural-language query on a synthetic blank field; Agent called the local read_field tool and returned successfully.",
+    "run_id": "214b4420-da3b-4142-84f3-1c4dffee6110",
+    "started_at": "2026-10-18T07:44:28.048061Z",
+    "elapsed_ms": 2577,
+    "request_count": 2,
+    "tool_count": 1,
+    "tools": [
+      {
+        "name": "read_field",
+        "status": "success",
+        "elapsed_ms": 1
+      }
+    ],
+    "prompt_tokens": 4968,
+    "completion_tokens": 212,
+    "network_note": "NO_PROXY bypassed the configured system proxy for api.deepseek.com; one live call succeeded.",
+    "credential_recorded": false,
+    "local_config": "ignored .env"
   },
   "local_validation": {
     "environment_check": "passed",
