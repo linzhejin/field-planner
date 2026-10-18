@@ -30,11 +30,13 @@ uv run streamlit run src/nongshi/app.py
 
 ## 目录与验证
 
+需求研究的当前修订稿为 [`AIC claude code/需求研究/农时窗口_问题剖析与需求调研报告_修订版_20261018.docx`](AIC%20claude%20code/需求研究/农时窗口_问题剖析与需求调研报告_修订版_20261018.docx)。原稿保留作历史；修订稿已修正主要证据外推，仍待团队按 A02 复核，不代表用户调研或田间验证已完成。
+
 ```text
 src/nongshi/     领域模型、持久化、业务服务、工具接入和 Streamlit 工作台
 tests/           排程、规则、天气、Agent、SQLite 和页面流程测试
 rules/           原始规则、来源、工程约定与参考案例
-reports/         开发案例运行报告
+reports/         开发案例运行报告、规则与需求证据核对
 ```
 
 运行检查：
