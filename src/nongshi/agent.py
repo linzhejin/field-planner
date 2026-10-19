@@ -22,6 +22,7 @@ from nongshi.schema_v3 import (
     AgentToolMetricV3,
     AgentToolTraceV3,
     FactEventInputV3,
+    GeocodingResultV3,
     PlanPreviewV3,
     RuleSearchQueryV3,
 )
@@ -52,6 +53,16 @@ class QueryWeatherArgs(ToolArgs):
     field_id: str
     start_date: str
     end_date: str
+
+
+class SearchLocationsArgs(ToolArgs):
+    field_id: str
+    query: str = Field(min_length=2, max_length=160)
+
+
+class ProposeLocationArgs(ToolArgs):
+    field_id: str
+    candidate_id: str
 
 
 class PreviewPlanArgs(ToolArgs):
@@ -122,6 +133,16 @@ TOOL_DEFINITIONS: list[dict[str, object]] = [
         "查询已选择地点的逐日天气；只提供风险信息，不判断现场能否作业。",
         QueryWeatherArgs,
     ),
+    _tool(
+        "search_locations",
+        "按用户给出的地名查找天气查询点；必须由用户明确确认候选项。",
+        SearchLocationsArgs,
+    ),
+    _tool(
+        "propose_location",
+        "只根据本轮已查询的候选地点提出位置修改，不直接保存。",
+        ProposeLocationArgs,
+    ),
     _tool("preview_plan", "根据已保存的输入生成计划预览；不会采用或覆盖计划。", PreviewPlanArgs),
     _tool("propose_field_update", "提出档案修改，须由用户确认后才会保存。", ProposeFieldUpdateArgs),
     _tool("propose_feedback", "提出现场事实修改，须由用户确认后才会记录。", ProposeFeedbackArgs),
@@ -143,6 +164,7 @@ class AgentServiceV3:
         self.weather = weather or OpenMeteoService(
             store=workbench.store,
             timeout_seconds=settings.weather_timeout_seconds,
+            cache_hours=settings.weather_cache_hours,
         )
         self._client = httpx.Client(
             transport=transport,
@@ -151,6 +173,7 @@ class AgentServiceV3:
         )
         self._monotonic = monotonic
         self._retriever = RuleRetrieverV3(workbench.catalog)
+        self._geocoding_candidates: dict[str, tuple[str, GeocodingResultV3]] = {}
 
     def close(self) -> None:
         self._client.close()
@@ -381,10 +404,10 @@ class AgentServiceV3:
     @staticmethod
     def _system_message(field_id: str, *, received_at: datetime) -> str:
         return (
-            "你是农时窗口的中文单地块助手。当前地块 ID 是 "
+            "你是农时窗口的中文农事助手。当前地块 ID 是 "
             f"{field_id}。本轮接收时间为北京时间 {received_at:%Y-%m-%d %H:%M}。"
             "只能根据本地工具结果解释任务、依据、天气和排程。"
-            "先读取或核对状态，再按需调用天气、规则、评估或计划预览工具。"
+            "先读取或核对状态，再按需调用地点搜索、天气、规则、评估或计划预览工具。"
             "最多提出三条影响当前判断的问题。"
             "相对日期只按本轮接收时的北京时间换算，并在待确认修改里写出完整日期；"
             "不能猜测缺失的日期。"
@@ -465,6 +488,56 @@ class AgentServiceV3:
                     end,
                 )
                 result = snapshot.model_dump(mode="json")
+            elif name == "search_locations":
+                args = SearchLocationsArgs.model_validate(raw_arguments)
+                self._check_field(field_id, args.field_id)
+                candidates = self.weather.search_locations(args.query)
+                result_items = []
+                for candidate in candidates:
+                    candidate_id = uuid4().hex
+                    self._geocoding_candidates[candidate_id] = (field_id, candidate)
+                    result_items.append(
+                        {
+                            "candidate_id": candidate_id,
+                            "candidate": candidate.model_dump(mode="json"),
+                        }
+                    )
+                result = {
+                    "query": args.query,
+                    "candidates": result_items,
+                    "instruction": "请让用户按候选显示名称和查询精度明确选择。",
+                }
+            elif name == "propose_location":
+                args = ProposeLocationArgs.model_validate(raw_arguments)
+                self._check_field(field_id, args.field_id)
+                selected = self._geocoding_candidates.get(args.candidate_id)
+                if selected is None or selected[0] != field_id:
+                    raise ValueError("该地点候选不存在或不属于当前地块；请重新搜索")
+                state = self.workbench.get_field(field_id)
+                if state.draft.profile is None:
+                    raise ValueError("先保存地块档案，再修改天气查询地点")
+                candidate = selected[1]
+                location = self.weather.select_location([candidate], candidate.id)
+                updated = state.draft.model_copy(update={"location": location})
+                proposal = AgentProposalV3(
+                    kind="field_update",
+                    field_id=field_id,
+                    expected_draft_version=state.draft_version,
+                    draft=updated,
+                    summary="助手根据地名查找到天气查询点；请核对行政区和精度后确认。",
+                    changes={
+                        "天气查询地点": {
+                            "原值": state.draft.location.model_dump(mode="json")
+                            if state.draft.location
+                            else None,
+                            "候选值": location.model_dump(mode="json"),
+                        }
+                    },
+                )
+                result = {
+                    "requires_user_confirmation": True,
+                    "proposal": proposal.model_dump(mode="json"),
+                }
             elif name == "preview_plan":
                 args = PreviewPlanArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
@@ -584,7 +657,8 @@ class AgentServiceV3:
     ) -> AgentProposalV3:
         state = self.workbench.get_field(field_id)
         current = self.workbench.get_current_plan(field_id)
-        valid_task_ids = {item.task_id for item in current.items} if current else set()
+        current_items = list(current.items) if current else []
+        valid_task_ids = {item.task_id for item in current_items}
         event_ids = {event.event_id for event in self.workbench.list_events(field_id)}
         for event in events:
             feedback = event.feedback
@@ -595,10 +669,8 @@ class AgentServiceV3:
             if event.correction_of and event.correction_of not in event_ids:
                 raise ValueError("更正引用的现场事件不存在")
             if feedback and feedback.kind == "completed":
-                item = (
-                    next((task for task in current.items if task.task_id == feedback.task_id), None)
-                    if current
-                    else None
+                item = next(
+                    (task for task in current_items if task.task_id == feedback.task_id), None
                 )
                 if item is None:
                     raise ValueError("完成反馈引用的任务不存在于当前采用版")

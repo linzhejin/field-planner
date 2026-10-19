@@ -22,4 +22,5 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr = SecretStr("")
     llm_timeout_seconds: float = 20.0
     weather_timeout_seconds: float = 8.0
+    weather_cache_hours: float = 6.0
     database_path: Path = PROJECT_ROOT / "data" / "local" / "plans.sqlite3"

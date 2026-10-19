@@ -88,6 +88,12 @@ def handler_for(forecast: dict[str, object], *, count: int = 2):
     return respond
 
 
+def online_results(service: OpenMeteoService):
+    return [
+        result for result in service.search_locations("武昌") if result.match_source == "open_meteo"
+    ]
+
+
 def test_geocoding_returns_candidates_without_silently_selecting_first() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         assert request.url.params["countryCode"] == "CN"
@@ -97,9 +103,72 @@ def test_geocoding_returns_candidates_without_silently_selecting_first() -> None
     service = OpenMeteoService(transport=httpx.MockTransport(respond))
     results = service.search_locations("武昌")
 
-    assert len(results) == 2
-    assert results[0].label == "湖北省 · 武汉市 · 武昌区"
-    assert service.select_location(results, "1").latitude == 30.55
+    online = [result for result in results if result.match_source == "open_meteo"]
+    assert len(online) == 2
+    assert online[0].label == "湖北省 · 武汉市 · 武昌区"
+    assert service.select_location(online, "1").latitude == 30.55
+
+
+def test_geocoding_matches_admin_names_without_region_suffixes() -> None:
+    response = {
+        "results": [
+            {
+                "id": 21,
+                "name": "西湖区",
+                "latitude": 30.25,
+                "longitude": 120.15,
+                "admin1": "浙江",
+                "admin2": "杭州",
+                "feature_code": "ADM3",
+            }
+        ]
+    }
+    service = OpenMeteoService(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=response))
+    )
+
+    results = service.search_locations("浙江省杭州市西湖区")
+
+    online = [result for result in results if result.match_source == "open_meteo"]
+    assert len(online) == 1
+    assert online[0].label == "浙江 · 杭州 · 西湖区"
+
+
+def test_geocoding_retries_at_city_level_when_exact_query_has_no_results() -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        query = request.url.params["name"]
+        requests.append(query)
+        if query.startswith("西湖"):
+            return httpx.Response(200, json={"results": []})
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    {
+                        "id": 22,
+                        "name": "杭州市",
+                        "latitude": 30.27,
+                        "longitude": 120.15,
+                        "admin1": "浙江",
+                        "admin2": "杭州",
+                        "feature_code": "PPLA",
+                    }
+                ]
+            },
+        )
+
+    service = OpenMeteoService(transport=httpx.MockTransport(respond))
+
+    results = service.search_locations("浙江省杭州市西湖区")
+
+    online = [result for result in results if result.match_source == "open_meteo"]
+    assert requests[:2] == ["西湖, 杭州, China", "杭州, 浙江, China"]
+    assert len(online) == 1
+    assert online[0].resolution == "city"
+    assert "已放宽行政区查询范围" in online[0].match_reason
+    assert online[0].query == "浙江省杭州市西湖区"
 
 
 def test_forecast_uses_exact_seven_day_range_and_preserves_grid_and_units() -> None:
@@ -113,22 +182,21 @@ def test_forecast_uses_exact_seven_day_range_and_preserves_grid_and_units() -> N
         return httpx.Response(200, json=forecast_payload())
 
     service = OpenMeteoService(transport=httpx.MockTransport(respond))
-    results = service.search_locations("武昌")
-    location = service.select_location(results, "1")
+    location = service.select_location(online_results(service), "1")
     snapshot = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
 
     assert len(snapshot.days) == 7
     assert snapshot.requested_latitude == location.latitude
     assert snapshot.grid_latitude == 30.5625
     assert snapshot.units["precipitation_sum"] == "mm"
-    assert snapshot.location.resolution == "unknown"
+    assert snapshot.location.resolution == "county"
 
 
 def test_forecast_rejects_a_missing_day_instead_of_filling_weather_with_a_guess() -> None:
     service = OpenMeteoService(
         transport=httpx.MockTransport(handler_for(forecast_payload(count=6)))
     )
-    location = service.select_location(service.search_locations("武昌"), "1")
+    location = service.select_location(online_results(service), "1")
 
     with pytest.raises(WeatherServiceError, match="缺少日期"):
         service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
@@ -138,7 +206,7 @@ def test_forecast_rejects_a_response_in_the_wrong_timezone() -> None:
     payload = forecast_payload()
     payload["timezone"] = "UTC"
     service = OpenMeteoService(transport=httpx.MockTransport(handler_for(payload)))
-    location = service.select_location(service.search_locations("武昌"), "1")
+    location = service.select_location(online_results(service), "1")
 
     with pytest.raises(WeatherServiceError, match="时区"):
         service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
@@ -163,7 +231,7 @@ def test_cached_forecast_expires_after_six_hours_and_never_sets_workability(
         transport=httpx.MockTransport(respond),
         now=lambda: now[0],
     )
-    location = service.select_location(service.search_locations("武昌"), "1")
+    location = service.select_location(online_results(service), "1")
     first = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
     cached = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
     assert cached.id == first.id
@@ -175,3 +243,55 @@ def test_cached_forecast_expires_after_six_hours_and_never_sets_workability(
     assert refreshed.id != first.id
     assert requests == 2
     assert store.latest_weather("field-1").id == refreshed.id
+
+
+def test_force_refresh_bypasses_an_unexpired_weather_cache(tmp_path: Path) -> None:
+    requests = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        if request.url.path.endswith("/search"):
+            return httpx.Response(200, json=LOCATION_RESPONSE)
+        requests += 1
+        return httpx.Response(200, json=forecast_payload())
+
+    store = field_store(tmp_path / "force-weather.sqlite3")
+    service = OpenMeteoService(
+        store=store,
+        transport=httpx.MockTransport(respond),
+        now=lambda: datetime(2026, 10, 18, 8, tzinfo=UTC),
+    )
+    location = service.select_location(online_results(service), "1")
+    first = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
+
+    cached = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
+    refreshed = service.fetch_forecast(
+        "field-1", location, START, START + timedelta(days=6), force_refresh=True
+    )
+
+    assert cached.id == first.id
+    assert refreshed.id != first.id
+    assert requests == 2
+
+
+def test_latest_snapshot_is_stale_when_location_or_coverage_does_not_match(
+    tmp_path: Path,
+) -> None:
+    store = field_store(tmp_path / "mismatch-weather.sqlite3")
+    service = OpenMeteoService(
+        store=store,
+        transport=httpx.MockTransport(handler_for(forecast_payload())),
+        now=lambda: datetime(2026, 10, 18, 8, tzinfo=UTC),
+    )
+    location = service.select_location(online_results(service), "1")
+    snapshot = service.fetch_forecast("field-1", location, START, START + timedelta(days=6))
+
+    stale = service.latest_snapshot(
+        "field-1",
+        location=location.model_copy(update={"latitude": location.latitude + 1}),
+        start_date=START + timedelta(days=1),
+        end_date=START + timedelta(days=7),
+    )
+
+    assert stale is not None and stale.is_stale is True
+    assert stale.id == snapshot.id

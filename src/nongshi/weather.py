@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
 import httpx
 
+from nongshi.location_search import normalize_online_query, search_hubei_locations
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.schema_v3 import (
     GeocodingResultV3,
@@ -46,9 +48,13 @@ class OpenMeteoService:
         store: WorkbenchStoreV3 | None = None,
         transport: httpx.BaseTransport | None = None,
         timeout_seconds: float = 8.0,
+        cache_hours: float = 6.0,
         now: Callable[[], datetime] | None = None,
     ) -> None:
+        if cache_hours <= 0:
+            raise ValueError("天气缓存时长必须大于零")
         self.store = store
+        self.cache_ttl = timedelta(hours=cache_hours)
         self._now = now or (lambda: datetime.now(UTC))
         self._client = httpx.Client(
             transport=transport,
@@ -71,12 +77,65 @@ class OpenMeteoService:
             raise ValueError("地点至少输入两个字")
         if not 1 <= count <= 10:
             raise ValueError("地点候选最多显示十条")
+        local_results = search_hubei_locations(name, count=count)
+        if (
+            local_results
+            and local_results[0][0] >= 1000
+            and any(suffix in name for suffix in ("省", "市", "区", "县", "旗", "镇", "乡"))
+        ):
+            return [result for _, result in local_results]
+        local_results = local_results[: max(1, count - 2)]
+        try:
+            online_results = []
+            for attempt, (provider_query, context_query) in enumerate(
+                self._geocoding_queries(name)
+            ):
+                candidates = self._request_geocoding(provider_query, name)
+                online_results = self._filter_by_address_context(context_query, candidates)
+                if online_results:
+                    if attempt:
+                        online_results = [
+                            result.model_copy(
+                                update={
+                                    "match_reason": (
+                                        "已放宽行政区查询范围，请核对具体查询点"
+                                        if not result.match_reason
+                                        else (
+                                            f"{result.match_reason}；已放宽查询范围，请核对具体查询点"
+                                        )
+                                    )
+                                }
+                            )
+                            for result in online_results
+                        ]
+                    break
+        except WeatherServiceError:
+            if local_results:
+                return [result for _, result in local_results]
+            raise
+        merged: dict[str, tuple[int, GeocodingResultV3]] = {}
+        for score, result in local_results:
+            merged[result.id] = (score, result)
+        for index, result in enumerate(online_results):
+            key = self._location_key(result)
+            normalized_query = normalize_online_query(name).split(",", 1)[0].strip()
+            score = (
+                700 - index if normalized_query and normalized_query in result.name else 400 - index
+            )
+            previous = merged.get(key)
+            if previous is None or previous[0] < score:
+                merged[key] = (score, result)
+        return [result for _, result in sorted(merged.values(), key=lambda item: -item[0])[:count]]
+
+    def _request_geocoding(
+        self, provider_query: str, original_query: str
+    ) -> list[GeocodingResultV3]:
         try:
             response = self._client.get(
                 GEOCODING_URL,
                 params={
-                    "name": name,
-                    "count": count,
+                    "name": provider_query,
+                    "count": 100,
                     "language": "zh",
                     "format": "json",
                     "countryCode": "CN",
@@ -109,15 +168,93 @@ class OpenMeteoService:
                     admin1=item.get("admin1"),
                     admin2=item.get("admin2"),
                     admin3=item.get("admin3"),
+                    admin4=item.get("admin4"),
                     feature_code=str(item.get("feature_code", "")),
                     population=(
                         int(item["population"]) if item.get("population") is not None else None
                     ),
+                    query=original_query,
+                    match_source="open_meteo",
+                    resolution=self._resolution(str(item.get("feature_code", ""))),
                 )
                 for item in payload.get("results", [])
             ]
         except (KeyError, TypeError, ValueError) as error:
             raise WeatherServiceError("invalid", "地点服务返回了无效候选") from error
+
+    @staticmethod
+    def _geocoding_queries(query: str) -> list[tuple[str, str]]:
+        pattern = r"[\u4e00-\u9fff]+?(?:特别行政区|自治区|自治州|地区|省|市|区|县|旗|镇|乡)"
+        matches = list(re.finditer(pattern, query))
+        parts = [match.group() for match in matches]
+        trailing = query[matches[-1].end() :].strip() if matches else ""
+        queries = [(normalize_online_query(query), query)]
+
+        start_index = len(parts) - 1 if trailing else len(parts) - 2
+        for index in range(start_index, 0, -1):
+            place = OpenMeteoService._strip_admin_suffix(parts[index])
+            parent = OpenMeteoService._strip_admin_suffix(parts[index - 1])
+            queries.append((f"{place}, {parent}, China", "".join(parts[index - 1 : index + 1])))
+        if len(parts) > 1:
+            city = OpenMeteoService._strip_admin_suffix(parts[1])
+            queries.append((f"{city}, China", "".join(parts[:2])))
+
+        unique: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for provider_query, context_query in queries:
+            if provider_query and provider_query not in seen:
+                unique.append((provider_query, context_query))
+                seen.add(provider_query)
+        return unique
+
+    @staticmethod
+    def _strip_admin_suffix(value: str) -> str:
+        return re.sub(r"(?:特别行政区|自治区|自治州|地区|省|市|区|县|旗|镇|乡)$", "", value)
+
+    @staticmethod
+    def _resolution(feature_code: str) -> Literal["township", "county", "city", "unknown"]:
+        if feature_code in {"ADM4", "PPLA3", "PPLA4"}:
+            return "township"
+        if feature_code in {"ADM2", "ADM3"}:
+            return "county"
+        if feature_code in {"ADM1", "PPLC", "PPLA", "PPLA1"}:
+            return "city"
+        return "unknown"
+
+    @staticmethod
+    def _location_key(result: GeocodingResultV3) -> str:
+        if result.match_source == "local_gazetteer":
+            return result.id
+        return f"{result.latitude:.4f}:{result.longitude:.4f}"
+
+    @staticmethod
+    def _filter_by_address_context(
+        query: str, results: list[GeocodingResultV3]
+    ) -> list[GeocodingResultV3]:
+        normalized = re.sub(r"\s+", "", query).casefold()
+        tokens = re.findall(
+            r"[\u4e00-\u9fff]+?(?:特别行政区|自治区|自治州|地区|省|市|区|县|旗|镇|乡)",
+            normalized,
+        )
+        if not tokens:
+            return results
+        tokens = [OpenMeteoService._strip_admin_suffix(token).casefold() for token in tokens]
+        filtered = []
+        for result in results:
+            areas = [
+                OpenMeteoService._strip_admin_suffix(area).casefold()
+                for area in (
+                    result.admin1,
+                    result.admin2,
+                    result.admin3,
+                    result.admin4,
+                    result.name,
+                )
+                if area
+            ]
+            if all(any(token == area or token in area for area in areas) for token in tokens):
+                filtered.append(result)
+        return filtered
 
     @staticmethod
     def select_location(
@@ -130,13 +267,19 @@ class OpenMeteoService:
         if len(matches) != 1:
             raise ValueError("请从地点候选中明确选择一个查询点")
         result = matches[0]
+        selected_resolution = result.resolution if resolution == "unknown" else resolution
         return WeatherLocationV3(
-            query=result.label,
+            query=result.query or result.label,
             display_name=result.label,
             latitude=result.latitude,
             longitude=result.longitude,
             timezone="Asia/Shanghai",
-            resolution=resolution,
+            resolution=selected_resolution,
+            geocoding_source=(
+                "GeoNames.org 湖北离线地名索引"
+                if result.match_source == "local_gazetteer"
+                else "Open-Meteo Geocoding API"
+            ),
             administrative_area=[
                 area for area in (result.admin1, result.admin2, result.admin3) if area
             ],
@@ -148,6 +291,8 @@ class OpenMeteoService:
         location: WeatherLocationV3,
         start_date: date,
         end_date: date,
+        *,
+        force_refresh: bool = False,
     ) -> WeatherSnapshotV3:
         if end_date - start_date != timedelta(days=6):
             raise ValueError("天气查询范围需要覆盖完整七天")
@@ -155,7 +300,7 @@ class OpenMeteoService:
         if now.tzinfo is None:
             raise ValueError("天气缓存时间需要包含时区")
         now = now.astimezone(UTC)
-        if self.store:
+        if self.store and not force_refresh:
             cached = self.store.cached_weather(
                 field_id,
                 latitude=location.latitude,
@@ -195,7 +340,9 @@ class OpenMeteoService:
             ) from error
         except ValueError as error:
             raise WeatherServiceError("invalid", "天气服务返回的数据无法读取") from error
-        snapshot = self._parse_snapshot(field_id, location, start_date, end_date, now, payload)
+        snapshot = self._parse_snapshot(
+            field_id, location, start_date, end_date, now, payload, self.cache_ttl
+        )
         if self.store:
             self.store.save_weather_snapshot(snapshot)
         return snapshot
@@ -208,6 +355,7 @@ class OpenMeteoService:
         end_date: date,
         now: datetime,
         payload: object,
+        cache_ttl: timedelta = timedelta(hours=6),
     ) -> WeatherSnapshotV3:
         if not isinstance(payload, dict) or not isinstance(payload.get("daily"), dict):
             raise WeatherServiceError("invalid", "天气响应中缺少 daily 数据")
@@ -248,15 +396,34 @@ class OpenMeteoService:
                 coverage_end=end_date,
                 units=dict(payload.get("daily_units", {})),
                 days=days,
-                cache_expires_at=now + timedelta(hours=6),
+                cache_expires_at=now + cache_ttl,
             )
         except (KeyError, TypeError, ValueError) as error:
             raise WeatherServiceError("invalid", "天气响应字段缺失或数值无效") from error
 
-    def latest_snapshot(self, field_id: str) -> WeatherSnapshotV3 | None:
+    def latest_snapshot(
+        self,
+        field_id: str,
+        *,
+        location: WeatherLocationV3 | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> WeatherSnapshotV3 | None:
         if self.store is None:
             return None
         snapshot = self.store.latest_weather(field_id)
         if snapshot is None:
             return None
-        return snapshot.model_copy(update={"is_stale": snapshot.cache_expires_at <= self._now()})
+        mismatch = bool(
+            location
+            and (
+                snapshot.requested_latitude != location.latitude
+                or snapshot.requested_longitude != location.longitude
+            )
+        ) or bool(
+            start_date
+            and end_date
+            and (snapshot.coverage_start != start_date or snapshot.coverage_end != end_date)
+        )
+        stale = snapshot.is_stale or snapshot.cache_expires_at <= self._now() or mismatch
+        return snapshot.model_copy(update={"is_stale": stale})

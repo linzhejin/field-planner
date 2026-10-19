@@ -88,14 +88,18 @@ class WorkbenchServiceV3:
             )
         if not replayed_event_ids:
             current = self.store.get_current_plan(field_id)
+            current_items = list(current.items) if current else []
             for event in events:
                 feedback = event.feedback
                 if not feedback or feedback.kind != "completed":
                     continue
-                item = (
-                    next((task for task in current.items if task.task_id == feedback.task_id), None)
-                    if current
-                    else None
+                item = next(
+                    (
+                        task
+                        for task in current_items
+                        if task.task_id == feedback.task_id and task.plot_id == field_id
+                    ),
+                    None,
                 )
                 if item is None or item.completed or item.start_at is None:
                     raise ValueError("只能记录当前已安排且尚未完成的任务")
@@ -423,11 +427,31 @@ class WorkbenchServiceV3:
     def store_weather(self, snapshot: WeatherSnapshotV3) -> None:
         self.store.save_weather_snapshot(snapshot)
 
-    def latest_weather(self, field_id: str) -> WeatherSnapshotV3 | None:
+    def latest_weather(
+        self,
+        field_id: str,
+        *,
+        location=None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> WeatherSnapshotV3 | None:
         snapshot = self.store.latest_weather(field_id)
         if snapshot is None:
             return None
-        return snapshot.model_copy(update={"is_stale": snapshot.cache_expires_at <= self._now()})
+        mismatch = bool(
+            location
+            and (
+                snapshot.requested_latitude != location.latitude
+                or snapshot.requested_longitude != location.longitude
+            )
+        ) or bool(
+            start_date
+            and end_date
+            and (snapshot.coverage_start != start_date or snapshot.coverage_end != end_date)
+        )
+        return snapshot.model_copy(
+            update={"is_stale": snapshot.cache_expires_at <= self._now() or mismatch}
+        )
 
     def _build_request(self, state: FieldStateV3) -> tuple[PlanRequestV2, PlanVersionV2 | None]:
         draft = state.draft

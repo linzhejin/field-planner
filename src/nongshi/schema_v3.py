@@ -246,8 +246,13 @@ class GeocodingResultV3(BaseModel):
     admin1: str | None = None
     admin2: str | None = None
     admin3: str | None = None
+    admin4: str | None = None
     feature_code: str = ""
     population: int | None = None
+    query: str = ""
+    match_source: Literal["open_meteo", "local_gazetteer"] = "open_meteo"
+    resolution: Literal["township", "county", "city", "unknown"] = "unknown"
+    match_reason: str = ""
 
     @property
     def label(self) -> str:

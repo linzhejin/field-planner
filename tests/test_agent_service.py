@@ -14,8 +14,9 @@ from nongshi.config import Settings
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
 from nongshi.schema_v2 import DayWindow, FieldProfile, TimeWindow
-from nongshi.schema_v3 import FieldDraftV3
+from nongshi.schema_v3 import FieldDraftV3, GeocodingResultV3
 from nongshi.service_v3 import WorkbenchServiceV3
+from nongshi.weather import OpenMeteoService
 
 TEST_KEY = "sk-test-agent-key-do-not-log"
 START = date(2026, 10, 19)
@@ -192,6 +193,58 @@ def test_bad_tool_arguments_are_rejected_and_unknown_task_ids_cannot_be_proposed
     assert result.tools[0].status == "invalid_arguments"
     assert service.get_field("field-1").fact_version == 0
     assert service.get_current_plan("field-1") is None
+
+
+def test_location_tools_only_propose_a_user_selectable_search_candidate(tmp_path: Path) -> None:
+    candidate = GeocodingResultV3(
+        id="local-5374",
+        name="珞珈街道",
+        latitude=30.536,
+        longitude=114.365,
+        country="中国",
+        country_code="CN",
+        admin1="湖北省",
+        admin2="武汉市",
+        admin3="洪山区",
+        query="湖北省武汉市洪山区珞珈街道",
+        match_source="local_gazetteer",
+        resolution="township",
+        match_reason="本地索引匹配",
+    )
+
+    class FakeWeather:
+        def search_locations(self, query: str):
+            assert query == "洪山区珞珈街道"
+            return [candidate]
+
+        select_location = staticmethod(OpenMeteoService.select_location)
+
+        def close(self) -> None:
+            return None
+
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
+    agent.weather.close()
+    agent.weather = FakeWeather()
+    result, _, _, status = agent._execute_tool(
+        "search_locations",
+        '{"field_id":"field-1","query":"洪山区珞珈街道"}',
+        field_id="field-1",
+        run_id="location-run",
+    )
+
+    assert status == "success"
+    candidate_id = result["candidates"][0]["candidate_id"]
+    result, proposal, _, status = agent._execute_tool(
+        "propose_location",
+        json.dumps({"field_id": "field-1", "candidate_id": candidate_id}),
+        field_id="field-1",
+        run_id="location-run",
+    )
+    assert status == "success"
+    assert result["requires_user_confirmation"] is True
+    assert proposal is not None and proposal.draft is not None
+    assert proposal.draft.location.display_name == "湖北省 · 武汉市 · 洪山区 · 珞珈街道"
+    assert service.get_field("field-1").draft.location is None
 
 
 def test_missing_credential_keeps_structured_workbench_available_without_network(

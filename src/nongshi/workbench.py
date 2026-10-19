@@ -41,6 +41,33 @@ STAGE_OPTIONS = {"未知": None, "苗期": "苗期", "其他生育期": "其他�
 CROP_OPTIONS = {"未知": None, "油菜": "油菜", "其他作物": "其他作物"}
 WORKABILITY_OPTIONS = {"未知": None, "可作业": True, "不可作业": False}
 
+_VIEWPORT_LAYOUT = st.components.v2.component(
+    "workbench_viewport_layout",
+    js="""
+    export default function({ data, setStateValue }) {
+      let compact = data?.compact ?? true;
+      let timer;
+      const update = () => {
+        const nextCompact = window.innerWidth < 1100;
+        if (compact !== nextCompact) {
+          compact = nextCompact;
+          setStateValue("compact", compact);
+        }
+      };
+      const onResize = () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(update, 100);
+      };
+      window.addEventListener("resize", onResize);
+      update();
+      return () => {
+        window.removeEventListener("resize", onResize);
+        window.clearTimeout(timer);
+      };
+    }
+    """,
+)
+
 PALETTE = """
 <style>
 .stApp { background: #f5f6f1; color: #1d332b; }
@@ -50,6 +77,13 @@ h1, h2, h3 { color: #173f32; letter-spacing: -.025em; }
 .workbench-note { border-left: 4px solid #b9984b; padding: .65rem .9rem;
   background: #edf1e7; border-radius: 0 .4rem .4rem 0; line-height: 1.55; }
 .muted { color: #627369; font-size: .9rem; }
+div[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .5rem; }
+@media (max-width: 1099px) {
+  div[data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
+  div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+    min-width: 100% !important; flex: 1 1 100% !important;
+  }
+}
 </style>
 """
 
@@ -537,51 +571,65 @@ def _render_weather(
     field_id: str,
     state: FieldStateV3 | None,
 ) -> None:
-    st.subheader("地点与天气参考")
+    st.subheader("天气与查询地点")
     if state is None:
         st.caption("保存地块后可以搜索查询点。")
         return
     query_key = f"weather_query:{field_id}"
+    choice_key = f"geo_choice:{field_id}"
     with st.form(f"geo_search:{field_id}"):
         query = st.text_input(
-            "搜索乡镇或县区", key=query_key, placeholder="例如：湖北省武汉市洪山区"
+            "输入地名或完整地址",
+            key=query_key,
+            placeholder="例如：湖北省武汉市洪山区，也可只输入洪山区",
         )
         search = st.form_submit_button("搜索地点")
     if search:
+        st.session_state[f"geo_results:{field_id}"] = []
+        st.session_state[choice_key] = None
         try:
             results = agent.weather.search_locations(query)
             st.session_state[f"geo_results:{field_id}"] = results
             if not results:
-                st.warning("没有找到地点候选；可尝试县区名称。")
+                st.warning(
+                    "没有匹配到地点。可以补充县区或上级城市，例如“湖北省武汉市洪山区”；"
+                    "湖北地名支持离线查询，其他地区会尝试在线搜索。"
+                )
+            else:
+                st.success(f"找到 {len(results)} 个地点候选，请核对行政区和查询点级别。")
         except (ValueError, WeatherServiceError) as error:
             st.error(str(error))
     results: list[GeocodingResultV3] = st.session_state.get(f"geo_results:{field_id}", [])
     if results:
         choices = {result.id: result for result in results}
+        resolution_labels = {
+            "township": "乡镇级",
+            "county": "县/区级",
+            "city": "市级",
+            "unknown": "普通地点（级别未核实）",
+        }
+
+        def format_location(result_id: str) -> str:
+            result = choices[result_id]
+            source = (
+                "湖北离线地名库" if result.match_source == "local_gazetteer" else "在线地名服务"
+            )
+            level = resolution_labels[result.resolution]
+            detail = f" · {result.match_reason}" if result.match_reason else ""
+            return f"{result.label} · {level} · {source}{detail}"
+
         selected_id = st.selectbox(
             "选择天气查询点（必须手动选择）",
             options=list(choices),
             index=None,
-            format_func=lambda value: choices[value].label,
-            key=f"geo_choice:{field_id}",
+            format_func=format_location,
+            key=choice_key,
         )
-        resolution_labels = {
-            "未判定": "unknown",
-            "乡镇级": "township",
-            "县/区级": "county",
-            "市级": "city",
-        }
-        resolution = st.selectbox(
-            "查询点级别", list(resolution_labels), key=f"geo_resolution:{field_id}"
-        )
+        st.caption("地图查询点代表行政区附近位置，不能当作地块实测坐标。")
         if st.button(
             "确认所选地点", key=f"confirm_location:{field_id}", disabled=selected_id is None
         ):
-            location = agent.weather.select_location(
-                results,
-                str(selected_id),
-                resolution=resolution_labels[resolution],
-            )
+            location = agent.weather.select_location(results, str(selected_id))
             updated = state.draft.model_copy(update={"location": location})
             try:
                 service.save_field_draft(
@@ -596,32 +644,86 @@ def _render_weather(
     state = _field_state(service, field_id)
     if state and state.draft.location:
         location = state.draft.location
-        st.write(f"已选：{location.display_name} · {location.resolution}查询点")
-        st.caption(f"坐标 {location.latitude:.4f}, {location.longitude:.4f}；时区 Asia/Shanghai")
+        resolution_labels = {
+            "township": "乡镇级",
+            "county": "县/区级",
+            "city": "市级",
+            "unknown": "级别未核实",
+        }
+        st.write(f"已选：{location.display_name} · {resolution_labels[location.resolution]}查询点")
+        st.caption(
+            f"查询位置 {location.query} · {location.geocoding_source} · "
+            f"坐标 {location.latitude:.4f}, {location.longitude:.4f} · Asia/Shanghai"
+        )
         start = state.draft.start_date or (_today() + timedelta(days=1))
-        if st.button("查询完整七天天气", key=f"fetch_weather:{field_id}"):
+        end = start + timedelta(days=6)
+        query_col, refresh_col = st.columns(2)
+        should_query = query_col.button("查询七天天气", key=f"fetch_weather:{field_id}")
+        should_refresh = refresh_col.button("刷新天气", key=f"refresh_weather:{field_id}")
+        if should_query or should_refresh:
             try:
                 snapshot = agent.weather.fetch_forecast(
-                    field_id, location, start, start + timedelta(days=6)
+                    field_id,
+                    location,
+                    start,
+                    end,
+                    force_refresh=should_refresh,
                 )
+                if should_refresh:
+                    st.session_state.pop(f"weather_refresh_error:{field_id}", None)
                 st.session_state[f"notice:{field_id}"] = f"已获取 {len(snapshot.days)} 天天气数据。"
                 st.rerun()
             except (ValueError, WeatherServiceError) as error:
+                if should_refresh:
+                    st.session_state[f"weather_refresh_error:{field_id}"] = str(error)
                 st.error(f"天气查询失败：{error}")
-        snapshot = service.latest_weather(field_id)
+        snapshot = service.latest_weather(
+            field_id, location=location, start_date=start, end_date=end
+        )
         if snapshot:
-            state_label = "缓存已过期，仅作历史参考" if snapshot.is_stale else "当前缓存"
-            st.caption(
-                f"{state_label} · {snapshot.source} · 获取于 "
-                f"{snapshot.fetched_at.astimezone(ZONE):%Y-%m-%d %H:%M} · "
-                f"返回网格 {snapshot.grid_latitude:.3f}, {snapshot.grid_longitude:.3f}"
+            refresh_error = st.session_state.get(f"weather_refresh_error:{field_id}")
+            same_location = (
+                snapshot.requested_latitude == location.latitude
+                and snapshot.requested_longitude == location.longitude
             )
-            st.info("天气预报只展示风险信息，不自动表示田间积水、道路通畅或可以进田。")
-            for day in snapshot.days:
-                st.write(
-                    f"{day.day:%m月%d日} · {day.temperature_min}–{day.temperature_max} °C · "
-                    f"降水 {day.precipitation_sum} mm · 最大风速 {day.wind_speed_max} km/h"
-                )
+            same_range = snapshot.coverage_start == start and snapshot.coverage_end == end
+            if not same_location or not same_range:
+                with st.expander("查看上次天气（位置或日期与当前输入不同）"):
+                    _render_weather_snapshot(snapshot, stale=True)
+            else:
+                _render_weather_snapshot(snapshot, stale=snapshot.is_stale or bool(refresh_error))
+            if refresh_error:
+                st.warning(f"天气刷新失败，下面仅保留上次查询结果：{refresh_error}")
+        else:
+            st.caption("尚无当前地点和日期的天气数据。")
+
+
+def _render_weather_snapshot(snapshot, *, stale: bool) -> None:  # type: ignore[no-untyped-def]
+    state_label = "过期天气，仅作历史参考" if stale else "七天预报"
+    st.caption(
+        f"{state_label} · {snapshot.source} · 查询点 {snapshot.location.display_name} · "
+        f"覆盖 {snapshot.coverage_start:%Y-%m-%d} 至 {snapshot.coverage_end:%Y-%m-%d} · "
+        f"获取于 {snapshot.fetched_at.astimezone(ZONE):%Y-%m-%d %H:%M} · "
+        f"预报网格 {snapshot.grid_latitude:.3f}, {snapshot.grid_longitude:.3f}"
+    )
+    st.info("天气预报只展示风险信息，不自动表示田间积水、道路通畅或可以进田。")
+    for day in snapshot.days:
+        temperature = (
+            f"{day.temperature_min:g}–{day.temperature_max:g} °C"
+            if day.temperature_min is not None and day.temperature_max is not None
+            else "气温缺失"
+        )
+        rain = (
+            f"降水 {day.precipitation_sum:g} mm"
+            if day.precipitation_sum is not None
+            else "降水缺失"
+        )
+        wind = (
+            f"最大风速 {day.wind_speed_max:g} km/h"
+            if day.wind_speed_max is not None
+            else "风速缺失"
+        )
+        st.write(f"{day.day:%m月%d日} · {temperature} · {rain} · {wind}")
 
 
 def _render_evidence(item) -> None:  # type: ignore[no-untyped-def]
@@ -826,6 +928,10 @@ def _commit_feedback(
     st.session_state[f"notice:{state.id}"] = "现场事实已保存；旧计划保留并标记待更新。"
 
 
+def _reset_observation_value(field_id: str, fact_version: int) -> None:
+    st.session_state[f"observation_value:{field_id}:{fact_version}"] = "未知"
+
+
 def _render_feedback(
     service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None
 ) -> None:
@@ -869,13 +975,15 @@ def _render_feedback(
         "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
         "是否有实际降雨": ("actual_rain_observed", BOOL_OPTIONS),
     }
+    label = st.selectbox(
+        "观察项目",
+        list(observation_fields),
+        key=f"observation_field:{field_id}:{state.fact_version}",
+        on_change=_reset_observation_value,
+        args=(field_id, state.fact_version),
+    )
+    field, choices = observation_fields[label]
     with st.form(f"observation:{field_id}:{state.fact_version}"):
-        label = st.selectbox(
-            "观察项目",
-            list(observation_fields),
-            key=f"observation_field:{field_id}:{state.fact_version}",
-        )
-        field, choices = observation_fields[label]
         value_label = st.selectbox(
             "记录值", list(choices), key=f"observation_value:{field_id}:{state.fact_version}"
         )
@@ -1156,10 +1264,10 @@ def _render_rule_reviews(service: WorkbenchServiceV3, field_id: str, state: Fiel
 
 
 def main() -> None:
-    st.set_page_config(page_title="农时窗口 · 单地块工作台", page_icon="🌱", layout="wide")
+    st.set_page_config(page_title="农时窗口 · 农事工作台", page_icon="🌱", layout="wide")
     st.markdown(PALETTE, unsafe_allow_html=True)
     st.title("农时窗口")
-    st.caption("油菜苗期任务助手 · 单地块工作台")
+    st.caption(f"油菜苗期任务助手 · {_today():%Y年%m月%d日}")
     with st.sidebar:
         st.markdown("### 工作空间")
         mode_label = st.radio(
@@ -1172,39 +1280,52 @@ def main() -> None:
             else "此处的输入只写入独立模拟数据库，不会进入真实地块。"
         )
         service, agent, database = _context(mode)
-        field_id, state = _select_field(service, mode)
         st.caption(f"数据文件：`{database.name}`")
         if mode == "demo" and st.button("新建固定模拟地块", key="seed_demo"):
             new_id = _seed_demo(service)
             st.session_state[f"pending_field_selection:{mode}"] = new_id
             st.rerun()
-    notice = st.session_state.pop(f"notice:{field_id}", None)
-    if notice:
-        st.success(notice)
-    if state and state.plan_stale:
-        st.warning("已保存事实或档案有更新；旧计划保留，等待重新预览和采用。")
+
+    compact = _VIEWPORT_LAYOUT(
+        key="workbench_viewport_layout",
+        data={"compact": True},
+        default={"compact": True},
+        on_compact_change=lambda: None,
+        width=1,
+        height=1,
+    ).compact
     st.markdown(
         '<div class="workbench-note">规则候选处于<strong>开发验证，适用性待复核</strong>。'
-        "天气用于查看风险，不替代现场确认；每块地单独排程，尚未统筹其他地块时间。</div>",
+        "天气用于查看风险，不替代现场确认。每块地独立排程，尚未统筹其他地块时间。</div>",
         unsafe_allow_html=True,
     )
-    profile_tab, results_tab, assistant_tab = st.tabs(["地块与输入", "计划结果", "助手与历史"])
-    with profile_tab:
-        _save_draft_form(service, field_id, state, mode)
+
+    def render_fields() -> tuple[str, FieldStateV3 | None]:
+        st.markdown("### 地块与资源")
+        field_id, field_state = _select_field(service, mode)
+        notice = st.session_state.pop(f"notice:{field_id}", None)
+        if notice:
+            st.success(notice)
+        _save_draft_form(service, field_id, field_state, mode)
+        field_state = _field_state(service, field_id)
+        if field_state:
+            _render_schedule_form(service, field_id, field_state)
+        return field_id, field_state
+
+    def render_results(field_id: str) -> None:
         current = _field_state(service, field_id)
-        st.divider()
-        _render_schedule_form(service, field_id, current)
-        st.divider()
+        if current and current.plan_stale:
+            st.warning("已保存事实或档案有更新；旧计划保留，等待重新预览和采用。")
         _render_weather(service, agent, field_id, current)
-    with results_tab:
-        current = _field_state(service, field_id)
+        st.divider()
         _render_evaluation(service, field_id, current)
         st.divider()
         _render_plans(service, field_id, current)
         if current:
             st.divider()
             _render_feedback(service, field_id, current)
-    with assistant_tab:
+
+    def render_assistant(field_id: str) -> None:
         current = _field_state(service, field_id)
         _render_agent(service, agent, field_id, current)
         st.divider()
@@ -1220,6 +1341,27 @@ def main() -> None:
                         f"{feedback.value if feedback.value is not None else ''}"
                     )
         _render_legacy_history(service, database, mode)
+
+    if compact:
+        fields_tab, results_tab, assistant_tab = st.tabs(["地块与资源", "计划结果", "助手与历史"])
+        with fields_tab:
+            field_id, _ = render_fields()
+        with results_tab:
+            selected = st.session_state.get(f"field_selection:{mode}")
+            field_id = _active_field_id(mode) if not selected or selected == NEW_FIELD else selected
+            render_results(field_id)
+        with assistant_tab:
+            selected = st.session_state.get(f"field_selection:{mode}")
+            field_id = _active_field_id(mode) if not selected or selected == NEW_FIELD else selected
+            render_assistant(field_id)
+    else:
+        left, middle, right = st.columns([2.4, 6.2, 3.4], gap="medium")
+        with left:
+            field_id, current = render_fields()
+        with middle:
+            render_results(field_id)
+        with right:
+            render_assistant(field_id)
         if current:
             st.divider()
             _render_rule_reviews(service, field_id, current)

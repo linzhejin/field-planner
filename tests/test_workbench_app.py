@@ -30,7 +30,7 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     app = AppTest.from_file(APP, default_timeout=30).run()
 
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["地块与输入", "计划结果", "助手与历史"]
+    assert [tab.label for tab in app.tabs] == ["地块与资源", "计划结果", "助手与历史"]
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     field_id = app.session_state["new_field_id:real"]
     assert app.text_input(key=f"field_name:{field_id}:0").value == ""
@@ -65,6 +65,22 @@ def test_saving_confirmed_field_observations_records_their_source_and_time(
     assert saved.draft.profile is not None
     assert saved.draft.profile.observation_source == "observed"
     assert saved.draft.profile.observed_at is not None
+
+
+def test_observation_type_selector_is_reactive_outside_the_submit_form(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+
+    observation_type = app.selectbox(key=f"observation_field:{field_id}:0")
+    assert observation_type.proto.form_id == ""
+    observation_type.set_value("是否有实际降雨").run()
+    assert app.selectbox(key=f"observation_value:{field_id}:0").options == ["未知", "是", "否"]
 
 
 def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
