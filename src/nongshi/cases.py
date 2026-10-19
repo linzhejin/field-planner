@@ -224,6 +224,19 @@ def replay_reference_history() -> list[PlanVersionV2]:
     )
     v3.reference_version = "V3 · 沟系复核"
     history.append(v3)
+    # 新语义下观察事实不再自动推断问题成立；参考故事中用户随即显式确认存在问题。
+    v3 = apply_feedback_v2(
+        v3,
+        FeedbackV2(
+            kind="observation",
+            plot_id="B",
+            field="maintenance_problem_confirmed",
+            value=True,
+            at=_fixed_datetime(reference["V3"]["as_of"]),
+        ),
+    )
+    v3.reference_version = "V3 · 问题确认"
+    history.append(v3)
     v3 = apply_feedback_v2(
         v3,
         FeedbackV2(

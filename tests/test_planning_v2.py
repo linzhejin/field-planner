@@ -33,6 +33,7 @@ def request_v2(**field_overrides: object) -> PlanRequestV2:
         "field_type": "lowland_rice_stubble",
         "inspection_requested": True,
         "maintenance_need_confirmed": True,
+        "maintenance_problem_confirmed": True,
         "moisture": "wet",
         "ditch_connectivity": "impaired",
         "standing_water": False,
@@ -94,6 +95,33 @@ def test_no_maintenance_need_is_not_generated_and_not_a_window_failure() -> None
     assert maintenance.necessity == "no_need"
     assert maintenance.window_by_date == {}
     assert maintenance.schedule_status == "not_generated"
+
+
+def test_standing_water_or_impaired_ditch_does_not_auto_confirm_a_problem() -> None:
+    plan = build_plan_v2(
+        request_v2(
+            maintenance_problem_confirmed=None,
+            ditch_connectivity="impaired",
+            standing_water=True,
+        )
+    )
+    maintenance = items(plan)["A-M"]
+
+    assert maintenance.necessity == "unknown"
+    assert maintenance.schedule_status == "pending"
+    assert "maintenance_problem_confirmed" in maintenance.missing_fields
+
+    clear_but_unconfirmed = items(
+        build_plan_v2(
+            request_v2(
+                maintenance_problem_confirmed=None,
+                ditch_connectivity="clear",
+                standing_water=False,
+            )
+        )
+    )["A-M"]
+    assert clear_but_unconfirmed.necessity == "unknown"
+    assert "maintenance_problem_confirmed" in clear_but_unconfirmed.missing_fields
 
 
 def test_unknown_scope_and_unknown_daily_workability_remain_distinct() -> None:
@@ -468,3 +496,25 @@ def test_intervals_merge_adjacent_and_reject_overlap() -> None:
 def test_explicit_prerequisite_cycle_is_rejected() -> None:
     with pytest.raises(ValueError, match="形成循环"):
         request_v2(maintenance_prerequisites=["A-M"])
+
+
+def test_growth_observations_are_stored_as_facts_without_driving_tasks() -> None:
+    first = build_plan_v2(request_v2())
+    changed = first
+    for offset, field in enumerate(("pest_signs", "missing_seedlings", "crowding")):
+        changed = apply_feedback_v2(
+            changed,
+            FeedbackV2(
+                kind="observation",
+                at=datetime(2026, 10, 19, 8, offset, tzinfo=LOCAL_ZONE),
+                plot_id="A",
+                field=field,
+                value=True,
+            ),
+        )
+    plot = changed.request.plots[0]
+    assert plot.pest_signs is True
+    assert plot.missing_seedlings is True
+    assert plot.crowding is True
+    assert plot.workability_by_date == {}
+    assert items(changed)["A-M"].start_at == items(first)["A-M"].start_at

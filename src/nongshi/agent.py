@@ -125,7 +125,10 @@ def _tool(name: str, description: str, arguments: type[BaseModel]) -> dict[str, 
 TOOL_DEFINITIONS: list[dict[str, object]] = [
     _tool("read_field", "读取指定地块当前已保存的档案与版本状态。", ReadFieldArgs),
     _tool(
-        "search_rules", "按地区、作物、生育期、田型和任务筛选有来源的规则候选。", SearchRulesArgs
+        "search_rules",
+        "按地区、作物、生育期、田型和任务筛选有来源的规则候选；暂缓卡仅作历史参考，"
+        "检索总体状态不代表具体任务必要性，不能当作排程依据。",
+        SearchRulesArgs,
     ),
     _tool("evaluate_field", "计算当前地块候选事项、四层状态、缺项与规则证据。", EvaluateFieldArgs),
     _tool(

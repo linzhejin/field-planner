@@ -36,6 +36,13 @@ FIELD_TYPES = {
     "丘陵旱地": "dry_hilly",
     "其他": "other",
 }
+TERRAIN_OPTIONS = {
+    "未知": None,
+    "低洼": "lowland",
+    "丘陵": "hilly",
+    "平原": "flat",
+    "其他": "other",
+}
 BOOL_OPTIONS = {"未知": None, "是": True, "否": False}
 STAGE_OPTIONS = {"未知": None, "苗期": "苗期", "其他生育期": "其他生育期"}
 CROP_OPTIONS = {"未知": None, "油菜": "油菜", "其他作物": "其他作物"}
@@ -232,6 +239,31 @@ def _save_draft_form(
             ),
             key=f"field_type:{key_suffix}",
         )
+        st.caption("以下田型事实只作档案记录，不影响候选规则判断。")
+        rice_stubble_label = st.selectbox(
+            "是否稻茬田",
+            list(BOOL_OPTIONS),
+            index=list(BOOL_OPTIONS).index(
+                _enum_label(BOOL_OPTIONS, profile.rice_stubble if profile else None)
+            ),
+            key=f"field_rice_stubble:{key_suffix}",
+        )
+        cold_waterlogged_label = st.selectbox(
+            "是否冷浸田",
+            list(BOOL_OPTIONS),
+            index=list(BOOL_OPTIONS).index(
+                _enum_label(BOOL_OPTIONS, profile.cold_waterlogged if profile else None)
+            ),
+            key=f"field_cold_waterlogged:{key_suffix}",
+        )
+        terrain_label = st.selectbox(
+            "地形",
+            list(TERRAIN_OPTIONS),
+            index=list(TERRAIN_OPTIONS).index(
+                _enum_label(TERRAIN_OPTIONS, profile.terrain if profile else None)
+            ),
+            key=f"field_terrain:{key_suffix}",
+        )
         area_mu = st.number_input(
             "面积（亩，可留空）",
             min_value=0.0,
@@ -399,6 +431,9 @@ def _save_draft_form(
                 stage=STAGE_OPTIONS[stage_label],
                 stage_confirmed=stage_confirmed,
                 field_type=FIELD_TYPES[field_type_label],
+                rice_stubble=BOOL_OPTIONS[rice_stubble_label],
+                cold_waterlogged=BOOL_OPTIONS[cold_waterlogged_label],
+                terrain=TERRAIN_OPTIONS[terrain_label],
                 area_mu=area_mu or None,
                 inspection_requested=BOOL_OPTIONS[inspect_label],
                 maintenance_need_confirmed=BOOL_OPTIONS[maintenance_label],
@@ -780,6 +815,17 @@ def _render_evaluation(
         f"规则资料 {evaluation.ruleset_version} · {evaluation.status_label} · "
         f"事实 v{evaluation.fact_version} / 档案 v{evaluation.draft_version}"
     )
+    profile = state.draft.profile
+    standing_water = profile.standing_water if profile else None
+    for event in service._active_events(field_id):
+        feedback = event.feedback
+        if feedback and feedback.kind == "observation" and feedback.field == "standing_water":
+            standing_water = feedback.value if isinstance(feedback.value, bool) else None
+    if standing_water is True:
+        st.warning(
+            "田里仍有积水记录：若积水持续或加重，请先现场核实或联系当地农技人员；"
+            "系统不替代现场处置。"
+        )
     if evaluation.clarification_questions:
         st.warning("优先核对：" + "；".join(evaluation.clarification_questions[:3]))
     if evaluation.items:
@@ -974,6 +1020,9 @@ def _render_feedback(
         "维护需求": ("maintenance_need_confirmed", BOOL_OPTIONS),
         "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
         "是否有实际降雨": ("actual_rain_observed", BOOL_OPTIONS),
+        "虫害迹象": ("pest_signs", BOOL_OPTIONS),
+        "缺苗情况": ("missing_seedlings", BOOL_OPTIONS),
+        "拥挤情况": ("crowding", BOOL_OPTIONS),
     }
     label = st.selectbox(
         "观察项目",

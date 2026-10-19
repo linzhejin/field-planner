@@ -18,6 +18,10 @@ SUPPORTED_PROBLEMS = {
     "墒情",
 }
 
+# A03 采用记录：C18/C19/C20/C24 为暂缓卡。规则卡包没有逐卡采用状态字段，
+# 开发期在此硬编码暂缓名单；这些卡只作历史参考，不参与总体状态聚合。
+REFERENCE_RULE_IDS = frozenset({"C18", "C19", "C20", "C24"})
+
 
 class RuleRetrieverV3:
     def __init__(self, catalog: RuleCatalog | None = None) -> None:
@@ -38,7 +42,14 @@ class RuleRetrieverV3:
                 ruleset_version=self.catalog.delivery_version,
             )
         hits = [self._hit(rule_id, query) for rule_id in rule_ids]
-        statuses = {hit.applicability for hit in hits}
+        statuses = {hit.applicability for hit in hits if hit.applicability != "reference"}
+        if not statuses:
+            return RuleSearchResultV3(
+                status="no_basis",
+                reason="当前命中规则均为暂缓卡，仅作历史参考，不能作为计划依据。",
+                ruleset_version=self.catalog.delivery_version,
+                hits=hits,
+            )
         if "pending" in statuses:
             status = "pending"
             reasons = list(
@@ -54,6 +65,7 @@ class RuleRetrieverV3:
         else:
             status = "no_basis"
             reason = "当前资料没有可用依据。"
+        reason += "总体状态仅代表候选规则可查阅，不代表具体任务必要性。"
         return RuleSearchResultV3(
             status=status,
             reason=reason,
@@ -90,27 +102,16 @@ class RuleRetrieverV3:
                 evidence=evidence,
                 runtime_enabled=card.runtime_enabled,
             )
-        if rule_id == "C19":
-            if query.field_type is None:
-                applicability, reason = "pending", "需要确认田型，才能判断低洼/稻茬田条件。"
-            elif query.field_type != "lowland_rice_stubble":
-                applicability, reason = "out_of_scope", "超出低洼/稻茬田适用条件。"
-            else:
-                applicability, reason = (
-                    "matched",
-                    "田型与规则适用条件相符；仍需单独确认现场问题和任务需求。",
-                )
-        elif rule_id == "C20":
-            if query.field_type is None:
-                applicability, reason = "pending", "需要确认田型，才能判断丘陵旱地条件。"
-            elif query.field_type != "dry_hilly":
-                applicability, reason = "out_of_scope", "超出丘陵旱地适用条件。"
-            else:
-                applicability, reason = (
-                    "matched",
-                    "田型与规则适用条件相符；仍需单独确认现场问题和任务需求。",
-                )
-        elif rule_id == "C23":
+        if rule_id in REFERENCE_RULE_IDS:
+            return RuleSearchHitV3(
+                rule_id=rule_id,
+                title=card.title,
+                applicability="reference",
+                reason=self._reference_reason(rule_id, query),
+                evidence=evidence,
+                runtime_enabled=card.runtime_enabled,
+            )
+        if rule_id == "C23":
             if query.field_type is None:
                 applicability, reason = "pending", "需要先确认田型。"
             elif query.field_type == "other":
@@ -127,19 +128,6 @@ class RuleRetrieverV3:
                     "matched",
                     "田型、现场问题和维护需求均已确认；天气与进田条件仍需另行判断。",
                 )
-        elif rule_id == "C18":
-            if query.winter_before_context_confirmed is True:
-                applicability, reason = "matched", "用户已确认冬前情境；仍需按卡片限制复核。"
-            else:
-                applicability, reason = "pending", "冬前情境尚未确认。"
-        elif rule_id == "C24":
-            if query.actual_rain_observed is True:
-                applicability, reason = "matched", "已记录实际降雨；预报不能替代实况观察。"
-            else:
-                applicability, reason = (
-                    "pending",
-                    "需要确认实际降雨情况，不能把天气预报当成现场事实。",
-                )
         else:
             applicability, reason = (
                 "matched",
@@ -153,6 +141,37 @@ class RuleRetrieverV3:
             evidence=evidence,
             runtime_enabled=card.runtime_enabled,
         )
+
+    @staticmethod
+    def _reference_reason(rule_id: str, query: RuleSearchQueryV3) -> str:
+        base = "暂缓自动适用，仅作历史参考，不代表条件已符合（见 A03 采用记录）。"
+        if rule_id == "C18":
+            hint = (
+                "原适用条件（冬前情境）已确认，但卡片仍暂缓。"
+                if query.winter_before_context_confirmed is True
+                else "原适用条件：冬前情境需用户确认。"
+            )
+        elif rule_id == "C19":
+            if query.field_type is None:
+                hint = "原适用条件：需确认田型为低洼/稻茬田。"
+            elif query.field_type != "lowland_rice_stubble":
+                hint = "原适用条件为低洼/稻茬田，当前田型不相符。"
+            else:
+                hint = "原适用条件（低洼/稻茬田）相符，但卡片仍暂缓。"
+        elif rule_id == "C20":
+            if query.field_type is None:
+                hint = "原适用条件：需确认田型为丘陵旱地。"
+            elif query.field_type != "dry_hilly":
+                hint = "原适用条件为丘陵旱地，当前田型不相符。"
+            else:
+                hint = "原适用条件（丘陵旱地）相符，但卡片仍暂缓。"
+        else:  # C24
+            hint = (
+                "已记录实际降雨，但卡片仍暂缓；预报不能替代实况观察。"
+                if query.actual_rain_observed is True
+                else "原适用条件：需确认实际降雨，不能把天气预报当成现场事实。"
+            )
+        return base + hint
 
     @staticmethod
     def _scope_reason(query: RuleSearchQueryV3) -> str:

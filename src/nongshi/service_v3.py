@@ -165,11 +165,20 @@ class WorkbenchServiceV3:
             or not self._weather_covers(weather, calculated.request.start_date)
         ):
             weather = None
-        adoptions = [
-            record
-            for record in self.store.list_rule_adoptions(field_id)
-            if record.status == "adopted"
+        reviews = self.store.list_rule_adoptions(field_id)
+        adoptions = [record for record in reviews if record.status == "adopted"]
+        calculation_basis = [
+            "单地块独立计划；尚未统筹其他地块时间",
+            "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+            "候选规则处于开发验证阶段，适用性待复核",
         ]
+        if reviews:
+            calculation_basis.append("已采用规则仅限登记用途；暂缓规则不作为计划依据")
+        if any(plot.standing_water is True for plot in calculated.request.plots):
+            calculation_basis.append(
+                "田里仍有积水记录：积水持续或加重时请先现场核实或联系当地农技人员；"
+                "系统不替代现场处置"
+            )
         version = PlanVersionV3(
             field_id=field_id,
             parent_id=current.id if current else None,
@@ -182,11 +191,7 @@ class WorkbenchServiceV3:
             rule_adoption_ids=[record.id for record in adoptions],
             source=source or self._source_for(state),
             changes=changes,
-            calculation_basis=[
-                "单地块独立计划；尚未统筹其他地块时间",
-                "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
-                "候选规则处于开发验证阶段，适用性待复核",
-            ],
+            calculation_basis=calculation_basis,
         )
         preview = PlanPreviewV3(
             field_id=field_id,
@@ -521,6 +526,11 @@ class WorkbenchServiceV3:
                 ):
                     raise ValueError("已完成记录不可更改；请提交明确的更正事件")
                 completed_at[feedback.task_id] = feedback.at
+        # 采用/暂缓记录在评估前注入：rejected 卡不再作为任务依据，
+        # adopted 卡仅改标注。同卡多条记录时以最新一条为准。
+        rule_review_status = {
+            record.rule_id: record.status for record in self.store.list_rule_adoptions(state.id)
+        }
         request = PlanRequestV2(
             start_date=start_date,
             plots=[profile],
@@ -530,6 +540,7 @@ class WorkbenchServiceV3:
             adoption_profile="development_validation",
             synthetic=draft.mode == "demo" or draft.input_source == "demo",
             completed_at=completed_at,
+            rule_review_status=rule_review_status,
         )
         initial = build_plan_v2(
             request,
@@ -665,6 +676,9 @@ class WorkbenchServiceV3:
             "weather_workability": "当天天气是否适合作业",
             "ditch_connectivity": "沟渠是否通畅",
             "standing_water": "田里是否有积水",
+            "pest_signs": "田里是否发现虫害迹象",
+            "missing_seedlings": "田里是否缺苗",
+            "crowding": "苗是否拥挤",
         }
         questions: list[str] = []
         for item in missing:

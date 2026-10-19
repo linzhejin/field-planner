@@ -146,3 +146,51 @@ def test_simulation_uses_a_separate_database_from_real_fields(tmp_path: Path, mo
     demo_fields = WorkbenchStoreV3(demo_database).list_fields(mode="demo")
     assert len(demo_fields) == 1
     assert demo_fields[0].draft.profile.name == "演示地块"
+
+
+def test_field_type_facts_save_independently_and_survive_reopen(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.selectbox(key=f"field_rice_stubble:{field_id}:0").set_value("是")
+    app.selectbox(key=f"field_cold_waterlogged:{field_id}:0").set_value("否")
+    app.selectbox(key=f"field_terrain:{field_id}:0").set_value("低洼")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+
+    assert not app.exception
+    profile = WorkbenchStoreV3(database).get_field(field_id).draft.profile
+    assert profile is not None
+    assert profile.field_type == "lowland_rice_stubble"
+    assert profile.rice_stubble is True
+    assert profile.cold_waterlogged is False
+    assert profile.terrain == "lowland"
+
+    reopened = AppTest.from_file(APP, default_timeout=30).run()
+    assert not reopened.exception
+    restored = WorkbenchStoreV3(database).get_field(field_id).draft.profile
+    assert restored is not None
+    assert restored.rice_stubble is True
+    assert restored.cold_waterlogged is False
+    assert restored.terrain == "lowland"
+
+
+def test_standing_water_warning_is_shown_from_saved_facts(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
+    assert not any("农技人员" in warning.value for warning in app.warning)
+
+    app.selectbox(key=f"observation_field:{field_id}:0").set_value("积水情况").run()
+    app.selectbox(key=f"observation_value:{field_id}:0").set_value("是")
+    app.button(key=f"save_observation:{field_id}:0").click().run()
+
+    assert not app.exception
+    assert any("农技人员" in warning.value for warning in app.warning)

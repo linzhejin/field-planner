@@ -236,6 +236,93 @@ def test_weather_and_rule_adoption_records_are_separate_from_source_cards(tmp_pa
     assert load_rule_catalog().cards["C11"].runtime_enabled is False
 
 
+def test_rule_adoption_status_shapes_evidence_before_planning(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    service.record_rule_adoption("field-1", "C23", status="rejected", reviewer="许继哲")
+    service.record_rule_adoption("field-1", "C31", status="adopted", reviewer="许继哲")
+
+    evaluation = service.evaluate_field("field-1")
+    items = {item.task_id: item for item in evaluation.items}
+    maintenance_rules = {evidence.rule_id for evidence in items["field-1-M"].evidence}
+    inspection = {evidence.rule_id: evidence for evidence in items["field-1-I"].evidence}
+
+    assert "C23" not in maintenance_rules
+    assert inspection["C31"].status_label == "已采用（限用途）"
+    assert inspection["C11"].status_label == "开发验证，适用性待复核"
+
+    preview = service.preview_plan("field-1")
+    assert preview.version.rule_adoption_ids
+    assert any("暂缓规则不作为计划依据" in basis for basis in preview.version.calculation_basis)
+
+
+def test_standing_water_adds_onsite_verification_basis_without_threshold(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    preview = service.preview_plan("field-1")
+    assert not any("农技人员" in basis for basis in preview.version.calculation_basis)
+
+    service.commit_events(
+        "field-1",
+        [
+            FactEventInputV3(
+                event_id="obs-standing-water",
+                feedback={
+                    "kind": "observation",
+                    "at": "2026-10-18T10:00:00+08:00",
+                    "plot_id": "field-1",
+                    "field": "standing_water",
+                    "value": True,
+                },
+            )
+        ],
+        operation_id="obs-water",
+        expected_fact_version=0,
+    )
+    preview = service.preview_plan("field-1")
+    assert any("农技人员" in basis for basis in preview.version.calculation_basis)
+
+
+def test_growth_observation_events_validate_and_survive_reopen(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    with pytest.raises(ValueError, match="pest_signs"):
+        FactEventInputV3(
+            feedback={
+                "kind": "observation",
+                "at": "2026-10-18T10:00:00+08:00",
+                "plot_id": "field-1",
+                "field": "pest_signs",
+                "value": "少量",
+            }
+        )
+    events = [
+        FactEventInputV3(
+            event_id=f"obs-{field}",
+            feedback={
+                "kind": "observation",
+                "at": "2026-10-18T10:00:00+08:00",
+                "plot_id": "field-1",
+                "field": field,
+                "value": True,
+            },
+        )
+        for field in ("pest_signs", "missing_seedlings", "crowding")
+    ]
+    service.commit_events("field-1", events, operation_id="obs-growth", expected_fact_version=0)
+
+    reloaded = make_service(tmp_path / "workbench.sqlite3")
+    assert [event.feedback.field for event in reloaded.list_events("field-1")] == [
+        "pest_signs",
+        "missing_seedlings",
+        "crowding",
+    ]
+    evaluation = reloaded.evaluate_field("field-1")
+    assert evaluation.fact_version == 1
+    maintenance = next(item for item in evaluation.items if item.task_type == "maintenance")
+    assert maintenance.necessity == "unknown"
+
+
 def test_expired_weather_snapshot_makes_preview_stale_and_blocks_adoption(
     tmp_path: Path,
 ) -> None:

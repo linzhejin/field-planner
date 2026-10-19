@@ -88,6 +88,10 @@ class FieldProfile(BaseModel):
     stage: str | None = None
     stage_confirmed: bool = False
     field_type: Literal["lowland_rice_stubble", "dry_hilly", "other"] | None = None
+    # 田型相关事实拆分记录；仅作档案，不替代 field_type 的规则门控
+    rice_stubble: bool | None = None
+    cold_waterlogged: bool | None = None
+    terrain: Literal["lowland", "hilly", "flat", "other"] | None = None
     area_mu: float | None = Field(default=None, gt=0)
     inspection_requested: bool | None = None
     maintenance_need_confirmed: bool | None = None
@@ -96,6 +100,10 @@ class FieldProfile(BaseModel):
     ditch_connectivity: Literal["clear", "impaired"] | None = None
     standing_water: bool | None = None
     leaf_count: float | None = Field(default=None, ge=0)
+    # 苗情观察事实；只作记录，不发明任何农业反应逻辑
+    pest_signs: bool | None = None
+    missing_seedlings: bool | None = None
+    crowding: bool | None = None
     actual_rain_observed: bool | None = None
     winter_before_context_confirmed: bool | None = None
     workability_by_date: dict[date, WorkabilityConfirmation] = Field(default_factory=dict)
@@ -149,6 +157,9 @@ class PlanRequestV2(BaseModel):
     )
     synthetic: bool = True
     completed_at: dict[str, AwareDatetime] = Field(default_factory=dict)
+    # 地块级规则复核状态（rule_id -> pending_review/adopted/rejected）；
+    # 缺省为空表示全部待复核，保持现状。由服务层在评估前注入。
+    rule_review_status: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_plan_input(self) -> PlanRequestV2:
@@ -259,6 +270,9 @@ class FeedbackV2(BaseModel):
             "leaf_count",
             "actual_rain_observed",
             "winter_before_context_confirmed",
+            "pest_signs",
+            "missing_seedlings",
+            "crowding",
         ]
         | None
     ) = None

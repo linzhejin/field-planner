@@ -49,8 +49,31 @@ def test_out_of_scope_location_and_field_type_are_explained() -> None:
 
     wrong_type = RuleRetrieverV3().search(query(field_type="dry_hilly"))
     by_id = {hit.rule_id: hit for hit in wrong_type.hits}
-    assert by_id["C19"].applicability == "out_of_scope"
-    assert by_id["C20"].applicability == "matched"
+    assert by_id["C19"].applicability == "reference"
+    assert by_id["C20"].applicability == "reference"
+
+
+def test_suspended_rules_are_reference_only_and_never_drive_overall_status() -> None:
+    result = RuleRetrieverV3().search(
+        query(
+            winter_before_context_confirmed=True,
+            actual_rain_observed=True,
+        )
+    )
+    by_id = {hit.rule_id: hit for hit in result.hits}
+
+    assert {rule_id for rule_id, hit in by_id.items() if hit.applicability == "reference"} == {
+        "C18",
+        "C19",
+        "C20",
+        "C24",
+    }
+    for rule_id in ("C18", "C19", "C20", "C24"):
+        assert "暂缓" in by_id[rule_id].reason
+        assert "不代表" in by_id[rule_id].reason
+        assert by_id[rule_id].evidence, "暂缓卡仍保留来源证据供人工查阅"
+    assert result.status == "matched"
+    assert "不代表具体任务必要性" in result.reason
 
 
 def test_unknown_maintenance_problem_keeps_maintenance_rule_pending() -> None:

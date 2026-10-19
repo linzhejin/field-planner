@@ -90,6 +90,9 @@ class FactEventInputV3(BaseModel):
                 "standing_water",
                 "actual_rain_observed",
                 "winter_before_context_confirmed",
+                "pest_signs",
+                "missing_seedlings",
+                "crowding",
             }
             if field in boolean_fields and value is not None and not isinstance(value, bool):
                 raise ValueError(f"{field} 的现场值必须是是/否/未知")
@@ -221,7 +224,7 @@ class RuleSearchQueryV3(BaseModel):
 class RuleSearchHitV3(BaseModel):
     rule_id: str
     title: str
-    applicability: Literal["matched", "out_of_scope", "pending", "no_basis"]
+    applicability: Literal["matched", "out_of_scope", "pending", "no_basis", "reference"]
     reason: str
     evidence: list[RuleEvidenceV2] = Field(default_factory=list)
     runtime_enabled: bool = False

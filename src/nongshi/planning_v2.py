@@ -42,13 +42,11 @@ def _scope(plot: FieldProfile) -> tuple[str, list[str], str]:
 
 
 def _problem_state(plot: FieldProfile) -> tuple[bool | None, list[str]]:
+    # 现场观察（沟渠受阻、积水）只是事实，不能替用户推断"存在问题"；
+    # 问题是否成立必须由用户显式确认（maintenance_problem_confirmed）。
     if plot.maintenance_problem_confirmed is not None:
         return plot.maintenance_problem_confirmed, []
-    if plot.ditch_connectivity == "impaired" or plot.standing_water is True:
-        return True, []
-    if plot.ditch_connectivity == "clear" and plot.standing_water is False:
-        return False, []
-    missing = []
+    missing = ["maintenance_problem_confirmed"]
     if plot.ditch_connectivity is None:
         missing.append("ditch_connectivity")
     if plot.standing_water is None:
@@ -108,11 +106,21 @@ def _rule_ids_for(plot: FieldProfile, task_type: str) -> list[str]:
 
 
 def _make_evidence(
-    catalog: RuleCatalog, plot: FieldProfile, task_type: str
+    catalog: RuleCatalog,
+    plot: FieldProfile,
+    task_type: str,
+    review_status: dict[str, str] | None = None,
 ) -> list[RuleEvidenceV2]:
+    status_by_rule = review_status or {}
     result: list[RuleEvidenceV2] = []
     for raw in catalog.evidence_for(_rule_ids_for(plot, task_type)):
-        result.append(RuleEvidenceV2(**raw))
+        status = status_by_rule.get(raw["rule_id"])
+        if status == "rejected":
+            continue
+        evidence = RuleEvidenceV2(**raw)
+        if status == "adopted":
+            evidence.status_label = "已采用（限用途）"
+        result.append(evidence)
     return result
 
 
@@ -138,6 +146,7 @@ def _base_item(
     task_type: str,
     catalog: RuleCatalog,
     days: list[DayWindow],
+    review_status: dict[str, str] | None = None,
 ) -> PlanItemV2:
     applicability, necessity, missing = _task_state(plot, task_type)
     task_id = (
@@ -200,7 +209,7 @@ def _base_item(
         reason=reason,
         reason_code=reason_code,
         missing_fields=list(dict.fromkeys(missing)),
-        evidence=_make_evidence(catalog, plot, task_type),
+        evidence=_make_evidence(catalog, plot, task_type, review_status),
     )
 
 
@@ -382,8 +391,12 @@ def build_plan_v2(
     items: list[PlanItemV2] = []
     plot_by_id = {plot.id: plot for plot in request.plots}
     for plot in request.plots:
-        items.append(_base_item(plot, "inspection", catalog, request.days))
-        items.append(_base_item(plot, "maintenance", catalog, request.days))
+        items.append(
+            _base_item(plot, "inspection", catalog, request.days, request.rule_review_status)
+        )
+        items.append(
+            _base_item(plot, "maintenance", catalog, request.days, request.rule_review_status)
+        )
     previous_items = {item.task_id: item for item in previous.items} if previous else {}
     current_ids = {item.task_id for item in items}
     if previous:
@@ -604,6 +617,9 @@ def apply_feedback_v2(
             "maintenance_need_confirmed",
             "maintenance_problem_confirmed",
             "winter_before_context_confirmed",
+            "pest_signs",
+            "missing_seedlings",
+            "crowding",
         } and value not in {True, False, None}:
             raise ValueError("该观察项需要是是/否/未知")
         if feedback.field == "leaf_count" and value is not None:
