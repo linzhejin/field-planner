@@ -1,0 +1,56 @@
+[
+  {
+    "file": "S01_湖北2026主推技术指南.html",
+    "url": "https://nyt.hubei.gov.cn/zfxxgk/zc_GK2020/qtzdgkwj_GK2020/tz/202602/t20260210_5874529.shtml",
+    "final_url": "https://nyt.hubei.gov.cn/zfxxgk/zc_GK2020/qtzdgkwj_GK2020/tz/202602/t20260210_5874529.shtml",
+    "content_type": "text/html",
+    "bytes": 1436253,
+    "sha256": "047ce68816d6b61baedcdcfbdd61dfd6b1d40be455c625b0a8ac0d720c7bb230",
+    "access_date": "2026-10-19",
+    "status": "downloaded_pending_content_check"
+  },
+  {
+    "file": "S02_湖北2025苗期田管意见.html",
+    "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+    "final_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+    "content_type": "text/html",
+    "bytes": 66738,
+    "sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd",
+    "access_date": "2026-10-19",
+    "status": "downloaded_pending_content_check"
+  },
+  {
+    "file": "S03_湖北2025冬前田管意见.html",
+    "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+    "final_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+    "content_type": "text/html",
+    "bytes": 56232,
+    "sha256": "67936430a6e646a6b47a5803abfb66eed4350d3e9042a2b40571cfafad343dce",
+    "access_date": "2026-10-19",
+    "status": "downloaded_pending_content_check"
+  },
+  {
+    "file": "S04_抗渍涝促壮苗_福建转载.html",
+    "url": "https://nynct.fujian.gov.cn/ztzl/kpxj/zrzhl/202510/t20251027_7026490.htm",
+    "final_url": "https://nynct.fujian.gov.cn/ztzl/kpxj/zrzhl/202510/t20251027_7026490.htm",
+    "content_type": "text/html",
+    "bytes": 44089,
+    "sha256": "4ee79b6497b05e0eda51f20b790a6f94fdd69f30a5edf955d5d579b8e5bdb5cb",
+    "access_date": "2026-10-19",
+    "status": "downloaded_pending_content_check"
+  },
+  {
+    "file": "S05_全国冬油菜2026_平凉转载.html",
+    "url": "https://nync.pingliang.gov.cn/xwdt/syjs/art/2026/art_7cc42d9bae9e473085986689fb43c29b.html",
+    "status": "failed",
+    "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1010)>",
+    "access_date": "2026-10-19"
+  },
+  {
+    "file": "S06_冷浸田生境研究_2014.pdf",
+    "url": "https://nyxdhyj.isa.ac.cn/en/article/pdf/preview/20140322.pdf",
+    "status": "failed",
+    "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
+    "access_date": "2026-10-19"
+  }
+]

@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-19",
+  "baseline": "10651fe",
+  "checks": [
+    {
+      "card": "C11",
+      "source": "Z15",
+      "pages": [
+        1
+      ],
+      "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+    },
+    {
+      "card": "C11",
+      "source": "Z09",
+      "pages": [
+        2
+      ],
+      "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+    },
+    {
+      "card": "C18",
+      "source": "Z09",
+      "pages": [
+        1
+      ],
+      "quote": "及时清理“三沟”，尤其前期因抢播整田质量较差、沟系配套不到位的田块，厢沟深度要达到20cm以上，腰沟、围沟逐渐加深，确保沟沟相通",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+    },
+    {
+      "card": "C19",
+      "source": "Z09",
+      "pages": [
+        1
+      ],
+      "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+    },
+    {
+      "card": "C20",
+      "source": "Z09",
+      "pages": [
+        1
+      ],
+      "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+    },
+    {
+      "card": "C23",
+      "source": "Z01",
+      "pages": [
+        2
+      ],
+      "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+    },
+    {
+      "card": "C23",
+      "source": "Z15",
+      "pages": [
+        1
+      ],
+      "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+    },
+    {
+      "card": "C24",
+      "source": "Z04",
+      "pages": [
+        1
+      ],
+      "quote": "降雨后要及时检查田间积水情况，发现问题及时处理，做到积水不过夜，最大程度降低土壤水分。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+    },
+    {
+      "card": "C31",
+      "source": "Z16",
+      "pages": [
+        1
+      ],
+      "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+      "hash_matches_index_and_card": true,
+      "quote_located": true,
+      "sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e"
+    }
+  ],
+  "note": "本记录仅验证本地资料定位，不证明农艺适用性或正式采用。",
+  "supplemental_checks": [
+    {
+      "card": "C18",
+      "source": "Z15",
+      "pages": [
+        1
+      ],
+      "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+      "quote_located": true
+    },
+    {
+      "card": "C19",
+      "source": "Z15",
+      "pages": [
+        1
+      ],
+      "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+      "quote_located": true
+    },
+    {
+      "card": "C20",
+      "source": "Z15",
+      "pages": [
+        1
+      ],
+      "quote": "维持底墒足、表土爽即可，增强冬春抗旱抗寒能力。",
+      "quote_located": true
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# Preserve downloaded HTML bytes so the recorded SHA-256 remains reproducible.
+*.html -text -diff

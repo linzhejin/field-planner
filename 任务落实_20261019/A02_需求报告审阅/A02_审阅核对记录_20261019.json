@@ -1,0 +1,71 @@
+{
+  "task": "A02",
+  "date": "2026-10-19",
+  "source_file": "D:\\桌面\\武大遥感\\大三\\大三上\\AIC\\field-planner\\AIC claude code\\需求研究\\农时窗口_问题剖析与需求调研报告_修订版_20261018.docx",
+  "source_sha256": "57e476e056ec22653f103b61572009ce28c8ad1303f346b831864a4b5484b0ad",
+  "review_status": "review_delivered_report_revision_and_signoff_pending",
+  "required_items": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08"
+  ],
+  "optional_items": [
+    "R09"
+  ],
+  "original_modified": false,
+  "sources": [
+    {
+      "label": "[1] 全国冬油菜意见",
+      "scope": "平凉市农业农村局转载页可访问，页面日期为2026年9月14日，标示来源全国农技中心。清沟及沟系连通内容支持报告的一般关注点；保留具体阶段和田况限制。",
+      "url": "https://nync.pingliang.gov.cn/xwdt/syjs/art/2026/art_7cc42d9bae9e473085986689fb43c29b.html"
+    },
+    {
+      "label": "[2] 湖北冬前田管意见",
+      "scope": "2025年12月3日原网页支持按田况分类管理及先清沟排渍等具体语境；不能把冬前或特定田型措施推广到所有苗期地块。",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml"
+    },
+    {
+      "label": "[3] 湖北秋播工作提示",
+      "scope": "2026年10月10日原网页涉及耕整播种和稻田沟系；支持“不能仅按月份推定已进入苗期”的论述。",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202610/t20261010_6030560.shtml"
+    },
+    {
+      "label": "[4] 湖北阶段性农情报道",
+      "scope": "2025年11月27日转载页可核对降雨偏多、播种窗口及统一开沟数据。报告对时间和分母的限制应保留，不据其计算未服务率。",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywdt/sycbgs/202511/t20251127_5822063.shtml"
+    },
+    {
+      "label": "[5] 轮作体系需水研究",
+      "scope": "论文摘要及方法可核对历史气候资料、54／59毫米和各档年份比例。表1两列合计30.0%与47.5%的加法正确，不能改成当前受灾面积或预测概率。",
+      "url": "https://www.sciopen.com/local/article_pdf/10.3864/j.issn.0578-1752.2025.07.009.pdf"
+    },
+    {
+      "label": "[6] 江苏405份水稻样本论文",
+      "scope": "南京农业大学作者公开目录可核对作者、题名、2025年46卷2期及105—112页。本次只核题录和样本范围，未据此审核全文统计结论；现有报告也未将其用于湖北用户画像。",
+      "url": "https://faculty.njau.edu.cn/tiansuyan/zh_CN/lwcg/115964/list/index.htm"
+    },
+    {
+      "label": "[7] 农业多智能体综述",
+      "scope": "论文第3.3节讨论可解释性、幻觉及多模态数据挑战，支持风险背景。不能据此断言所有通用模型都会违反本项目排程约束，亦不证明本系统效果。",
+      "url": "https://www.sciopen.com/local/article_pdf/10.12133/j.smartag.SA202503026.pdf"
+    }
+  ],
+  "qa": {
+    "pages": 4,
+    "renderer": "Microsoft Word hidden read-only export plus Poppler",
+    "bundled_renderer_limitation": "LibreOffice soffice.exe unavailable",
+    "visual_pages_checked": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "hyperlink_count": 7,
+    "source_hash_unchanged": true
+  }
+}
