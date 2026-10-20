@@ -1,0 +1,107 @@
+{
+  "version": "A04-1.0",
+  "date": "2026-10-19",
+  "note": "A04 补充来源登记。单独标识为 A04-Sxx，不覆盖原 C 卡、原来源索引、SHA-256 或 runtime_enabled，也不表示原卡已正式采用。数据来源为 任务落实_20261019/A04_缺口答复/A04_缺口答复表_20261019.json。",
+  "sources": [
+    {
+      "id": "A04-S01",
+      "title": "湖北省2026年农业主推技术指南",
+      "publisher": "湖北省农业农村厅",
+      "date": "页面及发文日期字段2026-01-09；正文落款2026-01-16，二者不一致；URL含20260210，不作为发布日期",
+      "url": "https://nyt.hubei.gov.cn/zfxxgk/zc_GK2020/qtzdgkwj_GK2020/tz/202602/t20260210_5874529.shtml",
+      "archive_file": "S01_湖北2026主推技术指南.html",
+      "locator": "第九项 油菜耕播集成与农机农艺融合生产技术 二4配套田间管理 三适宜区域 四注意事项",
+      "use": "可补充播后沟系维护及墒情管理的方向；不能将整个机械化技术包、尺寸、药肥或增产数据转为本系统结论。",
+      "access_date": "2026-10-19",
+      "sha256": "047ce68816d6b61baedcdcfbdd61dfd6b1d40be455c625b0a8ac0d720c7bb230",
+      "archive_type": "downloaded_original_response"
+    },
+    {
+      "id": "A04-S02",
+      "title": "2025年湖北省油菜苗期田间管理技术指导意见",
+      "publisher": "湖北省油菜办公室",
+      "date": "2025-11-07",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+      "archive_file": "S02_湖北2025苗期田管意见.html",
+      "locator": "导语及第一部分 清沟降渍 第二部分 移密补稀；对应既有Z15 PDF第1页",
+      "use": "苗期证据及偏湿、偏干条件对照；当年天气背景不能当成本年度田况。",
+      "access_date": "2026-10-19",
+      "sha256": "d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd",
+      "archive_type": "downloaded_original_response"
+    },
+    {
+      "id": "A04-S03",
+      "title": "湖北省油菜冬前田间管理技术指导意见",
+      "publisher": "湖北省油菜办公室等",
+      "date": "2025-12-03",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+      "archive_file": "S03_湖北2025冬前田管意见.html",
+      "locator": "第一部分 开沟降渍；对应既有Z09 PDF第1页",
+      "use": "冬前、田型及干湿差异的原有约束，不能自动扩到所有苗期。",
+      "access_date": "2026-10-19",
+      "sha256": "67936430a6e646a6b47a5803abfb66eed4350d3e9042a2b40571cfafad343dce",
+      "archive_type": "downloaded_original_response"
+    },
+    {
+      "id": "A04-S04",
+      "title": "2025年冬油菜抗渍涝保播种促壮苗技术意见",
+      "publisher": "农业农村部油菜专家指导组 全国农业技术推广服务中心；福建省农业农村厅转载",
+      "date": "转载页显示2025-10-22 15:52；URL含20251027，不取代显示日期；原索引日期2025-10-20仍须另核",
+      "url": "https://nynct.fujian.gov.cn/ztzl/kpxj/zrzhl/202510/t20251027_7026490.htm",
+      "archive_file": "S04_抗渍涝促壮苗_福建转载.html",
+      "locator": "导语及第一部分 抢排水降渍害；对应既有Z04 PDF第1页",
+      "use": "持续阴雨、偏湿播栽背景下保留雨后核查与及时处理提示；不转为统一24小时时限。",
+      "access_date": "2026-10-19",
+      "sha256": "4ee79b6497b05e0eda51f20b790a6f94fdd69f30a5edf955d5d579b8e5bdb5cb",
+      "archive_type": "downloaded_original_response"
+    },
+    {
+      "id": "A04-S05",
+      "title": "2026年全国冬油菜生产技术意见",
+      "publisher": "平凉市农业农村局转载；标示来源全国农业技术推广服务中心",
+      "date": "转载页2026-09-14 17:14；原索引首发2026-09-08未独立证实",
+      "url": "https://nync.pingliang.gov.cn/xwdt/syjs/art/2026/art_7cc42d9bae9e473085986689fb43c29b.html",
+      "archive_file": "S05_平凉转载_访问核对记录.md",
+      "locator": "第一部分 长江中游；第三部分 因地因苗强化防灾减灾 一 防范气象灾害；对应Z01 PDF第1至2页",
+      "use": "已在线查看并核对使用段落，完整HTML下载失败；保存访问核对记录，不能称作下载的原网页。",
+      "access_date": "2026-10-19",
+      "sha256": "a80f32cecf76b1f62e3d5a42a2ecefeb0d9a0abcf14abc6261c984744dac70e8",
+      "archive_type": "review_note_only"
+    },
+    {
+      "id": "A04-S06",
+      "title": "冷浸田地下水位与农田小气候生境特征研究",
+      "publisher": "王飞等 福建省农业科学院；农业现代化研究",
+      "date": "2014年5月 第35卷第3期",
+      "url": "https://nyxdhyj.isa.ac.cn/en/article/pdf/preview/20140322.pdf",
+      "archive_file": "S06_冷浸田生境研究_2014.pdf",
+      "locator": "PDF第1页 摘要与引言；已查看页图",
+      "use": "福建闽侯典型冷浸田与灰泥田的连续两年监测，说明研究涉及水位与生境指标；不产生湖北油菜田的自动分类阈值。",
+      "access_date": "2026-10-19",
+      "sha256": "67361d77ae493263a7547731613d8525e349aa51966261584753933fa079b3c5",
+      "archive_type": "downloaded_original_response"
+    },
+    {
+      "id": "A04-S07",
+      "title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+      "publisher": "农业农村部办公厅",
+      "date": "网页2020-11-24；文件落款2020-11-05",
+      "url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+      "archive_file": "",
+      "locator": "分类指导相关检查要求；复用既有Z16 PDF第1页",
+      "use": "检查主题的背景依据，不能直接规定普通用户的频率、时长或诊断能力。",
+      "access_date": "2026-10-19",
+      "sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+      "archive_type": "existing_pdf"
+    }
+  ],
+  "card_links": {
+    "C11": [],
+    "C18": ["A04-S01", "A04-S02", "A04-S03", "A04-S06"],
+    "C19": ["A04-S01", "A04-S02", "A04-S03", "A04-S06"],
+    "C20": ["A04-S01", "A04-S02", "A04-S03", "A04-S05", "A04-S06"],
+    "C23": ["A04-S01", "A04-S02", "A04-S03", "A04-S04", "A04-S05"],
+    "C24": ["A04-S02", "A04-S04"],
+    "C31": ["A04-S02", "A04-S04"]
+  }
+}

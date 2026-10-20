@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -375,6 +376,158 @@ def test_expired_weather_snapshot_makes_preview_stale_and_blocks_adoption(
 
     assert store.load_preview(preview.id).status == "stale"
     assert service.get_current_plan("field-1") is None
+
+
+def test_forecast_rain_never_becomes_an_observed_fact(tmp_path: Path) -> None:
+    database = tmp_path / "workbench.sqlite3"
+    service = make_service(database)
+    location = WeatherLocationV3(
+        query="武汉市洪山区",
+        display_name="湖北省 · 武汉市 · 洪山区",
+        latitude=30.5,
+        longitude=114.3,
+        resolution="county",
+    )
+    service.save_field_draft(
+        draft().model_copy(update={"location": location}),
+        expected_version=None,
+        operation_id="create-with-location",
+    )
+    service.store_weather(
+        WeatherSnapshotV3(
+            field_id="field-1",
+            location=location,
+            requested_latitude=location.latitude,
+            requested_longitude=location.longitude,
+            grid_latitude=30.51,
+            grid_longitude=114.31,
+            fetched_at=datetime(2026, 10, 18, 8, tzinfo=UTC),
+            coverage_start=date(2026, 10, 19),
+            coverage_end=date(2026, 10, 25),
+            units={"precipitation_sum": "mm"},
+            days=[
+                WeatherDayV3(
+                    day=date(2026, 10, 19) + timedelta(days=offset),
+                    precipitation_sum=25.0,
+                )
+                for offset in range(7)
+            ],
+            cache_expires_at=datetime(2026, 10, 18, 20, tzinfo=UTC),
+        )
+    )
+
+    state = service.get_field("field-1")
+    assert state.draft.profile is not None
+    assert state.draft.profile.actual_rain_observed is None
+
+    evaluation = service.evaluate_field("field-1")
+    rule_ids = {row.rule_id for item in evaluation.items for row in item.evidence}
+    assert "C24" not in rule_ids
+
+
+def test_adopting_another_field_plan_leaves_the_first_field_plan_untouched(
+    tmp_path: Path,
+) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft("field-1"), expected_version=None, operation_id="create-1")
+    preview_one = service.preview_plan("field-1", operation_id="preview-1")
+    adopted_one = service.adopt_plan(
+        preview_one.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-1",
+    ).version
+
+    service.save_field_draft(draft("field-2"), expected_version=None, operation_id="create-2")
+    preview_two = service.preview_plan("field-2", operation_id="preview-2")
+    service.adopt_plan(
+        preview_two.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-2",
+    )
+
+    assert service.get_current_plan("field-1").id == adopted_one.id
+    markdown = service.export_markdown("field-1")
+    assert "单地块；尚未统筹其他地块时间" in markdown
+
+
+def test_duplicate_or_unknown_completion_event_is_rejected_without_new_version(
+    tmp_path: Path,
+) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    preview = service.preview_plan("field-1", operation_id="preview")
+    adopted = service.adopt_plan(
+        preview.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt",
+    ).version
+    inspection = next(item for item in adopted.items if item.task_type == "inspection")
+
+    service.commit_events(
+        "field-1",
+        [
+            FactEventInputV3(
+                event_id="complete-1",
+                feedback={
+                    "kind": "completed",
+                    "task_id": inspection.task_id,
+                    "at": (inspection.end_at + timedelta(minutes=1)).isoformat(),
+                },
+            )
+        ],
+        operation_id="complete-1",
+        expected_fact_version=0,
+    )
+    history_after_first = len(service.plan_history("field-1"))
+
+    with pytest.raises(ValueError, match="已记录完成"):
+        service.commit_events(
+            "field-1",
+            [
+                FactEventInputV3(
+                    event_id="complete-2",
+                    feedback={
+                        "kind": "completed",
+                        "task_id": inspection.task_id,
+                        "at": (inspection.end_at + timedelta(minutes=2)).isoformat(),
+                    },
+                )
+            ],
+            operation_id="complete-2",
+            expected_fact_version=1,
+        )
+    assert len(service.plan_history("field-1")) == history_after_first
+
+
+def test_exports_carry_mode_version_tasks_basis_and_reasons(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    preview = service.preview_plan("field-1", operation_id="preview")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt",
+    )
+
+    payload = json.loads(service.export_json("field-1"))
+    assert payload["schema_version"] == 3
+    assert payload["adopted_plan"] is not None
+    assert payload["adopted_plan"]["id"] == preview.version.id
+    assert payload["field"]["draft"]["mode"] == "real"
+    assert payload["adopted_plan"]["plan"]["items"], "导出必须包含任务明细"
+    assert payload["history"], "导出必须包含已采用版本历史"
+
+    markdown = service.export_markdown("field-1")
+    assert "开发验证，适用性待复核" in markdown
+    assert "单地块；尚未统筹其他地块时间" in markdown
+    assert "## 七天安排" in markdown
+    assert "依据：" in markdown
+    assert "任务：" in markdown
+    assert "## 缺项和未排入原因" in markdown
 
 
 def test_feedback_values_are_field_validated_before_any_fact_is_saved(

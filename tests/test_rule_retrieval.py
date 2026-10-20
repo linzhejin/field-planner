@@ -98,3 +98,21 @@ def test_unrepresented_problem_returns_no_basis_instead_of_keyword_match() -> No
     assert result.status == "no_basis"
     assert not result.hits
     assert "没有直接依据" in result.reason
+
+
+def test_hilly_blocked_ditch_is_not_rejected_while_deferred_card_stays_reference() -> None:
+    result = RuleRetrieverV3().search(
+        query(
+            field_type="dry_hilly",
+            problem="ditch",
+            problem_confirmed=True,
+            maintenance_requested=True,
+            task_type="all",
+        )
+    )
+    by_id = {hit.rule_id: hit for hit in result.hits}
+
+    assert by_id["C23"].applicability == "matched"
+    assert "适用依据" in by_id["C23"].reason or "确认" in by_id["C23"].reason
+    assert by_id["C20"].applicability == "reference"
+    assert result.status == "matched"

@@ -194,3 +194,18 @@ def test_standing_water_warning_is_shown_from_saved_facts(tmp_path: Path, monkey
 
     assert not app.exception
     assert any("农技人员" in warning.value for warning in app.warning)
+
+
+def test_a04_supplementary_registry_is_visible_with_prefix(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+
+    assert not app.exception
+    texts = [element.value for element in app.markdown]
+    texts += [element.value for element in app.caption]
+    assert any("A04-S01" in text for text in texts)
+    assert any("不改写规则卡原文" in text or "补充来源" in text for text in texts)

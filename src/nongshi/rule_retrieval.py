@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from nongshi.rules import RuleCatalog, load_rule_catalog
 from nongshi.schema_v2 import RuleEvidenceV2
-from nongshi.schema_v3 import RuleSearchHitV3, RuleSearchQueryV3, RuleSearchResultV3
+from nongshi.schema_v3 import (
+    RuleSearchHitV3,
+    RuleSearchQueryV3,
+    RuleSearchResultV3,
+    RuleSupplementarySourceV3,
+)
 
 SUPPORTED_PROBLEMS = {
     "inspection",
@@ -18,9 +23,8 @@ SUPPORTED_PROBLEMS = {
     "墒情",
 }
 
-# A03 采用记录：C18/C19/C20/C24 为暂缓卡。规则卡包没有逐卡采用状态字段，
-# 开发期在此硬编码暂缓名单；这些卡只作历史参考，不参与总体状态聚合。
-REFERENCE_RULE_IDS = frozenset({"C18", "C19", "C20", "C24"})
+# A03 暂缓名单来自 src/nongshi/data/rule_adoption_development.json（规则卡包本身没有逐卡采用状态
+# 字段），这些卡只作历史参考，不参与总体状态聚合。审核状态见该文件的 decision_status。
 
 
 class RuleRetrieverV3:
@@ -91,6 +95,9 @@ class RuleRetrieverV3:
     def _hit(self, rule_id: str, query: RuleSearchQueryV3) -> RuleSearchHitV3:
         card = self.catalog.cards[rule_id]
         evidence = [RuleEvidenceV2(**row) for row in self.catalog.evidence_for([rule_id])]
+        supplementary = [
+            RuleSupplementarySourceV3(**row) for row in self.catalog.supplementary_for([rule_id])
+        ]
         scope_reason = self._scope_reason(query)
         if scope_reason:
             applicability = "out_of_scope" if scope_reason.startswith("超出") else "pending"
@@ -100,15 +107,17 @@ class RuleRetrieverV3:
                 applicability=applicability,
                 reason=scope_reason,
                 evidence=evidence,
+                supplementary_sources=supplementary,
                 runtime_enabled=card.runtime_enabled,
             )
-        if rule_id in REFERENCE_RULE_IDS:
+        if rule_id in self.catalog.deferred_rule_ids:
             return RuleSearchHitV3(
                 rule_id=rule_id,
                 title=card.title,
                 applicability="reference",
                 reason=self._reference_reason(rule_id, query),
                 evidence=evidence,
+                supplementary_sources=supplementary,
                 runtime_enabled=card.runtime_enabled,
             )
         if rule_id == "C23":
@@ -139,6 +148,7 @@ class RuleRetrieverV3:
             applicability=applicability,
             reason=reason,
             evidence=evidence,
+            supplementary_sources=supplementary,
             runtime_enabled=card.runtime_enabled,
         )
 

@@ -1,0 +1,43 @@
+{
+  "report_version": "2.0",
+  "tested_at": "2026-10-20T02:28:47.272987+00:00",
+  "classification": "Live service acceptance refresh; Open-Meteo weather and DeepSeek Agent tool call",
+  "base_commit": "de9c8e2",
+  "offline_validation": {
+    "pytest": "147 passed",
+    "note": "offline suite uses fixed inputs and mocked HTTP"
+  },
+  "weather": {
+    "status": "passed",
+    "provider": "Open-Meteo Forecast API",
+    "location": "湖北省 · 武汉市 · 武汉",
+    "resolution": "city",
+    "coverage_start": "2026-10-20",
+    "coverage_end": "2026-10-26",
+    "days_returned": 7,
+    "stale": false,
+    "network_note": "NO_PROXY set for open-meteo.com"
+  },
+  "deepseek": {
+    "status": "success",
+    "model": "deepseek-flash",
+    "run_id": "844ef2d2-7980-4d06-889c-ed1572eed4b0",
+    "request_count": 2,
+    "tool_count": 2,
+    "tools": [
+      {
+        "name": "read_field",
+        "status": "success"
+      },
+      {
+        "name": "evaluate_field",
+        "status": "success"
+      }
+    ],
+    "prompt_tokens": 7839,
+    "completion_tokens": 449,
+    "text": "已完成本轮查询；请以计划结果和依据面板中的结构化内容为准。",
+    "error_message": "",
+    "network_note": "NO_PROXY set for api.deepseek.com"
+  }
+}

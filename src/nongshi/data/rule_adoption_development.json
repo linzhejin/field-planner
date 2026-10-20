@@ -1,0 +1,50 @@
+{
+  "version": "A03-1.0",
+  "date": "2026-10-19",
+  "note": "A03 七卡采用建议的开发期登记。decision 为建议稿（proposed_decision），decision_status 为审核状态；formal_adopted 为 0，不改变 runtime_enabled，也不代表专家认证。数据来源为 任务落实_20261019/A03_规则采用记录/A03_七卡采用建议_20261019.json。",
+  "formal_adopted": 0,
+  "records": [
+    {
+      "rule_id": "C11",
+      "decision": "采用",
+      "scope": "仅采用观察记录用途",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C18",
+      "decision": "暂缓",
+      "scope": "暂缓作为冬前适用和尺寸处置的独立触发规则",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C19",
+      "decision": "暂缓",
+      "scope": "暂缓按单一田型标签自动判断适用",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C20",
+      "decision": "暂缓",
+      "scope": "暂缓按丘陵标签自动推定保墒或排水目标",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C23",
+      "decision": "采用",
+      "scope": "仅采用经确认的既有沟渠清理候选用途",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C24",
+      "decision": "暂缓",
+      "scope": "暂缓以实际降雨单字段自动触发该情境规则",
+      "decision_status": "建议稿，待负责人复核"
+    },
+    {
+      "rule_id": "C31",
+      "decision": "采用",
+      "scope": "仅采用用户自述观察清单用途",
+      "decision_status": "建议稿，待负责人复核"
+    }
+  ]
+}

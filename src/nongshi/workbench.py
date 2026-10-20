@@ -764,7 +764,9 @@ def _render_weather_snapshot(snapshot, *, stale: bool) -> None:  # type: ignore[
 def _render_evidence(item) -> None:  # type: ignore[no-untyped-def]
     if not item.evidence:
         return
+    catalog = load_rule_catalog()
     with st.expander("规则依据与来源"):
+        rendered_rules: set[str] = set()
         for evidence in item.evidence:
             st.markdown(f"**{evidence.rule_id} · {evidence.title}**")
             st.caption(
@@ -779,6 +781,24 @@ def _render_evidence(item) -> None:  # type: ignore[no-untyped-def]
             st.caption(f"来源指纹：{evidence.source_sha256}")
             if evidence.source_url:
                 st.link_button("打开来源", evidence.source_url)
+            if evidence.rule_id in rendered_rules:
+                continue
+            rendered_rules.add(evidence.rule_id)
+            _render_supplementary_sources(catalog.supplementary_for([evidence.rule_id]))
+
+
+def _render_supplementary_sources(rows: list) -> None:  # type: ignore[type-arg]
+    """显示 A04 补充来源；单独标识，不改写原卡适用性或启用状态。"""
+    for source in rows:
+        st.markdown(f"↳ {source['source_id']} · {source['source_title']}")
+        st.caption(
+            f"{source['publisher']} · {source['source_date'] or '日期未提供'} · "
+            f"{source['locator']} · 访问日 {source['access_date'] or '未提供'}"
+        )
+        st.caption(f"用途限制：{source['use'] or '未提供'}")
+        st.caption(f"{source['status_label']} · 指纹 {source['source_sha256']}")
+        if source["source_url"]:
+            st.link_button("打开补充来源", source["source_url"])
 
 
 def _render_item(item) -> None:  # type: ignore[no-untyped-def]
@@ -1277,6 +1297,16 @@ def _render_legacy_history(service: WorkbenchServiceV3, database: Path, mode: st
 def _render_rule_reviews(service: WorkbenchServiceV3, field_id: str, state: FieldStateV3) -> None:
     st.markdown("#### 规则复核记录")
     st.caption("复核记录独立保存；不改写规则卡原文，也不会把 runtime_enabled 改为正式启用。")
+    with st.expander("A04 补充来源登记（只作追溯，不代表原卡启用）"):
+        st.caption("补充来源单独标识为 A04-Sxx；不覆盖原卡、原来源索引或原件指纹。")
+        for rule_id, source_ids in service.catalog.supplementary_links.items():
+            if not source_ids:
+                continue
+            st.markdown(f"**{rule_id}**")
+            for source in service.catalog.supplementary_for([rule_id]):
+                st.caption(
+                    f"{source['source_id']} · {source['source_title']} · {source['locator']}"
+                )
     for record in service.rule_adoptions(field_id):
         st.write(
             f"{record.rule_id} · {record.status} · {record.reviewer or '未填写复核人'} · "

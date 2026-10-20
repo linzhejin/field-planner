@@ -221,12 +221,30 @@ class RuleSearchQueryV3(BaseModel):
     actual_rain_observed: bool | None = None
 
 
+class RuleSupplementarySourceV3(BaseModel):
+    """A04 补充来源展示项；单独标识，不改写原 C 卡的适用性、来源指纹或启用状态。"""
+
+    rule_id: str
+    source_id: str
+    source_title: str
+    publisher: str
+    source_date: str
+    source_url: str
+    locator: str
+    use: str
+    access_date: str
+    source_sha256: str
+    archive_type: str
+    status_label: str = "A04 补充来源；不改变原卡适用性与启用状态"
+
+
 class RuleSearchHitV3(BaseModel):
     rule_id: str
     title: str
     applicability: Literal["matched", "out_of_scope", "pending", "no_basis", "reference"]
     reason: str
     evidence: list[RuleEvidenceV2] = Field(default_factory=list)
+    supplementary_sources: list[RuleSupplementarySourceV3] = Field(default_factory=list)
     runtime_enabled: bool = False
 
 

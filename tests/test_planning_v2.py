@@ -518,3 +518,50 @@ def test_growth_observations_are_stored_as_facts_without_driving_tasks() -> None
     assert plot.crowding is True
     assert plot.workability_by_date == {}
     assert items(changed)["A-M"].start_at == items(first)["A-M"].start_at
+
+
+def test_unknown_field_type_or_leaf_age_does_not_block_requested_inspection() -> None:
+    plan = build_plan_v2(
+        request_v2(
+            field_type=None,
+            leaf_count=None,
+            moisture=None,
+            ditch_connectivity=None,
+            standing_water=None,
+        )
+    )
+    by_id = items(plan)
+
+    inspection = by_id["A-I"]
+    assert inspection.applicability == "matched"
+    assert inspection.necessity == "required"
+    assert inspection.schedule_status == "scheduled"
+    assert {evidence.rule_id for evidence in inspection.evidence} == {"C11", "C31"}
+
+    maintenance = by_id["A-M"]
+    assert maintenance.applicability == "pending"
+    assert "field_type" in maintenance.missing_fields
+
+
+def test_completed_maintenance_never_rewrites_standing_water_fact() -> None:
+    first = build_plan_v2(
+        request_v2(
+            standing_water=True,
+            ditch_connectivity="impaired",
+            maintenance_problem_confirmed=True,
+            maintenance_need_confirmed=True,
+        )
+    )
+    assert items(first)["A-M"].schedule_status == "scheduled"
+
+    completed = apply_feedback_v2(
+        first,
+        FeedbackV2(
+            kind="completed",
+            task_id="A-M",
+            at=datetime(2026, 10, 19, 11, tzinfo=LOCAL_ZONE),
+        ),
+    )
+
+    assert items(completed)["A-M"].completed is True
+    assert completed.request.plots[0].standing_water is True

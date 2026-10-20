@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RULES_ROOT = PROJECT_ROOT / "rules"
 CARD_PACKAGE = RULES_ROOT / "农时窗口_规则卡片_融合修订版_20261017"
 DELIVERY_PACKAGE = RULES_ROOT / "农时窗口_规则与验证交付包_20261017"
+DATA_ROOT = Path(__file__).resolve().parent / "data"
 DEVELOPMENT_RULE_IDS = frozenset({"C11", "C18", "C19", "C20", "C23", "C24", "C31"})
 
 
@@ -58,6 +59,33 @@ class RuleCardRecord:
 
 
 @dataclass(frozen=True)
+class SupplementarySourceRecord:
+    """A04 补充来源，单独标识，不改写原 C 卡或原来源索引。"""
+
+    id: str
+    title: str
+    publisher: str
+    date: str
+    url: str
+    archive_file: str
+    locator: str
+    use: str
+    access_date: str
+    sha256: str
+    archive_type: str
+
+
+@dataclass(frozen=True)
+class RuleAdoptionRecord:
+    """A03 开发期采用建议；decision 为建议，decision_status 为审核状态。"""
+
+    rule_id: str
+    decision: str
+    scope: str
+    decision_status: str
+
+
+@dataclass(frozen=True)
 class RuleCatalog:
     delivery_version: str
     as_of: str
@@ -71,6 +99,9 @@ class RuleCatalog:
     engineering_rules_version: str
     engineering_rules: tuple[dict[str, Any], ...]
     input_contract: dict[str, Any]
+    supplementary_sources: dict[str, SupplementarySourceRecord]
+    supplementary_links: dict[str, tuple[str, ...]]
+    rule_adoptions: dict[str, RuleAdoptionRecord]
 
     def plan_metadata(self) -> dict[str, Any]:
         return {
@@ -80,6 +111,44 @@ class RuleCatalog:
             "engineering_rules_version": self.engineering_rules_version,
             "engineering_rule_ids": sorted(str(row["id"]) for row in self.engineering_rules),
         }
+
+    @property
+    def deferred_rule_ids(self) -> frozenset[str]:
+        """A03 建议暂缓的规则；仅作开发期判定，不代表正式采用状态。"""
+        return frozenset(
+            rule_id for rule_id, record in self.rule_adoptions.items() if record.decision == "暂缓"
+        )
+
+    @property
+    def limited_adopt_rule_ids(self) -> frozenset[str]:
+        """A03 建议限用途采用的规则。"""
+        return frozenset(
+            rule_id for rule_id, record in self.rule_adoptions.items() if record.decision == "采用"
+        )
+
+    def supplementary_for(self, rule_ids: list[str] | tuple[str, ...]) -> list[dict[str, Any]]:
+        """返回与规则相关的 A04 补充来源；不改变原卡适用性或启用状态。"""
+        rows: list[dict[str, Any]] = []
+        for rule_id in rule_ids:
+            for source_id in self.supplementary_links.get(rule_id, ()):
+                source = self.supplementary_sources[source_id]
+                rows.append(
+                    {
+                        "rule_id": rule_id,
+                        "source_id": source.id,
+                        "source_title": source.title,
+                        "publisher": source.publisher,
+                        "source_date": source.date,
+                        "source_url": source.url,
+                        "locator": source.locator,
+                        "use": source.use,
+                        "access_date": source.access_date,
+                        "source_sha256": source.sha256,
+                        "archive_type": source.archive_type,
+                        "status_label": "A04 补充来源；不改变原卡适用性与启用状态",
+                    }
+                )
+        return rows
 
     def evidence_for(self, rule_ids: list[str] | tuple[str, ...]) -> list[dict[str, Any]]:
         evidence: list[dict[str, Any]] = []
@@ -126,6 +195,60 @@ def _file_hash(path: Path) -> str:
     except OSError as error:
         raise ValueError(f"规则引用文件缺失或不可读：{path}") from error
     return digest.hexdigest()
+
+
+def _load_supplementary_sources(
+    raw_cards: dict[str, Any],
+) -> tuple[dict[str, SupplementarySourceRecord], dict[str, tuple[str, ...]]]:
+    """读取 A04 补充来源登记；只做标识与展示，不覆盖原卡或来源索引。"""
+    data = _read_json(DATA_ROOT / "a04_supplementary_sources.json")
+    sources: dict[str, SupplementarySourceRecord] = {}
+    for row in data.get("sources", []):
+        source_id = str(row.get("id", ""))
+        if not source_id.startswith("A04-"):
+            raise ValueError(f"A04 补充来源编号必须带 A04- 前缀：{source_id}")
+        sources[source_id] = SupplementarySourceRecord(
+            id=source_id,
+            title=str(row.get("title", "")),
+            publisher=str(row.get("publisher", "")),
+            date=str(row.get("date", "")),
+            url=str(row.get("url", "")),
+            archive_file=str(row.get("archive_file", "")),
+            locator=str(row.get("locator", "")),
+            use=str(row.get("use", "")),
+            access_date=str(row.get("access_date", "")),
+            sha256=str(row.get("sha256", "")).lower(),
+            archive_type=str(row.get("archive_type", "")),
+        )
+    links: dict[str, tuple[str, ...]] = {}
+    for rule_id, source_ids in data.get("card_links", {}).items():
+        if rule_id not in raw_cards:
+            raise ValueError(f"A04 补充来源登记引用了不存在的C规则：{rule_id}")
+        for source_id in source_ids:
+            if source_id not in sources:
+                raise ValueError(f"A04 补充来源登记引用了未登记来源：{source_id}")
+        links[str(rule_id)] = tuple(str(source_id) for source_id in source_ids)
+    return sources, links
+
+
+def _load_rule_adoptions(raw_cards: dict[str, Any]) -> dict[str, RuleAdoptionRecord]:
+    """读取 A03 采用建议登记；decision 为建议、decision_status 为审核状态。"""
+    data = _read_json(DATA_ROOT / "rule_adoption_development.json")
+    records: dict[str, RuleAdoptionRecord] = {}
+    for row in data.get("records", []):
+        rule_id = str(row.get("rule_id", ""))
+        if rule_id not in raw_cards:
+            raise ValueError(f"A03 采用登记引用了不存在的C规则：{rule_id}")
+        decision = str(row.get("decision", ""))
+        if decision not in {"采用", "暂缓"}:
+            raise ValueError(f"A03 采用登记 decision 非法：{rule_id}:{decision}")
+        records[rule_id] = RuleAdoptionRecord(
+            rule_id=rule_id,
+            decision=decision,
+            scope=str(row.get("scope", "")),
+            decision_status=str(row.get("decision_status", "")),
+        )
+    return records
 
 
 @lru_cache(maxsize=1)
@@ -232,6 +355,8 @@ def load_rule_catalog() -> RuleCatalog:
     delivery_version = str(card_data.get("version", ""))
     if not delivery_version:
         raise ValueError("规则卡交付版本缺失")
+    supplementary_sources, supplementary_links = _load_supplementary_sources(raw_cards)
+    rule_adoptions = _load_rule_adoptions(raw_cards)
     return RuleCatalog(
         delivery_version=delivery_version,
         as_of=str(card_data.get("as_of", "")),
@@ -245,4 +370,7 @@ def load_rule_catalog() -> RuleCatalog:
         engineering_rules_version=str(adoption_data.get("version", "")),
         engineering_rules=tuple(engineering_data.get("rules", [])),
         input_contract=adoption_data,
+        supplementary_sources=supplementary_sources,
+        supplementary_links=supplementary_links,
+        rule_adoptions=rule_adoptions,
     )

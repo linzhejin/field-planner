@@ -89,10 +89,17 @@ class WorkbenchServiceV3:
         if not replayed_event_ids:
             current = self.store.get_current_plan(field_id)
             current_items = list(current.items) if current else []
+            recorded_completions = {
+                event.feedback.task_id
+                for event in self.store.list_events(field_id)
+                if event.feedback and event.feedback.kind == "completed"
+            }
             for event in events:
                 feedback = event.feedback
                 if not feedback or feedback.kind != "completed":
                     continue
+                if feedback.task_id in recorded_completions:
+                    raise ValueError("任务已记录完成；同一任务不能重复提交完成事件")
                 item = next(
                     (
                         task
