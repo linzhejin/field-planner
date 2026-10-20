@@ -450,6 +450,7 @@ def test_adopting_another_field_plan_leaves_the_first_field_plan_untouched(
     assert service.get_current_plan("field-1").id == adopted_one.id
     markdown = service.export_markdown("field-1")
     assert "单地块；尚未统筹其他地块时间" in markdown
+    assert "不代表合并后可执行" in markdown
 
 
 def test_duplicate_or_unknown_completion_event_is_rejected_without_new_version(
@@ -524,6 +525,7 @@ def test_exports_carry_mode_version_tasks_basis_and_reasons(tmp_path: Path) -> N
     markdown = service.export_markdown("field-1")
     assert "开发验证，适用性待复核" in markdown
     assert "单地块；尚未统筹其他地块时间" in markdown
+    assert "不代表合并后可执行" in markdown
     assert "## 七天安排" in markdown
     assert "依据：" in markdown
     assert "任务：" in markdown

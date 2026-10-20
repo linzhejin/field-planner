@@ -175,7 +175,7 @@ class WorkbenchServiceV3:
         reviews = self.store.list_rule_adoptions(field_id)
         adoptions = [record for record in reviews if record.status == "adopted"]
         calculation_basis = [
-            "单地块独立计划；尚未统筹其他地块时间",
+            "单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行",
             "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
             "候选规则处于开发验证阶段，适用性待复核",
         ]
@@ -397,7 +397,7 @@ class WorkbenchServiceV3:
             f"- 现场事实版本：v{state.fact_version}",
             f"- 规则资料：{version.ruleset_version if version else self.catalog.delivery_version}",
             "- 模式：开发验证，适用性待复核",
-            "- 排程范围：单地块；尚未统筹其他地块时间",
+            "- 排程范围：单地块；尚未统筹其他地块时间，不代表合并后可执行",
             "",
         ]
         if version is None:

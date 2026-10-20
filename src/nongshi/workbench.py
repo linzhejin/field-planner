@@ -861,7 +861,8 @@ def _show_preview(service: WorkbenchServiceV3, preview: PlanPreviewV3) -> None:
     st.markdown("#### 七天计划预览")
     st.caption(
         f"依据：档案 v{preview.expected_draft_version} · "
-        f"现场事实 v{preview.expected_fact_version} · 单地块计算，尚未统筹其他地块时间"
+        f"现场事实 v{preview.expected_fact_version} · 单地块计算，"
+        "尚未统筹其他地块时间，不代表合并后可执行",
     )
     for basis in preview.version.calculation_basis:
         st.caption(basis)
@@ -1375,7 +1376,7 @@ def main() -> None:
     ).compact
     st.markdown(
         '<div class="workbench-note">规则候选处于<strong>开发验证，适用性待复核</strong>。'
-        "天气用于查看风险，不替代现场确认。每块地独立排程，尚未统筹其他地块时间。</div>",
+        "天气用于查看风险，不替代现场确认。每块地独立排程，尚未统筹其他地块时间，不代表合并后可执行。</div>",
         unsafe_allow_html=True,
     )
 
