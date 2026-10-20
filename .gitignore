@@ -26,5 +26,6 @@ logs/
 *.ckpt
 chroma_db/
 .vscode/
+.trae/
 ~$*
 .DS_Store
