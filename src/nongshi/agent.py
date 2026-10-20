@@ -188,10 +188,13 @@ class AgentServiceV3:
         user_message: str,
         *,
         conversation: list[dict[str, str]] | None = None,
+        received_at: datetime | None = None,
     ) -> AgentResponseV3:
         self.workbench.get_field(field_id)
         run_id = str(uuid4())
-        started_at = datetime.now(UTC)
+        # SYS-02：正式运行接口需要可注入的接收时间，便于离线适配器与三组对照固定时钟；
+        # 默认仍取系统 UTC 时钟。
+        started_at = received_at or datetime.now(UTC)
         started = self._monotonic()
         model = self.settings.llm_model.strip() or "deepseek-flash"
         request_count = 0

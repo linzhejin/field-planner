@@ -30,10 +30,14 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     app = AppTest.from_file(APP, default_timeout=30).run()
 
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["地块与资源", "计划结果", "助手与历史"]
+    # 顶层为三页签；右栏内部另有「农事助手/最近操作」子页签，故只校验前三个。
+    assert [tab.label for tab in app.tabs][:3] == ["地块与资源", "计划结果", "助手与历史"]
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     field_id = app.session_state["new_field_id:real"]
     assert app.text_input(key=f"field_name:{field_id}:0").value == ""
+    # 空白优先：首次进入直接显示内联空表单，无需点开「编辑当前地块」对话框。
+    assert app.button(key=f"save_field:{field_id}:0").label == "保存地块档案"
+    assert not any(button.key == f"edit_field:{field_id}" for button in app.button)
 
     app.text_input(key=f"field_name:{field_id}:0").set_value("河边一号")
     app.button(key=f"save_field:{field_id}:0").click().run()
@@ -94,6 +98,9 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
     app.button(key=f"save_field:{field_id}:0").click().run()
     assert not app.exception
 
+    # 逐日条件与可用时段已移入「调整可用时段」对话框：先点按钮打开表单。
+    app.button(key=f"edit_schedule:{field_id}").click().run()
+    assert not app.exception
     app.checkbox(key=f"resources_enabled:{field_id}:1").set_value(True).run()
     for offset in range(7):
         app.selectbox(key=f"site:{field_id}:1:{offset}").set_value("可作业")
@@ -115,6 +122,9 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
     inspection = next(item for item in current.items if item.task_type == "inspection")
     assert inspection.start_at is not None and inspection.end_at is not None
     assert len(store.plan_history(field_id)) == 1
+    # 顶栏计划版本随采用版更新为 V1。
+    top_markdown = "\n".join(element.value for element in app.markdown)
+    assert "计划 V1" in top_markdown
 
     app.selectbox(key=f"observation_field:{field_id}:0").set_value("沟渠连通")
     app.selectbox(key=f"observation_value:{field_id}:0").set_value("受阻")
@@ -205,7 +215,85 @@ def test_a04_supplementary_registry_is_visible_with_prefix(tmp_path: Path, monke
     app.button(key=f"save_field:{field_id}:0").click().run()
 
     assert not app.exception
+    # 规则依据与 A04 补充来源已移入「查看详情」对话框，卡片主区不再铺开。
+    detail_buttons = [element for element in app.button if element.label == "查看详情"]
+    assert detail_buttons
+    detail_buttons[0].click().run()
+    assert not app.exception
     texts = [element.value for element in app.markdown]
     texts += [element.value for element in app.caption]
     assert any("A04-S01" in text for text in texts)
     assert any("不改写规则卡原文" in text or "补充来源" in text for text in texts)
+
+
+def test_top_bar_shows_range_version_mode_and_history_export(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    assert not app.exception
+
+    markdown = "\n".join(element.value for element in app.markdown)
+    captions = "\n".join(element.value for element in app.caption)
+
+    # 顶栏：日期范围 + 计划版本 + 模式徽标 + 保存状态。
+    assert "未设置起始日" in markdown
+    assert "计划 未采用" in markdown
+    assert 'status-chip status-neutral">真实地块' in markdown
+    assert "尚未保存" in captions
+
+    # 顶栏提供历史版本与导出计划两个按钮。
+    button_keys = {button.key for button in app.button}
+    assert "top_history" in button_keys
+    assert "top_export" in button_keys
+
+    # 尚无采用版时点「历史版本」可在对话框内看到空态提示。
+    app.button(key="top_history").click().run()
+    assert not app.exception
+    dialog_text = "\n".join(element.value for element in app.caption)
+    assert "尚无已采用的计划版本" in dialog_text
+
+
+def test_result_count_strip_shows_status_counts(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
+
+    markdown = "\n".join(element.value for element in app.markdown)
+    # 三块计数卡沿用状态胶囊配色：已安排绿、待确认琥珀、未排入灰。
+    assert 'status-chip status-green">已安排' in markdown
+    assert 'status-chip status-amber">待确认' in markdown
+    assert 'status-chip status-neutral">未排入' in markdown
+    # 计数条上方有天气摘要行。
+    assert any(caption.value.startswith("天气：") for caption in app.caption)
+
+
+def test_quick_action_buttons_present(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+
+    button_keys = {button.key for button in app.button}
+    assert f"quick_observe:{field_id}" in button_keys
+    assert f"quick_complete:{field_id}" in button_keys
+    assert f"quick_resource:{field_id}" in button_keys
+
+
+def test_edit_field_button_opens_archive_dialog(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    _create_field(app, field_id)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
+
+    # 已有档案后表单不再常驻，需点「编辑当前地块」在对话框中打开。
+    assert not any(button.key == f"save_field:{field_id}:1" for button in app.button)
+    app.button(key=f"edit_field:{field_id}").click().run()
+    assert not app.exception
+    assert any(button.key == f"save_field:{field_id}:1" for button in app.button)

@@ -47,6 +47,17 @@ BOOL_OPTIONS = {"未知": None, "是": True, "否": False}
 STAGE_OPTIONS = {"未知": None, "苗期": "苗期", "其他生育期": "其他生育期"}
 CROP_OPTIONS = {"未知": None, "油菜": "油菜", "其他作物": "其他作物"}
 WORKABILITY_OPTIONS = {"未知": None, "可作业": True, "不可作业": False}
+APPLICABILITY_LABELS = {"matched": "适用", "out_of_scope": "超出范围", "pending": "待确认"}
+NECESSITY_LABELS = {"required": "需要", "no_need": "不需要", "unknown": "未知"}
+WINDOW_LABELS = {"available": "可安排", "unavailable": "暂不可安排", "pending": "待确认"}
+SCHEDULE_LABELS = {
+    "scheduled": "已安排",
+    "unscheduled": "未排入",
+    "pending": "待确认",
+    "not_generated": "未生成",
+    "completed": "已完成",
+}
+TASK_TYPE_LABELS = {"inspection": "巡田检查", "maintenance": "沟渠维护"}
 
 _VIEWPORT_LAYOUT = st.components.v2.component(
     "workbench_viewport_layout",
@@ -54,21 +65,41 @@ _VIEWPORT_LAYOUT = st.components.v2.component(
     export default function({ data, setStateValue }) {
       let compact = data?.compact ?? true;
       let timer;
-      const update = () => {
-        const nextCompact = window.innerWidth < 1100;
+      const mainEl = () =>
+        document.querySelector('[data-testid="stMainBlockContainer"]') ||
+        document.querySelector('.main') ||
+        document.body;
+      // 断点按“主内容区实际宽度”判断：侧栏开合只改变内容区宽度，
+      // 故用 ResizeObserver 监听它，三栏才能随侧栏状态重排。
+      const measure = () => {
+        const el = mainEl();
+        const width = el ? el.clientWidth : window.innerWidth;
+        const nextCompact = width < 1100;
         if (compact !== nextCompact) {
           compact = nextCompact;
           setStateValue("compact", compact);
         }
       };
-      const onResize = () => {
+      const schedule = () => {
         window.clearTimeout(timer);
-        timer = window.setTimeout(update, 100);
+        timer = window.setTimeout(measure, 100);
       };
-      window.addEventListener("resize", onResize);
-      update();
+      const observer = new ResizeObserver(schedule);
+      const start = () => {
+        const el = mainEl();
+        if (el) observer.observe(el);
+        measure();
+      };
+      if (document.readyState === "complete") {
+        start();
+      } else {
+        window.addEventListener("load", start, { once: true });
+      }
+      window.addEventListener("resize", schedule);
       return () => {
-        window.removeEventListener("resize", onResize);
+        observer.disconnect();
+        window.removeEventListener("resize", schedule);
+        window.removeEventListener("load", start);
         window.clearTimeout(timer);
       };
     }
@@ -77,20 +108,43 @@ _VIEWPORT_LAYOUT = st.components.v2.component(
 
 PALETTE = """
 <style>
-.stApp { background: #f5f6f1; color: #1d332b; }
-[data-testid="stHeader"] { background: rgba(245,246,241,.94); }
+.stApp { background: #f5f6f1; color: #1d332b; font-size: 16px; }
+[data-testid="stHeader"] { background: rgba(245,246,241,.94); height: 2.6rem; }
 h1, h2, h3 { color: #173f32; letter-spacing: -.025em; }
+/* 压缩顶部留白：收紧主区块内边距，并隐藏仅用于测量视口的自定义组件占位。 */
+[data-testid="stMainBlockContainer"], .main .block-container {
+  padding-top: 1.1rem !important; padding-bottom: 2.5rem !important; max-width: 100% !important; }
+iframe[width="1"], iframe[height="1"] { display: none !important; }
+[data-testid="stElementContainer"]:has(> iframe[width="1"]) { display: none !important; }
+h1 { font-size: 1.7rem; margin: .1rem 0 .15rem; }
+h2 { margin: .3rem 0 .2rem; }
+h3 { margin: .5rem 0 .2rem; }
 [data-testid="stButton"] button[kind="primary"] { background: #276653; border-color: #276653; }
+[data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button { font-size: 16px; }
+[data-testid="stVerticalBlockBorderWrapper"] { background: #ffffff; }
+/* 侧栏不再硬撑宽度：交回 Streamlit 默认，内容区随开合自适应。 */
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+  padding-left: 1rem; padding-right: 1rem; }
 .workbench-note { border-left: 4px solid #b9984b; padding: .65rem .9rem;
   background: #edf1e7; border-radius: 0 .4rem .4rem 0; line-height: 1.55; }
 .muted { color: #627369; font-size: .9rem; }
-div[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .5rem; }
-@media (max-width: 1099px) {
-  div[data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
-  div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-    min-width: 100% !important; flex: 1 1 100% !important;
-  }
+.status-chip { display: inline-block; padding: .1rem .55rem; border-radius: 999px;
+  font-size: .8rem; font-weight: 600; vertical-align: middle; white-space: nowrap; }
+.status-green { color: #1f5e46; background: #e2efe8; }
+.status-amber { color: #7a5a13; background: #f3ead2; }
+.status-red { color: #8a3b32; background: #f0ddd9; }
+.status-neutral { color: #5b6b62; background: #eceee9; }
+.count-number { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+.count-green { color: #1f5e46; }
+.count-amber { color: #7a5a13; }
+.count-neutral { color: #5b6b62; }
+.stApp :focus-visible { outline: 2px solid #276653; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+div[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .5rem; }
+/* 对话气泡限宽，避免窄栏里逐字换行造成的“细条”观感。 */
+[data-testid="stChatMessage"] { max-width: 92%; }
 </style>
 """
 
@@ -133,6 +187,7 @@ def _field_state(service: WorkbenchServiceV3, field_id: str) -> FieldStateV3 | N
 
 
 def _select_field(service: WorkbenchServiceV3, mode: str) -> tuple[str, FieldStateV3 | None]:
+    """解析当前选中地块（含待处理跳转）；不渲染控件，控件在左栏按设计顺序单独绘制。"""
     fields = _saved_fields(service, mode)
     key = f"field_selection:{mode}"
     pending_selection_key = f"pending_field_selection:{mode}"
@@ -144,38 +199,60 @@ def _select_field(service: WorkbenchServiceV3, mode: str) -> tuple[str, FieldSta
         st.session_state[key] = NEW_FIELD
     elif st.session_state.get(key) not in valid | {NEW_FIELD}:
         st.session_state[key] = fields[-1].id
-    selected = st.selectbox(
-        "当前地块",
-        options=[NEW_FIELD, *[field.id for field in fields]],
-        format_func=lambda value: (
-            "＋ 新建空白地块"
-            if value == NEW_FIELD
-            else next(
-                (
-                    field.draft.profile.name
-                    if field.draft.profile
-                    else f"未命名地块 · {field.id[-5:]}"
-                    for field in fields
-                    if field.id == value
-                ),
-                value,
-            )
-        ),
-        key=key,
-    )
-    if st.button("新增地块", key=f"add_field:{mode}", width="stretch"):
-        st.session_state[f"new_field_id:{mode}"] = f"field-{uuid4().hex[:10]}"
-        st.session_state[pending_selection_key] = NEW_FIELD
-        st.rerun()
+    selected = st.session_state.get(key)
     field_id = _active_field_id(mode) if selected == NEW_FIELD else selected
     return field_id, _field_state(service, field_id)
+
+
+def _render_field_selector(service: WorkbenchServiceV3, mode: str) -> None:
+    """左栏「当前地块」下拉与「+ 新增地块」按钮；沿用原有控件 key。
+
+    示意图只有一个地块时没有下拉：仅当存在两块及以上地块时才显示切换下拉。
+    """
+    fields = _saved_fields(service, mode)
+    key = f"field_selection:{mode}"
+    if len(fields) > 1:
+        st.selectbox(
+            "当前地块",
+            options=[NEW_FIELD, *[field.id for field in fields]],
+            format_func=lambda value: (
+                "＋ 新建空白地块"
+                if value == NEW_FIELD
+                else next(
+                    (
+                        field.draft.profile.name
+                        if field.draft.profile
+                        else f"未命名地块 · {field.id[-5:]}"
+                        for field in fields
+                        if field.id == value
+                    ),
+                    value,
+                )
+            ),
+            key=key,
+        )
+    if st.button("+ 新增地块", key=f"add_field:{mode}", width="stretch"):
+        st.session_state[f"new_field_id:{mode}"] = f"field-{uuid4().hex[:10]}"
+        st.session_state[f"pending_field_selection:{mode}"] = NEW_FIELD
+        st.rerun()
 
 
 def _enum_label(mapping: dict[str, object], value: object) -> str:
     return next((label for label, stored in mapping.items() if stored == value), "未知")
 
 
-def _save_draft_form(
+def _profile_from_form(previous: FieldProfile | None, values: dict[str, object]) -> FieldProfile:
+    """主表单只渲染部分字段；已有档案时保留未渲染字段（维护前置、逐日作业条件、苗情观察等）。
+
+    重新保存主表单不应清空这些字段（SYS-01）。
+    """
+
+    if previous is None:
+        return FieldProfile(**values)
+    return previous.model_copy(update=values)
+
+
+def _render_field_form(
     service: WorkbenchServiceV3,
     field_id: str,
     state: FieldStateV3 | None,
@@ -184,229 +261,239 @@ def _save_draft_form(
     previous = state.draft if state else FieldDraftV3(field_id=field_id, mode=mode)  # type: ignore[arg-type]
     profile = previous.profile
     key_suffix = f"{field_id}:{state.draft_version if state else 0}"
+    # 单一「下一步」：结果区已展示主按钮时，保存档案降为次级样式。
+    pending_preview = bool(st.session_state.get(f"current_preview:{field_id}"))
+    save_primary = _primary_action(pending_preview, profile is not None) == "save"
     st.subheader("地块档案")
     st.caption("首次使用从空白开始；未知信息保留为空，不会替你补值。")
     with st.form(f"field_form:{key_suffix}"):
-        left, right = st.columns(2)
-        name = left.text_input(
-            "地块名称",
-            value=profile.name if profile else "",
-            max_chars=80,
-            key=f"field_name:{key_suffix}",
-        )
-        province = right.text_input(
-            "省份",
-            value=profile.province or "" if profile else "",
-            key=f"field_province:{key_suffix}",
-        )
-        province_confirmed = right.checkbox(
-            "已确认省份",
-            value=profile.province_confirmed if profile else False,
-            key=f"province_confirmed:{key_suffix}",
-        )
-        crop_options = list(CROP_OPTIONS)
-        crop_label = st.selectbox(
-            "作物",
-            crop_options,
-            index=crop_options.index(_enum_label(CROP_OPTIONS, profile.crop if profile else None)),
-            key=f"field_crop:{key_suffix}",
-        )
-        crop_confirmed = st.checkbox(
-            "已确认作物",
-            value=profile.crop_confirmed if profile else False,
-            key=f"crop_confirmed:{key_suffix}",
-        )
-        stage_options = list(STAGE_OPTIONS)
-        stage_label = st.selectbox(
-            "生育期",
-            stage_options,
-            index=stage_options.index(
-                _enum_label(STAGE_OPTIONS, profile.stage if profile else None)
-            ),
-            key=f"field_stage:{key_suffix}",
-        )
-        stage_confirmed = st.checkbox(
-            "已由现场确认生育期",
-            value=profile.stage_confirmed if profile else False,
-            key=f"stage_confirmed:{key_suffix}",
-        )
-        type_options = list(FIELD_TYPES)
-        field_type_label = st.selectbox(
-            "田型",
-            type_options,
-            index=type_options.index(
-                _enum_label(FIELD_TYPES, profile.field_type if profile else None)
-            ),
-            key=f"field_type:{key_suffix}",
-        )
-        st.caption("以下田型事实只作档案记录，不影响候选规则判断。")
-        rice_stubble_label = st.selectbox(
-            "是否稻茬田",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(BOOL_OPTIONS, profile.rice_stubble if profile else None)
-            ),
-            key=f"field_rice_stubble:{key_suffix}",
-        )
-        cold_waterlogged_label = st.selectbox(
-            "是否冷浸田",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(BOOL_OPTIONS, profile.cold_waterlogged if profile else None)
-            ),
-            key=f"field_cold_waterlogged:{key_suffix}",
-        )
-        terrain_label = st.selectbox(
-            "地形",
-            list(TERRAIN_OPTIONS),
-            index=list(TERRAIN_OPTIONS).index(
-                _enum_label(TERRAIN_OPTIONS, profile.terrain if profile else None)
-            ),
-            key=f"field_terrain:{key_suffix}",
-        )
-        area_mu = st.number_input(
-            "面积（亩，可留空）",
-            min_value=0.0,
-            value=float(profile.area_mu or 0) if profile else 0.0,
-            step=0.5,
-            key=f"field_area:{key_suffix}",
-        )
-        inspect_label = st.selectbox(
-            "是否需要巡田",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(BOOL_OPTIONS, profile.inspection_requested if profile else None)
-            ),
-            key=f"inspection_requested:{key_suffix}",
-        )
-        maintenance_label = st.selectbox(
-            "是否需要沟渠维护",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(BOOL_OPTIONS, profile.maintenance_need_confirmed if profile else None)
-            ),
-            key=f"maintenance_need:{key_suffix}",
-        )
-        problem_label = st.selectbox(
-            "是否确认存在需要处理的问题",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(
-                    BOOL_OPTIONS, profile.maintenance_problem_confirmed if profile else None
-                )
-            ),
-            key=f"maintenance_problem:{key_suffix}",
-        )
-        moisture_options = {"未知": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}
-        moisture = st.selectbox(
-            "土壤墒情",
-            list(moisture_options),
-            index=list(moisture_options).index(
-                _enum_label(moisture_options, profile.moisture if profile else None)
-            ),
-            key=f"field_moisture:{key_suffix}",
-        )
-        ditch_options = {"未知": None, "通畅": "clear", "受阻": "impaired"}
-        ditch = st.selectbox(
-            "沟渠连通情况",
-            list(ditch_options),
-            index=list(ditch_options).index(
-                _enum_label(ditch_options, profile.ditch_connectivity if profile else None)
-            ),
-            key=f"field_ditch:{key_suffix}",
-        )
-        water = st.selectbox(
-            "是否有积水",
-            list(BOOL_OPTIONS),
-            index=list(BOOL_OPTIONS).index(
-                _enum_label(BOOL_OPTIONS, profile.standing_water if profile else None)
-            ),
-            key=f"field_water:{key_suffix}",
-        )
-        leaf_known = st.checkbox(
-            "记录叶片数",
-            value=profile.leaf_count is not None if profile else False,
-            key=f"leaf_known:{key_suffix}",
-        )
-        leaf_count = st.number_input(
-            "叶片数",
-            min_value=0.0,
-            value=float(profile.leaf_count or 0) if profile else 0.0,
-            disabled=not leaf_known,
-            key=f"leaf_count:{key_suffix}",
-        )
-        duration_left, duration_right = st.columns(2)
-        inspection_minutes = duration_left.number_input(
-            "巡田预计时长（分钟）",
-            min_value=0,
-            step=15,
-            value=profile.inspection_duration_minutes or 0 if profile else 0,
-            key=f"inspection_minutes:{key_suffix}",
-        )
-        maintenance_minutes = duration_right.number_input(
-            "维护预计时长（分钟）",
-            min_value=0,
-            step=15,
-            value=profile.maintenance_duration_minutes or 0 if profile else 0,
-            key=f"maintenance_minutes:{key_suffix}",
-        )
-        priority_left, priority_right = st.columns(2)
-        inspection_priority = priority_left.selectbox(
-            "巡田优先级（1 最高）",
-            [1, 2, 3],
-            index=(profile.inspection_priority - 1) if profile else 1,
-            key=f"inspection_priority:{key_suffix}",
-        )
-        maintenance_priority = priority_right.selectbox(
-            "维护优先级（1 最高）",
-            [1, 2, 3],
-            index=(profile.maintenance_priority - 1) if profile else 1,
-            key=f"maintenance_priority:{key_suffix}",
-        )
-        default_start = max(previous.start_date or (_today() + timedelta(days=1)), _today())
-        start_date = st.date_input(
-            "七天计划起始日",
-            value=default_start,
-            min_value=_today(),
-            help="默认从明天开始；若选择今天，只填写当前时刻之后的时段。",
-            key=f"start_date:{key_suffix}",
-        )
-        inspection_due_enabled = st.checkbox(
-            "设置巡田目标日期",
-            value=profile.inspection_due_date is not None if profile else False,
-            key=f"inspection_due_enabled:{key_suffix}",
-        )
-        inspection_due = st.date_input(
-            "巡田目标日期",
-            value=max(profile.inspection_due_date or start_date, start_date)
-            if profile
-            else start_date,
-            min_value=start_date,
-            disabled=not inspection_due_enabled,
-            key=f"inspection_due:{key_suffix}",
-        )
-        maintenance_due_enabled = st.checkbox(
-            "设置维护目标日期",
-            value=profile.maintenance_due_date is not None if profile else False,
-            key=f"maintenance_due_enabled:{key_suffix}",
-        )
-        maintenance_due = st.date_input(
-            "维护目标日期",
-            value=max(profile.maintenance_due_date or start_date, start_date)
-            if profile
-            else start_date,
-            min_value=start_date,
-            disabled=not maintenance_due_enabled,
-            key=f"maintenance_due:{key_suffix}",
-        )
-        notes = st.text_area(
-            "补充说明（不会自动转成规则）",
-            value=previous.notes,
-            key=f"field_notes:{key_suffix}",
-        )
+        with st.expander("基本信息", expanded=True):
+            left, right = st.columns(2)
+            name = left.text_input(
+                "地块名称",
+                value=profile.name if profile else "",
+                max_chars=80,
+                key=f"field_name:{key_suffix}",
+            )
+            province = right.text_input(
+                "省份",
+                value=profile.province or "" if profile else "",
+                key=f"field_province:{key_suffix}",
+            )
+            province_confirmed = right.checkbox(
+                "已确认省份",
+                value=profile.province_confirmed if profile else False,
+                key=f"province_confirmed:{key_suffix}",
+            )
+            crop_options = list(CROP_OPTIONS)
+            crop_label = st.selectbox(
+                "作物",
+                crop_options,
+                index=crop_options.index(
+                    _enum_label(CROP_OPTIONS, profile.crop if profile else None)
+                ),
+                key=f"field_crop:{key_suffix}",
+            )
+            crop_confirmed = st.checkbox(
+                "已确认作物",
+                value=profile.crop_confirmed if profile else False,
+                key=f"crop_confirmed:{key_suffix}",
+            )
+            stage_options = list(STAGE_OPTIONS)
+            stage_label = st.selectbox(
+                "生育期",
+                stage_options,
+                index=stage_options.index(
+                    _enum_label(STAGE_OPTIONS, profile.stage if profile else None)
+                ),
+                key=f"field_stage:{key_suffix}",
+            )
+            stage_confirmed = st.checkbox(
+                "已由现场确认生育期",
+                value=profile.stage_confirmed if profile else False,
+                key=f"stage_confirmed:{key_suffix}",
+            )
+            type_options = list(FIELD_TYPES)
+            field_type_label = st.selectbox(
+                "田型",
+                type_options,
+                index=type_options.index(
+                    _enum_label(FIELD_TYPES, profile.field_type if profile else None)
+                ),
+                key=f"field_type:{key_suffix}",
+            )
+        with st.expander("田块情况", expanded=False):
+            st.caption("以下田型事实只作档案记录，不影响候选规则判断。")
+            rice_stubble_label = st.selectbox(
+                "是否稻茬田",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(BOOL_OPTIONS, profile.rice_stubble if profile else None)
+                ),
+                key=f"field_rice_stubble:{key_suffix}",
+            )
+            cold_waterlogged_label = st.selectbox(
+                "是否冷浸田",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(BOOL_OPTIONS, profile.cold_waterlogged if profile else None)
+                ),
+                key=f"field_cold_waterlogged:{key_suffix}",
+            )
+            terrain_label = st.selectbox(
+                "地形",
+                list(TERRAIN_OPTIONS),
+                index=list(TERRAIN_OPTIONS).index(
+                    _enum_label(TERRAIN_OPTIONS, profile.terrain if profile else None)
+                ),
+                key=f"field_terrain:{key_suffix}",
+            )
+            area_mu = st.number_input(
+                "面积（亩，可留空）",
+                min_value=0.0,
+                value=float(profile.area_mu or 0) if profile else 0.0,
+                step=0.5,
+                key=f"field_area:{key_suffix}",
+            )
+            moisture_options = {"未知": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}
+            moisture = st.selectbox(
+                "土壤墒情",
+                list(moisture_options),
+                index=list(moisture_options).index(
+                    _enum_label(moisture_options, profile.moisture if profile else None)
+                ),
+                key=f"field_moisture:{key_suffix}",
+            )
+            ditch_options = {"未知": None, "通畅": "clear", "受阻": "impaired"}
+            ditch = st.selectbox(
+                "沟渠连通情况",
+                list(ditch_options),
+                index=list(ditch_options).index(
+                    _enum_label(ditch_options, profile.ditch_connectivity if profile else None)
+                ),
+                key=f"field_ditch:{key_suffix}",
+            )
+            water = st.selectbox(
+                "是否有积水",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(BOOL_OPTIONS, profile.standing_water if profile else None)
+                ),
+                key=f"field_water:{key_suffix}",
+            )
+            leaf_known = st.checkbox(
+                "记录叶片数",
+                value=profile.leaf_count is not None if profile else False,
+                key=f"leaf_known:{key_suffix}",
+            )
+            leaf_count = st.number_input(
+                "叶片数",
+                min_value=0.0,
+                value=float(profile.leaf_count or 0) if profile else 0.0,
+                disabled=not leaf_known,
+                key=f"leaf_count:{key_suffix}",
+            )
+        with st.expander("任务与时间", expanded=False):
+            inspect_label = st.selectbox(
+                "是否需要巡田",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(BOOL_OPTIONS, profile.inspection_requested if profile else None)
+                ),
+                key=f"inspection_requested:{key_suffix}",
+            )
+            maintenance_label = st.selectbox(
+                "是否需要沟渠维护",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(
+                        BOOL_OPTIONS, profile.maintenance_need_confirmed if profile else None
+                    )
+                ),
+                key=f"maintenance_need:{key_suffix}",
+            )
+            problem_label = st.selectbox(
+                "是否确认存在需要处理的问题",
+                list(BOOL_OPTIONS),
+                index=list(BOOL_OPTIONS).index(
+                    _enum_label(
+                        BOOL_OPTIONS, profile.maintenance_problem_confirmed if profile else None
+                    )
+                ),
+                key=f"maintenance_problem:{key_suffix}",
+            )
+            duration_left, duration_right = st.columns(2)
+            inspection_minutes = duration_left.number_input(
+                "巡田预计时长（分钟）",
+                min_value=0,
+                step=15,
+                value=profile.inspection_duration_minutes or 0 if profile else 0,
+                key=f"inspection_minutes:{key_suffix}",
+            )
+            maintenance_minutes = duration_right.number_input(
+                "维护预计时长（分钟）",
+                min_value=0,
+                step=15,
+                value=profile.maintenance_duration_minutes or 0 if profile else 0,
+                key=f"maintenance_minutes:{key_suffix}",
+            )
+            priority_left, priority_right = st.columns(2)
+            inspection_priority = priority_left.selectbox(
+                "巡田优先级（1 最高）",
+                [1, 2, 3],
+                index=(profile.inspection_priority - 1) if profile else 1,
+                key=f"inspection_priority:{key_suffix}",
+            )
+            maintenance_priority = priority_right.selectbox(
+                "维护优先级（1 最高）",
+                [1, 2, 3],
+                index=(profile.maintenance_priority - 1) if profile else 1,
+                key=f"maintenance_priority:{key_suffix}",
+            )
+            default_start = max(previous.start_date or (_today() + timedelta(days=1)), _today())
+            start_date = st.date_input(
+                "七天计划起始日",
+                value=default_start,
+                min_value=_today(),
+                help="默认从明天开始；若选择今天，只填写当前时刻之后的时段。",
+                key=f"start_date:{key_suffix}",
+            )
+            inspection_due_enabled = st.checkbox(
+                "设置巡田目标日期",
+                value=profile.inspection_due_date is not None if profile else False,
+                key=f"inspection_due_enabled:{key_suffix}",
+            )
+            inspection_due = st.date_input(
+                "巡田目标日期",
+                value=max(profile.inspection_due_date or start_date, start_date)
+                if profile
+                else start_date,
+                min_value=start_date,
+                disabled=not inspection_due_enabled,
+                key=f"inspection_due:{key_suffix}",
+            )
+            maintenance_due_enabled = st.checkbox(
+                "设置维护目标日期",
+                value=profile.maintenance_due_date is not None if profile else False,
+                key=f"maintenance_due_enabled:{key_suffix}",
+            )
+            maintenance_due = st.date_input(
+                "维护目标日期",
+                value=max(profile.maintenance_due_date or start_date, start_date)
+                if profile
+                else start_date,
+                min_value=start_date,
+                disabled=not maintenance_due_enabled,
+                key=f"maintenance_due:{key_suffix}",
+            )
+            notes = st.text_area(
+                "补充说明（不会自动转成规则）",
+                value=previous.notes,
+                key=f"field_notes:{key_suffix}",
+            )
         submitted = st.form_submit_button(
             "保存地块档案",
-            type="primary",
+            type="primary" if save_primary else "secondary",
             width="stretch",
             key=f"save_field:{field_id}:{state.draft_version if state else 0}",
         )
@@ -421,42 +508,37 @@ def _save_draft_form(
                 BOOL_OPTIONS[problem_label],
             )
             has_observation = any(value is not None for value in observed_values)
-            updated_profile = FieldProfile(
-                id=field_id,
-                name=name.strip(),
-                province=province.strip() or None,
-                province_confirmed=province_confirmed,
-                crop=CROP_OPTIONS[crop_label],
-                crop_confirmed=crop_confirmed,
-                stage=STAGE_OPTIONS[stage_label],
-                stage_confirmed=stage_confirmed,
-                field_type=FIELD_TYPES[field_type_label],
-                rice_stubble=BOOL_OPTIONS[rice_stubble_label],
-                cold_waterlogged=BOOL_OPTIONS[cold_waterlogged_label],
-                terrain=TERRAIN_OPTIONS[terrain_label],
-                area_mu=area_mu or None,
-                inspection_requested=BOOL_OPTIONS[inspect_label],
-                maintenance_need_confirmed=BOOL_OPTIONS[maintenance_label],
-                maintenance_problem_confirmed=BOOL_OPTIONS[problem_label],
-                moisture=moisture_options[moisture],
-                ditch_connectivity=ditch_options[ditch],
-                standing_water=BOOL_OPTIONS[water],
-                leaf_count=leaf_count if leaf_known else None,
-                inspection_duration_minutes=inspection_minutes or None,
-                maintenance_duration_minutes=maintenance_minutes or None,
-                inspection_priority=inspection_priority,
-                maintenance_priority=maintenance_priority,
-                inspection_earliest_date=profile.inspection_earliest_date if profile else None,
-                inspection_due_date=inspection_due if inspection_due_enabled else None,
-                maintenance_earliest_date=profile.maintenance_earliest_date if profile else None,
-                maintenance_due_date=maintenance_due if maintenance_due_enabled else None,
-                maintenance_task_id=profile.maintenance_task_id if profile else None,
-                completed_maintenance_task_ids=(
-                    profile.completed_maintenance_task_ids if profile else []
-                ),
-                observed_at=datetime.now(UTC) if has_observation else None,
-                observation_source="observed" if has_observation else "synthetic",
-            )
+            form_profile_values: dict[str, object] = {
+                "id": field_id,
+                "name": name.strip(),
+                "province": province.strip() or None,
+                "province_confirmed": province_confirmed,
+                "crop": CROP_OPTIONS[crop_label],
+                "crop_confirmed": crop_confirmed,
+                "stage": STAGE_OPTIONS[stage_label],
+                "stage_confirmed": stage_confirmed,
+                "field_type": FIELD_TYPES[field_type_label],
+                "rice_stubble": BOOL_OPTIONS[rice_stubble_label],
+                "cold_waterlogged": BOOL_OPTIONS[cold_waterlogged_label],
+                "terrain": TERRAIN_OPTIONS[terrain_label],
+                "area_mu": area_mu or None,
+                "inspection_requested": BOOL_OPTIONS[inspect_label],
+                "maintenance_need_confirmed": BOOL_OPTIONS[maintenance_label],
+                "maintenance_problem_confirmed": BOOL_OPTIONS[problem_label],
+                "moisture": moisture_options[moisture],
+                "ditch_connectivity": ditch_options[ditch],
+                "standing_water": BOOL_OPTIONS[water],
+                "leaf_count": leaf_count if leaf_known else None,
+                "inspection_duration_minutes": inspection_minutes or None,
+                "maintenance_duration_minutes": maintenance_minutes or None,
+                "inspection_priority": inspection_priority,
+                "maintenance_priority": maintenance_priority,
+                "inspection_due_date": inspection_due if inspection_due_enabled else None,
+                "maintenance_due_date": maintenance_due if maintenance_due_enabled else None,
+                "observed_at": datetime.now(UTC) if has_observation else None,
+                "observation_source": "observed" if has_observation else "synthetic",
+            }
+            updated_profile = _profile_from_form(profile, form_profile_values)
             days = previous.days
             if previous.start_date and previous.start_date != start_date and days:
                 days = [
@@ -482,6 +564,17 @@ def _save_draft_form(
             st.rerun()
         except (ValueError, ValidationError) as error:
             st.error(f"没有保存：{error}")
+
+
+@st.dialog("编辑地块档案")
+def _field_form_dialog(
+    service: WorkbenchServiceV3,
+    field_id: str,
+    state: FieldStateV3 | None,
+    mode: str,
+) -> None:
+    """按需弹出档案表单：内容与空白优先的内联表单完全一致。"""
+    _render_field_form(service, field_id, state, mode)
 
 
 def _parse_intervals(value: str) -> list[TimeWindow]:
@@ -521,6 +614,11 @@ def _render_schedule_form(
         value=resources_default,
         key=f"resources_enabled:{field_id}:{state.draft_version}",
     )
+    # 时段格式错误就近显示：上次保存失败后暂存的按天错误，在本次渲染中提示。
+    schedule_error_key = f"schedule_error:{field_id}:{state.draft_version}"
+    schedule_error = st.session_state.pop(schedule_error_key, None)
+    if schedule_error:
+        st.error(schedule_error[0])
     with st.form(f"schedule_form:{field_id}:{state.draft_version}"):
         st.caption("现场能否进田、天气是否适合作业分别确认；预报本身不会自动成为作业确认。")
         day_values: list[tuple[date, str, str, int, str]] = []
@@ -569,14 +667,30 @@ def _render_schedule_form(
                     key=f"intervals:{field_id}:{state.draft_version}:{index}",
                     disabled=not resources_enabled,
                 )
+                if schedule_error and index in schedule_error[1]:
+                    st.error("请修正时段格式：" + schedule_error[1][index])
                 day_values.append((day_date, site, weather, int(minutes), interval_text))
         submitted = st.form_submit_button(
             "保存逐日条件和资源",
-            type="primary",
+            type="secondary",
             width="stretch",
             key=f"save_schedule:{field_id}:{state.draft_version}",
         )
     if submitted:
+        # 先按天校验时段格式：非法时把错误就近挂到对应日期，成功后正常保存。
+        day_errors: dict[int, str] = {}
+        if resources_enabled:
+            for index, row in enumerate(day_values):
+                try:
+                    _parse_intervals(row[4])
+                except ValueError as error:
+                    day_errors[index] = str(error)
+        if day_errors:
+            st.session_state[schedule_error_key] = (
+                "没有保存：请修正下方标出的可用时段格式。",
+                day_errors,
+            )
+            st.rerun()
         try:
             days = [
                 DayWindow(
@@ -594,10 +708,195 @@ def _render_schedule_form(
                 expected_version=state.draft_version,
                 operation_id=f"schedule-{uuid4()}",
             )
+            st.session_state[schedule_error_key] = None
             st.session_state[f"notice:{field_id}"] = "逐日条件已保存；现场与天气仍按天分别判断。"
             st.rerun()
         except (ValueError, ValidationError) as error:
             st.error(f"没有保存：{error}")
+
+
+@st.dialog("逐日作业条件与可用时段")
+def _schedule_dialog(
+    service: WorkbenchServiceV3,
+    field_id: str,
+    state: FieldStateV3 | None,
+) -> None:
+    """按需弹出逐日条件与可用时段表单；内容与逐日折叠区一致。"""
+    _render_schedule_form(service, field_id, state)
+
+
+def _render_field_card(state: FieldStateV3) -> None:
+    """左栏「我的地块」卡片：名称、作物·生育期·田型与保存状态。"""
+    profile = state.draft.profile
+    name = profile.name if profile and profile.name else f"未命名地块 · {state.id[-5:]}"
+    crop = _enum_label(CROP_OPTIONS, profile.crop if profile else None)
+    stage = _enum_label(STAGE_OPTIONS, profile.stage if profile else None)
+    field_type = _enum_label(FIELD_TYPES, profile.field_type if profile else None)
+    saved = profile is not None
+    status = "当前地块 · 已保存" if saved else "当前地块 · 尚未保存"
+    with st.container(border=True):
+        st.markdown(f"**{name}**")
+        st.caption(f"{crop} · {stage} · {field_type}")
+        st.markdown(
+            f'<span class="status-chip status-neutral">{status}</span>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_availability_panel(state: FieldStateV3 | None) -> None:
+    """左栏可用时间面板：一名执行者，汇总逐日可用时段。"""
+    st.caption("一名执行者")
+    days = state.draft.days if state else []
+    if not days:
+        st.caption("尚未录入可用时段")
+        return
+    signatures = {
+        (tuple((window.start, window.end) for window in day.intervals), day.resource_minutes)
+        for day in days
+    }
+    if len(signatures) != 1:
+        st.caption("按日不同，见逐日条件")
+        return
+    shared = days[0]
+    intervals_text = "；".join(
+        f"{window.start:%H:%M}—{window.end:%H:%M}" for window in shared.intervals
+    )
+    minutes = shared.resource_minutes
+    if intervals_text and minutes is not None:
+        st.caption(f"每天 {intervals_text} · {minutes} 分钟")
+    elif minutes is not None:
+        st.caption(f"每天可用 {minutes} 分钟")
+    elif intervals_text:
+        st.caption(f"每天 {intervals_text}")
+    else:
+        st.caption("每天尚未录入时段")
+
+
+def _weather_summary(service: WorkbenchServiceV3, field_id: str) -> str:
+    """天气摘要行：查询位置 · 来源 · 获取时间 · 覆盖日期。"""
+    snapshot = service.latest_weather(field_id)
+    if snapshot is None:
+        return "天气：尚未获取天气"
+    return (
+        f"天气：{snapshot.location.display_name} · {snapshot.source} · "
+        f"获取 {snapshot.fetched_at.astimezone(ZONE):%Y-%m-%d %H:%M} · "
+        f"覆盖 {snapshot.coverage_start:%m月%d日}—{snapshot.coverage_end:%m月%d日}"
+    )
+
+
+def _render_count_strip(items: list) -> None:  # type: ignore[type-arg]
+    """中栏计数条：已安排/待确认/未排入三块白底卡片（数字在左、标签在右）。"""
+    scheduled = sum(1 for item in items if item.schedule_status in {"scheduled", "completed"})
+    pending = sum(1 for item in items if item.schedule_status == "pending")
+    unscheduled = len(items) - scheduled - pending
+    cards = [
+        ("已安排", scheduled, "green"),
+        ("待确认", pending, "amber"),
+        ("未排入", unscheduled, "neutral"),
+    ]
+    columns = st.columns(3)
+    for column, (label, count, tone) in zip(columns, cards, strict=True):
+        with column.container(border=True):
+            number_col, label_col = st.columns([1, 2], vertical_alignment="center")
+            number_col.markdown(
+                f'<div class="count-number count-{tone}">{count}</div>', unsafe_allow_html=True
+            )
+            label_col.markdown(
+                f'<span class="status-chip status-{tone}">{label}</span>',
+                unsafe_allow_html=True,
+            )
+
+
+@st.dialog("历史版本")
+def _history_dialog(service: WorkbenchServiceV3, field_id: str) -> None:
+    """顶栏历史版本：列出计划版本与变化，内容移自原中栏折叠区。"""
+    history = service.plan_history(field_id)
+    if not history:
+        st.caption("尚无已采用的计划版本。")
+        return
+    for version in history:
+        st.markdown(f"**{version.created_at.astimezone(ZONE):%Y-%m-%d %H:%M} · `{version.id}`**")
+        if version.parent_id:
+            st.caption(f"基于 `{version.parent_id}`")
+        if version.changes:
+            for change in version.changes:
+                st.write(f"- {change.task_id}：{change.kind}；{change.reason}")
+        else:
+            st.caption("首版计划")
+
+
+@st.dialog("导出计划")
+def _export_dialog(service: WorkbenchServiceV3, field_id: str) -> None:
+    """顶栏导出计划：Markdown 清单与 JSON 记录下载。"""
+    st.download_button(
+        "下载 Markdown 清单",
+        service.export_markdown(field_id),
+        file_name=f"{field_id}-plan.md",
+        mime="text/markdown",
+        key=f"export_md:{field_id}",
+    )
+    st.download_button(
+        "下载 JSON 记录",
+        service.export_json(field_id),
+        file_name=f"{field_id}-plan.json",
+        mime="application/json",
+        key=f"export_json:{field_id}",
+    )
+
+
+def _render_top_bar(
+    service: WorkbenchServiceV3,
+    field_id: str,
+    state: FieldStateV3 | None,
+    mode: str,
+) -> None:
+    """顶栏信息条：农时窗口 · 日期范围·计划版本 / 模式标签 / 保存状态·历史·导出。"""
+    draft = state.draft if state else None
+    start = draft.start_date if draft else None
+    if start:
+        end = start + timedelta(days=6)
+        if start.month == end.month:
+            date_range = f"{start.month}月{start.day}日—{end.day}日"
+        else:
+            date_range = f"{start.month}月{start.day}日—{end.month}月{end.day}日"
+    else:
+        date_range = "未设置起始日"
+    history = service.plan_history(field_id)
+    version = f"V{len(history)}" if history else "未采用"
+    saved = state is not None and state.draft.profile is not None
+    has_plan = service.get_current_plan(field_id) is not None
+    with st.container(border=True):
+        left, middle, right = st.columns([3.4, 1.2, 2.4], vertical_alignment="center")
+        with left:
+            title_col, meta_col = st.columns([1.3, 2.1], vertical_alignment="center")
+            title_col.markdown("### 农时窗口")
+            meta_col.markdown(f"{date_range} · 计划 {version}")
+        with middle:
+            if mode == "real":
+                st.markdown(
+                    '<span class="status-chip status-neutral">真实地块</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<span class="status-chip status-amber">模拟地块与天气</span>',
+                    unsafe_allow_html=True,
+                )
+        with right:
+            status_col, history_col, export_col = st.columns(
+                [0.9, 1, 1], vertical_alignment="center"
+            )
+            status_col.caption("已保存" if saved else "尚未保存")
+            if history_col.button("历史版本", key="top_history", width="stretch"):
+                _history_dialog(service, field_id)
+            if export_col.button(
+                "导出计划",
+                key="top_export",
+                disabled=not has_plan,
+                width="stretch",
+                help=None if has_plan else "采用计划后可导出",
+            ):
+                _export_dialog(service, field_id)
 
 
 def _render_weather(
@@ -801,17 +1100,71 @@ def _render_supplementary_sources(rows: list) -> None:  # type: ignore[type-arg]
             st.link_button("打开补充来源", source["source_url"])
 
 
-def _render_item(item) -> None:  # type: ignore[no-untyped-def]
-    status = {
-        "scheduled": "已安排",
-        "unscheduled": "未排入",
-        "pending": "待确认",
-        "not_generated": "未生成",
-        "completed": "已完成",
-    }.get(item.schedule_status, item.schedule_status)
+def _status_tone(item) -> str:  # type: ignore[no-untyped-def]
+    """按排程结果给卡片配色：绿=正常、琥珀=待确认、灰红=未排入。"""
+    if item.schedule_status in {"scheduled", "completed"}:
+        return "green"
+    if item.schedule_status == "unscheduled":
+        return "red"
+    if item.schedule_status == "pending":
+        return "amber"
+    return "neutral"
+
+
+def _overall_window(item) -> str | None:  # type: ignore[no-untyped-def]
+    states = set(item.window_by_date.values())
+    for candidate in ("available", "pending", "unavailable"):
+        if candidate in states:
+            return candidate
+    return None
+
+
+def _primary_action(has_pending_preview: bool, has_profile: bool) -> str:
+    """单一「下一步」归属：采用预览 > 生成/重算计划 > 保存档案。"""
+    if has_pending_preview:
+        return "adopt"
+    if has_profile:
+        return "plan"
+    return "save"
+
+
+def _item_detail_rows(item) -> list[tuple[str, str]]:  # type: ignore[no-untyped-def]
+    """整理任务详情行；纯函数，不做任何 Streamlit 调用，便于单元测试。"""
+    type_label = TASK_TYPE_LABELS.get(item.task_type, item.task_type)
+    if item.start_at and item.end_at:
+        when = (
+            f"{item.start_at.astimezone(ZONE):%Y-%m-%d %H:%M}–{item.end_at.astimezone(ZONE):%H:%M}"
+        )
+    else:
+        when = "未排入"
+    window = _overall_window(item)
+    rows = [
+        ("任务", f"{item.title} · {type_label}"),
+        ("编号", item.task_id),
+        ("日期与时间", when),
+        ("预计时长", f"{item.duration_minutes} 分钟" if item.duration_minutes else "未提供"),
+        ("窗口", WINDOW_LABELS.get(window, "未提供") if window else "未提供"),
+        ("适用性", APPLICABILITY_LABELS.get(item.applicability, item.applicability)),
+        ("需求", NECESSITY_LABELS.get(item.necessity, item.necessity)),
+        ("执行状态", SCHEDULE_LABELS.get(item.schedule_status, item.schedule_status)),
+        ("安排原因", item.reason),
+        ("待确认项", "、".join(item.missing_fields) if item.missing_fields else "无"),
+    ]
+    adjustment = getattr(item, "adjustment_reason", None)
+    if adjustment:
+        rows.append(("调整原因", str(adjustment)))
+    return rows
+
+
+def _render_item(item, *, scope: str) -> None:  # type: ignore[no-untyped-def]
+    """任务卡主区只显示摘要；完整字段移入「查看详情」对话框。"""
+    label = SCHEDULE_LABELS.get(item.schedule_status, item.schedule_status)
+    tone = _status_tone(item)
     with st.container(border=True):
-        st.markdown(f"**{item.title}**　`{item.task_id}`")
-        st.caption(f"适用性：{item.applicability} · 需求：{item.necessity} · 排程：{status}")
+        st.markdown(
+            f'**{item.title}**　<span class="status-chip status-{tone}">{label}</span>',
+            unsafe_allow_html=True,
+        )
         if item.start_at and item.end_at:
             st.write(
                 f"{item.start_at.astimezone(ZONE):%Y-%m-%d %H:%M}–"
@@ -820,7 +1173,21 @@ def _render_item(item) -> None:  # type: ignore[no-untyped-def]
         st.write(item.reason)
         if item.missing_fields:
             st.caption("待补信息：" + "、".join(item.missing_fields[:6]))
+        # scope 用于区分候选、预览与采用版中重名的任务编号，避免按钮 key 冲突。
+        if st.button("查看详情", key=f"detail:{scope}:{item.task_id}"):
+            _task_detail_dialog(item)
+
+
+@st.dialog("任务详情")
+def _task_detail_dialog(item) -> None:  # type: ignore[no-untyped-def]
+    """模态展示任务完整字段与依据；关闭后草稿、事实与计划版本均不变。"""
+    for name, value in _item_detail_rows(item):
+        st.markdown(f"**{name}**：{value}")
+    st.divider()
+    if item.evidence:
         _render_evidence(item)
+    else:
+        st.caption("当前资料不足以支持这项建议")
 
 
 def _render_evaluation(
@@ -850,14 +1217,17 @@ def _render_evaluation(
         st.warning("优先核对：" + "；".join(evaluation.clarification_questions[:3]))
     if evaluation.items:
         for item in evaluation.items:
-            _render_item(item)
+            _render_item(item, scope="candidate")
     else:
         st.info("当前没有候选事项。")
     if evaluation.missing_fields:
         st.caption("其他缺项：" + "、".join(evaluation.missing_fields[:12]))
 
 
-def _show_preview(service: WorkbenchServiceV3, preview: PlanPreviewV3) -> None:
+def _show_preview(
+    service: WorkbenchServiceV3, preview: PlanPreviewV3, *, scope: str = "results"
+) -> None:
+    """scope 用于区分结果区与助手区展示同一预览时的按钮 key。"""
     st.markdown("#### 七天计划预览")
     st.caption(
         f"依据：档案 v{preview.expected_draft_version} · "
@@ -896,8 +1266,21 @@ def _show_preview(service: WorkbenchServiceV3, preview: PlanPreviewV3) -> None:
     else:
         st.caption("首次预览。")
     for item in preview.version.plan.items:
-        _render_item(item)
+        _render_item(item, scope=f"{scope}-preview-{preview.id}")
     if preview.status == "preview":
+        confirm_key = f"confirm_cancel:{preview.id}"
+        if st.session_state.get(confirm_key):
+            st.warning("取消这版预览后需要重新计算，确定取消吗？")
+            keep, discard = st.columns(2)
+            if keep.button("保留预览", key=f"keep_preview:{preview.id}"):
+                st.session_state[confirm_key] = False
+                st.rerun()
+            if discard.button("确定取消预览", key=f"cancel_yes:{preview.id}"):
+                service.cancel_preview(preview.id)
+                st.session_state[f"current_preview:{preview.field_id}"] = None
+                st.session_state[confirm_key] = False
+                st.session_state.pop(f"preview_signature:{preview.field_id}", None)
+                st.rerun()
         left, right = st.columns(2)
         if left.button("采用这版安排", key=f"adopt:{preview.id}", type="primary"):
             try:
@@ -908,6 +1291,7 @@ def _show_preview(service: WorkbenchServiceV3, preview: PlanPreviewV3) -> None:
                     operation_id=f"adopt-{uuid4()}",
                 )
                 st.session_state[f"current_preview:{preview.field_id}"] = None
+                st.session_state.pop(f"preview_signature:{preview.field_id}", None)
                 st.session_state[f"notice:{preview.field_id}"] = (
                     "计划已采用并保存新版本。"
                     if adopted.created_new_version
@@ -917,26 +1301,18 @@ def _show_preview(service: WorkbenchServiceV3, preview: PlanPreviewV3) -> None:
             except ValueError as error:
                 st.error(f"预览已失效：{error}。请重新计算。")
         if right.button("取消预览", key=f"cancel:{preview.id}"):
-            service.cancel_preview(preview.id)
-            st.session_state[f"current_preview:{preview.field_id}"] = None
+            st.session_state[confirm_key] = True
             st.rerun()
     else:
         st.info(f"预览状态：{preview.status}")
 
 
 def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None) -> None:
-    st.subheader("计划与版本")
+    """中栏「今日与后续安排」：待决预览与已采用版的排程卡片。"""
     if state is None or state.draft.profile is None:
-        st.info("保存地块后可先看候选事项；排程信息可以稍后补。")
         return
     if state.plan_stale:
         st.warning("现场事实或档案已变化，当前采用版需要重新预览。旧版仍保留。")
-    if st.button("计算七天安排预览", key=f"preview_plan:{field_id}", type="primary"):
-        try:
-            preview = service.preview_plan(field_id, operation_id=f"manual-preview-{uuid4()}")
-            st.session_state[f"current_preview:{field_id}"] = preview.id
-        except (ValueError, KeyError) as error:
-            st.error(f"无法生成预览：{error}")
     preview_id = st.session_state.get(f"current_preview:{field_id}")
     if preview_id:
         try:
@@ -948,36 +1324,7 @@ def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV
         st.markdown("#### 当前采用版")
         st.caption(f"版本 `{adopted.id}` · {adopted.created_at.astimezone(ZONE):%Y-%m-%d %H:%M}")
         for item in adopted.items:
-            _render_item(item)
-    history = service.plan_history(field_id)
-    if history:
-        with st.expander(f"历史版本（{len(history)}）"):
-            for version in history:
-                st.markdown(
-                    f"**{version.created_at.astimezone(ZONE):%Y-%m-%d %H:%M} · `{version.id}`**"
-                )
-                if version.parent_id:
-                    st.caption(f"基于 `{version.parent_id}`")
-                if version.changes:
-                    for change in version.changes:
-                        st.write(f"- {change.task_id}：{change.kind}；{change.reason}")
-                else:
-                    st.caption("首版计划")
-    if adopted:
-        st.download_button(
-            "下载 Markdown 清单",
-            service.export_markdown(field_id),
-            file_name=f"{field_id}-plan.md",
-            mime="text/markdown",
-            key=f"export_md:{field_id}",
-        )
-        st.download_button(
-            "下载 JSON 记录",
-            service.export_json(field_id),
-            file_name=f"{field_id}-plan.json",
-            mime="application/json",
-            key=f"export_json:{field_id}",
-        )
+            _render_item(item, scope=f"adopted-{adopted.id}")
 
 
 def _commit_feedback(
@@ -1003,6 +1350,8 @@ def _render_feedback(
     service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None
 ) -> None:
     st.subheader("记录现场事实与资源变化")
+    # 右栏快捷动作预选反馈类型：弹出对应表单组。
+    kind = st.session_state.pop(f"feedback_kind:{field_id}", None)
     current = service.get_current_plan(field_id) if state else None
     if state is None:
         st.caption("保存地块档案后可以记录事实。")
@@ -1013,27 +1362,28 @@ def _render_feedback(
             for item in current.items
             if item.start_at and not item.completed and item.start_at.astimezone(ZONE) <= _now()
         ]
-        if eligible:
-            with st.form(f"completion:{field_id}:{state.fact_version}"):
-                task = st.selectbox(
-                    "已完成的已安排任务",
-                    eligible,
-                    format_func=lambda item: (
-                        f"{item.title} · {item.start_at.astimezone(ZONE):%m-%d %H:%M}"
-                    ),
-                )
-                if st.form_submit_button("记录完成"):
-                    try:
-                        _commit_feedback(
-                            service,
-                            state,
-                            FeedbackV2(kind="completed", task_id=task.task_id, at=_now()),
-                        )
-                        st.rerun()
-                    except ValueError as error:
-                        st.error(f"完成事实未保存：{error}")
-        else:
-            st.caption("当前没有已到计划开始时间且尚未完成的任务。")
+        with st.expander("记录任务完成", expanded=(kind == "completed")):
+            if eligible:
+                with st.form(f"completion:{field_id}:{state.fact_version}"):
+                    task = st.selectbox(
+                        "已完成的已安排任务",
+                        eligible,
+                        format_func=lambda item: (
+                            f"{item.title} · {item.start_at.astimezone(ZONE):%m-%d %H:%M}"
+                        ),
+                    )
+                    if st.form_submit_button("记录完成"):
+                        try:
+                            _commit_feedback(
+                                service,
+                                state,
+                                FeedbackV2(kind="completed", task_id=task.task_id, at=_now()),
+                            )
+                            st.rerun()
+                        except ValueError as error:
+                            st.error(f"完成事实未保存：{error}")
+            else:
+                st.caption("当前没有已到计划开始时间且尚未完成的任务。")
     observation_fields = {
         "沟渠连通": ("ditch_connectivity", {"未知": None, "通畅": "clear", "受阻": "impaired"}),
         "积水情况": ("standing_water", BOOL_OPTIONS),
@@ -1045,84 +1395,87 @@ def _render_feedback(
         "缺苗情况": ("missing_seedlings", BOOL_OPTIONS),
         "拥挤情况": ("crowding", BOOL_OPTIONS),
     }
-    label = st.selectbox(
-        "观察项目",
-        list(observation_fields),
-        key=f"observation_field:{field_id}:{state.fact_version}",
-        on_change=_reset_observation_value,
-        args=(field_id, state.fact_version),
-    )
-    field, choices = observation_fields[label]
-    with st.form(f"observation:{field_id}:{state.fact_version}"):
-        value_label = st.selectbox(
-            "记录值", list(choices), key=f"observation_value:{field_id}:{state.fact_version}"
+    with st.expander("补充现场观察", expanded=(kind == "observation")):
+        label = st.selectbox(
+            "观察项目",
+            list(observation_fields),
+            key=f"observation_field:{field_id}:{state.fact_version}",
+            on_change=_reset_observation_value,
+            args=(field_id, state.fact_version),
         )
-        if st.form_submit_button(
-            "保存观察事实", key=f"save_observation:{field_id}:{state.fact_version}"
-        ):
-            try:
-                _commit_feedback(
-                    service,
-                    state,
-                    FeedbackV2(
-                        kind="observation",
-                        plot_id=field_id,
-                        field=field,
-                        value=choices[value_label],
-                        at=_now(),
-                    ),
-                )
-                st.rerun()
-            except ValueError as error:
-                st.error(f"观察未保存：{error}")
+        field, choices = observation_fields[label]
+        with st.form(f"observation:{field_id}:{state.fact_version}"):
+            value_label = st.selectbox(
+                "记录值", list(choices), key=f"observation_value:{field_id}:{state.fact_version}"
+            )
+            if st.form_submit_button(
+                "保存观察事实", key=f"save_observation:{field_id}:{state.fact_version}"
+            ):
+                try:
+                    _commit_feedback(
+                        service,
+                        state,
+                        FeedbackV2(
+                            kind="observation",
+                            plot_id=field_id,
+                            field=field,
+                            value=choices[value_label],
+                            at=_now(),
+                        ),
+                    )
+                    st.rerun()
+                except ValueError as error:
+                    st.error(f"观察未保存：{error}")
     start = state.draft.start_date or (_today() + timedelta(days=1))
-    with st.form(f"workability:{field_id}:{state.fact_version}"):
-        day = st.date_input(
-            "作业条件日期", value=start, min_value=start, max_value=start + timedelta(days=6)
-        )
-        site_label = st.selectbox("现场能否作业", list(WORKABILITY_OPTIONS))
-        weather_label = st.selectbox("天气是否适合", list(WORKABILITY_OPTIONS))
-        if st.form_submit_button("保存当天条件"):
-            try:
-                _commit_feedback(
-                    service,
-                    state,
-                    FeedbackV2(
-                        kind="workability",
-                        plot_id=field_id,
-                        day=day,
-                        site_workable=WORKABILITY_OPTIONS[site_label],
-                        weather_workable=WORKABILITY_OPTIONS[weather_label],
-                        at=_now(),
-                    ),
-                )
-                st.rerun()
-            except ValueError as error:
-                st.error(f"当天条件未保存：{error}")
-    with st.form(f"resource:{field_id}:{state.fact_version}"):
-        resource_day = st.date_input(
-            "资源变化日期", value=start, min_value=start, max_value=start + timedelta(days=6)
-        )
-        resource_minutes = st.number_input(
-            "人员可用分钟数", min_value=0, max_value=1440, step=15, value=0
-        )
-        intervals_text = st.text_input("可用时段", placeholder="09:00-11:00;13:00-15:00")
-        if st.form_submit_button("保存资源变化"):
-            try:
-                _commit_feedback(
-                    service,
-                    state,
-                    FeedbackV2(
-                        kind="resource",
-                        day=resource_day,
-                        resource_minutes=int(resource_minutes),
-                        intervals=_parse_intervals(intervals_text),
-                        at=_now(),
-                    ),
-                )
-                st.rerun()
-            except (ValueError, ValidationError) as error:
-                st.error(f"资源变化未保存：{error}")
+    with st.expander("修改当天作业条件", expanded=(kind == "workability")):
+        with st.form(f"workability:{field_id}:{state.fact_version}"):
+            day = st.date_input(
+                "作业条件日期", value=start, min_value=start, max_value=start + timedelta(days=6)
+            )
+            site_label = st.selectbox("现场能否作业", list(WORKABILITY_OPTIONS))
+            weather_label = st.selectbox("天气是否适合", list(WORKABILITY_OPTIONS))
+            if st.form_submit_button("保存当天条件"):
+                try:
+                    _commit_feedback(
+                        service,
+                        state,
+                        FeedbackV2(
+                            kind="workability",
+                            plot_id=field_id,
+                            day=day,
+                            site_workable=WORKABILITY_OPTIONS[site_label],
+                            weather_workable=WORKABILITY_OPTIONS[weather_label],
+                            at=_now(),
+                        ),
+                    )
+                    st.rerun()
+                except ValueError as error:
+                    st.error(f"当天条件未保存：{error}")
+    with st.expander("修改可用时间", expanded=(kind == "resource")):
+        with st.form(f"resource:{field_id}:{state.fact_version}"):
+            resource_day = st.date_input(
+                "资源变化日期", value=start, min_value=start, max_value=start + timedelta(days=6)
+            )
+            resource_minutes = st.number_input(
+                "人员可用分钟数", min_value=0, max_value=1440, step=15, value=0
+            )
+            intervals_text = st.text_input("可用时段", placeholder="09:00-11:00;13:00-15:00")
+            if st.form_submit_button("保存资源变化"):
+                try:
+                    _commit_feedback(
+                        service,
+                        state,
+                        FeedbackV2(
+                            kind="resource",
+                            day=resource_day,
+                            resource_minutes=int(resource_minutes),
+                            intervals=_parse_intervals(intervals_text),
+                            at=_now(),
+                        ),
+                    )
+                    st.rerun()
+                except (ValueError, ValidationError) as error:
+                    st.error(f"资源变化未保存：{error}")
 
 
 def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> str:
@@ -1144,28 +1497,26 @@ def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> s
     raise ValueError("此修改建议格式无效")
 
 
-def _render_agent(
-    service: WorkbenchServiceV3,
-    agent: AgentServiceV3,
-    field_id: str,
-    state: FieldStateV3 | None,
-) -> None:
-    st.subheader("农时助手")
-    st.caption(f"模型：{agent.settings.llm_model} · 修改必须逐项确认")
-    if state is None or state.draft.profile is None:
-        st.info("先保存地块档案，再与助手对话。结构化表单不依赖模型密钥。")
-        return
-    history_key = f"chat:{field_id}"
-    history: list[dict[str, str]] = st.session_state.setdefault(history_key, [])
-    for message in history[-20:]:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-    with st.form(f"assistant_form:{field_id}"):
-        user_message = st.text_area(
-            "你想补充或询问什么？", placeholder="例如：我确认这里需要巡田，帮我看看还缺什么"
-        )
-        submitted = st.form_submit_button("发送给助手", type="primary")
-    if submitted:
+def _render_quick_actions(field_id: str) -> None:
+    """右栏快捷动作：预选反馈类型，供中栏反馈区展开对应表单。"""
+    if st.button("补充现场观察", key=f"quick_observe:{field_id}", type="primary", width="stretch"):
+        st.session_state[f"feedback_kind:{field_id}"] = "observation"
+        st.rerun()
+    if st.button("记录任务完成", key=f"quick_complete:{field_id}", width="stretch"):
+        st.session_state[f"feedback_kind:{field_id}"] = "completed"
+        st.rerun()
+    if st.button("修改可用时间", key=f"quick_resource:{field_id}", width="stretch"):
+        st.session_state[f"feedback_kind:{field_id}"] = "resource"
+        st.rerun()
+
+
+def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[str, str]]) -> None:
+    """对话输入区：用 chat_input 取代窄栏里被压成细长条的 text_area。"""
+    user_message = st.chat_input(
+        "例如：明天只能干一小时",
+        key=f"assistant_input:{field_id}",
+    )
+    if user_message:
         try:
             response = agent.run(field_id, user_message, conversation=history)
             history.extend(
@@ -1181,6 +1532,26 @@ def _render_agent(
             st.rerun()
         except (ValueError, KeyError) as error:
             st.error(f"本轮未完成：{error}")
+
+
+def _render_agent(
+    service: WorkbenchServiceV3,
+    agent: AgentServiceV3,
+    field_id: str,
+    state: FieldStateV3 | None,
+) -> None:
+    profile = state.draft.profile if state else None
+    name = profile.name if profile and profile.name else "未命名地块"
+    # 页签名已含「农事助手」，此处不再重复大标题。
+    st.caption(f"当前对话 · {name}")
+    if state is None or profile is None:
+        st.info("先保存地块档案，再与助手对话。结构化表单不依赖模型密钥。")
+        return
+    history_key = f"chat:{field_id}"
+    history: list[dict[str, str]] = st.session_state.setdefault(history_key, [])
+    for message in history[-20:]:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
     response = st.session_state.get(f"agent_result:{field_id}")
     if response:
         if response.status == "success":
@@ -1214,7 +1585,7 @@ def _render_agent(
         for preview in response.previews:
             st.markdown("#### 助手生成的预览（尚未采用）")
             st.session_state[f"current_preview:{field_id}"] = preview.id
-            _show_preview(service, preview)
+            _show_preview(service, preview, scope="agent")
         if response.prompt_tokens is not None:
             st.caption(
                 f"本轮 {response.request_count} 次模型请求 · "
@@ -1344,10 +1715,13 @@ def _render_rule_reviews(service: WorkbenchServiceV3, field_id: str, state: Fiel
 
 
 def main() -> None:
-    st.set_page_config(page_title="农时窗口 · 农事工作台", page_icon="🌱", layout="wide")
+    st.set_page_config(
+        page_title="农时窗口 · 农事工作台",
+        page_icon="🌱",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     st.markdown(PALETTE, unsafe_allow_html=True)
-    st.title("农时窗口")
-    st.caption(f"油菜苗期任务助手 · {_today():%Y年%m月%d日}")
     with st.sidebar:
         st.markdown("### 工作空间")
         mode_label = st.radio(
@@ -1374,77 +1748,145 @@ def main() -> None:
         width=1,
         height=1,
     ).compact
-    st.markdown(
-        '<div class="workbench-note">规则候选处于<strong>开发验证，适用性待复核</strong>。'
-        "天气用于查看风险，不替代现场确认。每块地独立排程，尚未统筹其他地块时间，不代表合并后可执行。</div>",
-        unsafe_allow_html=True,
-    )
+    top_slot = st.empty()
 
     def render_fields() -> tuple[str, FieldStateV3 | None]:
-        st.markdown("### 地块与资源")
+        st.markdown("### 我的地块")
         field_id, field_state = _select_field(service, mode)
         notice = st.session_state.pop(f"notice:{field_id}", None)
         if notice:
             st.success(notice)
-        _save_draft_form(service, field_id, field_state, mode)
-        field_state = _field_state(service, field_id)
-        if field_state:
-            _render_schedule_form(service, field_id, field_state)
+            # 保存成功后关闭仍在打开的编辑对话框。
+            st.session_state.pop(f"field_form_open:{field_id}", None)
+            st.session_state.pop(f"schedule_open:{field_id}", None)
+        has_profile = field_state is not None and field_state.draft.profile is not None
+        if has_profile:
+            _render_field_card(field_state)
+        # 当前地块下拉紧贴卡片下方；「+ 新增地块」紧随其后。
+        _render_field_selector(service, mode)
+        st.caption("一块地也能独立使用")
+        st.caption("新增后填写新地块信息")
+        st.caption("各地块分别保存结果")
+        if not has_profile:
+            # 空白优先：首次进入或新增地块时直接显示空白表单，无需对话框。
+            _render_field_form(service, field_id, field_state, mode)
+            return field_id, field_state
+        if st.button("编辑当前地块", key=f"edit_field:{field_id}", width="stretch"):
+            st.session_state[f"field_form_open:{field_id}"] = True
+            st.rerun()
+        st.markdown("#### 可用时间")
+        _render_availability_panel(field_state)
+        if st.button("调整可用时段", key=f"edit_schedule:{field_id}", width="stretch"):
+            st.session_state[f"schedule_open:{field_id}"] = True
+            st.rerun()
+        st.caption("地块与事实随计划保存")
+        st.caption("开发验证，适用性待复核")
+        if st.session_state.get(f"field_form_open:{field_id}"):
+            _field_form_dialog(service, field_id, field_state, mode)
+        if st.session_state.get(f"schedule_open:{field_id}"):
+            _schedule_dialog(service, field_id, field_state)
         return field_id, field_state
 
     def render_results(field_id: str) -> None:
         current = _field_state(service, field_id)
         if current and current.plan_stale:
             st.warning("已保存事实或档案有更新；旧计划保留，等待重新预览和采用。")
-        _render_weather(service, agent, field_id, current)
-        st.divider()
-        _render_evaluation(service, field_id, current)
-        st.divider()
+        profile = current.draft.profile if current else None
+        name = profile.name if profile and profile.name else "未命名地块"
+        header_left, header_right = st.columns([2.9, 1.5], vertical_alignment="center")
+        header_left.markdown(f"#### {name} · 结果")
+        if current and profile is not None:
+            preview_id = st.session_state.get(f"current_preview:{field_id}")
+            plan_primary = _primary_action(bool(preview_id), True) == "plan"
+            if header_right.button(
+                "重新计算计划",
+                key=f"preview_plan:{field_id}",
+                type="primary" if plan_primary else "secondary",
+                width="stretch",
+            ):
+                signature = (current.draft_version, current.fact_version)
+                last_signature = st.session_state.get(f"preview_signature:{field_id}")
+                if preview_id and last_signature == signature:
+                    # 防重复提交：同一档案与事实版本已生成预览，不再重复创建。
+                    st.caption("已按当前档案与事实生成预览，未重复计算。")
+                else:
+                    try:
+                        preview = service.preview_plan(
+                            field_id, operation_id=f"manual-preview-{uuid4()}"
+                        )
+                        st.session_state[f"current_preview:{field_id}"] = preview.id
+                        st.session_state[f"preview_signature:{field_id}"] = signature
+                    except (ValueError, KeyError) as error:
+                        st.error(f"无法生成预览：{error}")
+        st.caption(_weather_summary(service, field_id))
+        items: list = []
+        adopted = service.get_current_plan(field_id)
+        if adopted:
+            items = adopted.items
+        elif current and profile is not None:
+            items = service.evaluate_field(field_id).items
+        _render_count_strip(items)
+        st.markdown("#### 今日与后续安排")
         _render_plans(service, field_id, current)
-        if current:
-            st.divider()
-            _render_feedback(service, field_id, current)
+        st.caption("以上为当前地块结果；依据可在任务详情查看。")
+        st.caption("有其他地块？点击左侧「新增地块」继续。")
+        with st.expander("天气与查询位置", expanded=False):
+            _render_weather(service, agent, field_id, current)
+        with st.expander("候选与依据", expanded=False):
+            _render_evaluation(service, field_id, current)
+        with st.expander("反馈与历史", expanded=False):
+            if current:
+                _render_feedback(service, field_id, current)
 
     def render_assistant(field_id: str) -> None:
         current = _field_state(service, field_id)
-        _render_agent(service, agent, field_id, current)
-        st.divider()
-        if current:
-            st.markdown("#### 现场事件记录")
-            for event in service.list_events(field_id):
-                feedback = event.feedback
-                if feedback:
-                    st.write(
-                        f"v{event.fact_version} · {feedback.kind} · "
-                        f"{feedback.at.astimezone(ZONE):%Y-%m-%d %H:%M} · "
-                        f"{feedback.field or feedback.task_id or feedback.day or ''} · "
-                        f"{feedback.value if feedback.value is not None else ''}"
-                    )
-        _render_legacy_history(service, database, mode)
+        # 右栏内容用子页签分隔，避免全部竖排造成“细长条”。
+        agent_tab, recent_tab = st.tabs(["农事助手", "最近操作"])
+        with agent_tab:
+            _render_agent(service, agent, field_id, current)
+            _render_quick_actions(field_id)
+        with recent_tab:
+            if current:
+                for event in service.list_events(field_id):
+                    feedback = event.feedback
+                    if feedback:
+                        st.write(
+                            f"v{event.fact_version} · {feedback.kind} · "
+                            f"{feedback.at.astimezone(ZONE):%Y-%m-%d %H:%M} · "
+                            f"{feedback.field or feedback.task_id or feedback.day or ''} · "
+                            f"{feedback.value if feedback.value is not None else ''}"
+                        )
+            _render_legacy_history(service, database, mode)
+        # 输入区放在右栏底部（chat_input，固定高度）。
+        history = st.session_state.setdefault(f"chat:{field_id}", [])
+        _render_chat_input(agent, field_id, history)
 
     if compact:
         fields_tab, results_tab, assistant_tab = st.tabs(["地块与资源", "计划结果", "助手与历史"])
         with fields_tab:
-            field_id, _ = render_fields()
+            field_id, field_state = render_fields()
         with results_tab:
-            selected = st.session_state.get(f"field_selection:{mode}")
-            field_id = _active_field_id(mode) if not selected or selected == NEW_FIELD else selected
             render_results(field_id)
         with assistant_tab:
-            selected = st.session_state.get(f"field_selection:{mode}")
-            field_id = _active_field_id(mode) if not selected or selected == NEW_FIELD else selected
             render_assistant(field_id)
+        with top_slot.container():
+            _render_top_bar(service, field_id, field_state, mode)
     else:
-        left, middle, right = st.columns([2.4, 6.2, 3.4], gap="medium")
+        left, middle, right = st.columns([2.5, 5.0, 3.5], gap="medium")
         with left:
-            field_id, current = render_fields()
+            with st.container(border=True):
+                field_id, current = render_fields()
         with middle:
-            render_results(field_id)
+            with st.container(border=True):
+                render_results(field_id)
         with right:
-            render_assistant(field_id)
+            with st.container(border=True):
+                render_assistant(field_id)
+        with top_slot.container():
+            _render_top_bar(service, field_id, current, mode)
         if current:
-            st.divider()
-            _render_rule_reviews(service, field_id, current)
+            with st.expander("规则复核记录（开发用）", expanded=False):
+                _render_rule_reviews(service, field_id, current)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -144,6 +144,22 @@ def test_chat_calls_local_read_tool_with_deepseek_flash_and_records_redacted_met
     assert run.tool_metrics[0].name == "read_field"
     assert run.tool_metrics[0].status == "success"
     assert TEST_KEY.encode() not in database.read_bytes()
+
+
+def test_injected_received_at_fixes_the_agent_clock_for_deterministic_runs(
+    tmp_path: Path,
+) -> None:
+    payloads: list[dict[str, object]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        payloads.append(json.loads(request.content))
+        return httpx.Response(200, json=final_response())
+
+    agent, _, _ = make_agent(tmp_path, respond)
+    agent.run("field-1", "看看资料", received_at=datetime(2026, 10, 20, 8, 30, tzinfo=UTC))
+
+    system = payloads[0]["messages"][0]["content"]
+    assert "2026-10-20 16:30" in system
 
 
 def test_model_update_is_only_a_proposal_until_the_user_confirms_it(tmp_path: Path) -> None:
