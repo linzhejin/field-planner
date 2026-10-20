@@ -1,0 +1,36 @@
+{
+  "organized_at": "2026-10-20T11:38:07.070425+08:00",
+  "repository_base": "9fd18f6f34fa68833e80dd0dd5a75133b6b487a8",
+  "step1_evidence_base": "de9c8e2e65af3bb18fca798dca8cf41b1d9303a7",
+  "step1": {
+    "status": "需求与执行准备交付完成；遗留问题与正式确认另列",
+    "a02_review": "用户于2026-10-20反馈复核没有问题",
+    "public_integration_passed": 3,
+    "targeted_development_tests_passed": 24,
+    "new_live_model_calls": 0,
+    "new_live_weather_calls": 0
+  },
+  "step2": {
+    "status": "候选编题完成，待独立复核、人工新颖性复查和正式封存",
+    "main": 30,
+    "boundary": 6,
+    "distribution": {
+      "正常安排": 8,
+      "关键缺项": 6,
+      "工时或前置冲突": 6,
+      "反馈重排": 6,
+      "不适用或接口失败": 4
+    },
+    "human_second_review_complete": false,
+    "formal_sealing_complete": false,
+    "independence_proven": false,
+    "formal_cases_run": 0
+  },
+  "publication": {
+    "repository_public": true,
+    "step2_encrypted_by_role": true,
+    "plaintext_case_files_published": false,
+    "passwords_in_repository": false,
+    "sqlite_included": false
+  }
+}

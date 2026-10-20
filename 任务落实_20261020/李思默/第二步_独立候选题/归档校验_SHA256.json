@@ -1,0 +1,29 @@
+{
+  "format": "NSWENC01",
+  "algorithm": "AES-256-GCM",
+  "key_derivation": "PBKDF2-HMAC-SHA256",
+  "iterations": 600000,
+  "archives": [
+    {
+      "role": "评测方完整包",
+      "path": "加密交接包/评测方_完整候选归档_20261020.zip.aesgcm",
+      "bytes": 536405,
+      "sha256": "19604b0216c32764c223d74ffe3db69212e89020995c42369252a4e69a9b0b50",
+      "decrypted_zip_sha256": "ccacf44c30a4c0a4897f391da6062face95f284497cb1371eb3c206a4b4bad3e"
+    },
+    {
+      "role": "给许独立复核包",
+      "path": "加密交接包/给许_独立复核_20261020.zip.aesgcm",
+      "bytes": 131458,
+      "sha256": "ce361caa99b0b986e738a54fe2337e9ba773dde83662e9dc413627ae4f011233",
+      "decrypted_zip_sha256": "d27afc1647c11e5c0612246acee1904fb9439d8b47703652a287340099649d53"
+    },
+    {
+      "role": "给金执行输入包",
+      "path": "加密交接包/给金_执行输入_20261020.zip.aesgcm",
+      "bytes": 54908,
+      "sha256": "42dd67ecc3e2fcf87ffe0ac4bad7d45f0878efd81ac231025059370e0354963c",
+      "decrypted_zip_sha256": "a18e4ec13f881b6737a610974e18e2679d76a9287f252d6476e44e9347347ea1"
+    }
+  ]
+}

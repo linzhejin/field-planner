@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-10-20T11:42:30.656575+08:00",
+  "checks": {
+    "new_markdown_local_links": "passed",
+    "no_local_sqlite_or_plaintext_holdout_archives": "passed",
+    "no_archive_password_or_token_patterns": "passed",
+    "three_archives_powershell_roundtrip_hashes": "passed",
+    "wrong_password_no_output": "passed"
+  },
+  "document_integrity": "All copied Word files match previously rendered and visually checked local outputs byte for byte.",
+  "case_execution": "none; no formal holdout or Agent/weather calls"
+}

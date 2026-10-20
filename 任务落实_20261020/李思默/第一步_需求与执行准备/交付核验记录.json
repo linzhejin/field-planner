@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-20T10:39:06.538813+08:00",
+  "pages_visually_checked": {
+    "report": 13,
+    "handoff_note": 4
+  },
+  "result": "all_17_pages_checked_no_clipping_overlap_or_unreadable_tables",
+  "report_tables_preserved": 12,
+  "source_links_preserved": 7,
+  "scope_patch_check": "git apply --check passed on pinned source snapshot",
+  "current_working_checkout_changed": false,
+  "github_push_performed": false,
+  "A02_review_state": "no_issues_reported_by_user"
+}

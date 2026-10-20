@@ -1,0 +1,2 @@
+# Delivery evidence and its SHA-256 manifest preserve exact bytes on every platform.
+* -text whitespace=cr-at-eol

@@ -1,0 +1,1143 @@
+{
+  "case_id": "J01",
+  "classification": "integration_only_not_holdout",
+  "model_called": false,
+  "weather_http_called": false,
+  "checks": [
+    "连续七天完整",
+    "可选未知保留null",
+    "相邻时段合并",
+    "重新打开仍可读取已采用历史"
+  ],
+  "saved_state": {
+    "id": "j01-20261019",
+    "mode": "demo",
+    "draft_version": 1,
+    "fact_version": 0,
+    "draft": {
+      "schema_version": 3,
+      "field_id": "j01-20261019",
+      "mode": "demo",
+      "profile": {
+        "id": "j01-20261019",
+        "name": "完整字段与时段合并模拟田",
+        "province": "湖北",
+        "province_confirmed": true,
+        "crop": "油菜",
+        "crop_confirmed": true,
+        "stage": "苗期",
+        "stage_confirmed": true,
+        "field_type": "lowland_rice_stubble",
+        "rice_stubble": null,
+        "cold_waterlogged": null,
+        "terrain": null,
+        "area_mu": null,
+        "inspection_requested": true,
+        "maintenance_need_confirmed": false,
+        "maintenance_problem_confirmed": false,
+        "moisture": "normal",
+        "ditch_connectivity": "clear",
+        "standing_water": false,
+        "leaf_count": null,
+        "pest_signs": null,
+        "missing_seedlings": null,
+        "crowding": null,
+        "actual_rain_observed": null,
+        "winter_before_context_confirmed": null,
+        "workability_by_date": {},
+        "inspection_duration_minutes": 30,
+        "maintenance_duration_minutes": 45,
+        "inspection_priority": 2,
+        "maintenance_priority": 2,
+        "inspection_earliest_date": null,
+        "inspection_due_date": "2026-10-26",
+        "maintenance_earliest_date": null,
+        "maintenance_due_date": "2026-10-26",
+        "maintenance_prerequisites": [],
+        "maintenance_task_id": null,
+        "completed_maintenance_task_ids": [],
+        "observed_at": "2026-10-19T15:30:00+08:00",
+        "observation_source": "synthetic"
+      },
+      "location": {
+        "query": "湖北省武汉市洪山区（模拟查询）",
+        "display_name": "洪山区模拟县级点，未经地理编码核验",
+        "latitude": 30.6,
+        "longitude": 114.3,
+        "timezone": "Asia/Shanghai",
+        "resolution": "county",
+        "administrative_area": [
+          "湖北省",
+          "武汉市",
+          "洪山区"
+        ],
+        "geocoding_source": "synthetic_fixture_not_live"
+      },
+      "start_date": "2026-10-20",
+      "days": [
+        {
+          "day": "2026-10-20",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 120,
+          "intervals": [
+            {
+              "start": "09:00:00",
+              "end": "11:00:00"
+            }
+          ]
+        },
+        {
+          "day": "2026-10-21",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        },
+        {
+          "day": "2026-10-22",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        },
+        {
+          "day": "2026-10-23",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        },
+        {
+          "day": "2026-10-24",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        },
+        {
+          "day": "2026-10-25",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        },
+        {
+          "day": "2026-10-26",
+          "site_workable": true,
+          "weather_workable": true,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+          "resource_minutes": 0,
+          "intervals": []
+        }
+      ],
+      "notes": "不计分联调；无跨地块共享资源统筹；补充说明不自动成为前置规则。",
+      "input_source": "demo",
+      "source_plan_id": null
+    },
+    "latest_plan_id": null,
+    "plan_stale": false,
+    "updated_at": "2026-10-20T02:25:42.188868Z"
+  },
+  "evaluation": {
+    "field_id": "j01-20261019",
+    "draft_version": 1,
+    "fact_version": 0,
+    "evaluated_at": "2026-10-19T16:00:00+08:00",
+    "profile_ready": true,
+    "items": [
+      {
+        "task_id": "j01-20261019-I",
+        "plot_id": "j01-20261019",
+        "title": "巡田苗情墒情虫情与沟渠检查",
+        "task_type": "inspection",
+        "applicability": "matched",
+        "necessity": "required",
+        "window_by_date": {
+          "2026-10-20": "available",
+          "2026-10-21": "available",
+          "2026-10-22": "available",
+          "2026-10-23": "available",
+          "2026-10-24": "available",
+          "2026-10-25": "available",
+          "2026-10-26": "available"
+        },
+        "schedule_status": "scheduled",
+        "duration_minutes": 30,
+        "start_at": "2026-10-20T09:00:00+08:00",
+        "end_at": "2026-10-20T09:30:00+08:00",
+        "completed": false,
+        "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+        "reason_code": "scheduled",
+        "missing_fields": [],
+        "evidence": [
+          {
+            "rule_id": "C31",
+            "title": "普通巡田的苗情墒情虫情记录",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z16",
+            "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+            "publisher": "农业农村部办公厅；种植业管理司网站发布",
+            "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+            "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+            "pdf_pages": [
+              1
+            ],
+            "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+            "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+            "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+            "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+            "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          },
+          {
+            "rule_id": "C11",
+            "title": "巡田记录缺苗和拥挤现象",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z15",
+            "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+            "publisher": "湖北省油菜办公室",
+            "source_date": "2025-11-07",
+            "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+            "pdf_pages": [
+              1
+            ],
+            "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+            "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+            "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+            "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+            "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          },
+          {
+            "rule_id": "C11",
+            "title": "巡田记录缺苗和拥挤现象",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z09",
+            "source_title": "湖北省油菜冬前田间管理技术指导意见",
+            "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+            "source_date": "2025-12-03",
+            "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+            "pdf_pages": [
+              2
+            ],
+            "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+            "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+            "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+            "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+            "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          },
+          {
+            "rule_id": "C19",
+            "title": "低洼田积水检查与维护反馈",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z09",
+            "source_title": "湖北省油菜冬前田间管理技术指导意见",
+            "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+            "source_date": "2025-12-03",
+            "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+            "pdf_pages": [
+              1
+            ],
+            "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+            "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+            "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+            "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+            "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          }
+        ]
+      },
+      {
+        "task_id": "j01-20261019-M",
+        "plot_id": "j01-20261019",
+        "title": "既有沟渠维护候选",
+        "task_type": "maintenance",
+        "applicability": "matched",
+        "necessity": "no_need",
+        "window_by_date": {},
+        "schedule_status": "not_generated",
+        "duration_minutes": 45,
+        "start_at": null,
+        "end_at": null,
+        "completed": false,
+        "reason": "已确认不需要，未生成任务",
+        "reason_code": "no_need",
+        "missing_fields": [],
+        "evidence": [
+          {
+            "rule_id": "C23",
+            "title": "沟渠清理需求确认与候选任务",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z01",
+            "source_title": "2026年全国冬油菜生产技术意见",
+            "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+            "source_date": "2026-09-08",
+            "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+            "pdf_pages": [
+              2
+            ],
+            "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+            "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+            "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+            "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+            "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          },
+          {
+            "rule_id": "C23",
+            "title": "沟渠清理需求确认与候选任务",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z15",
+            "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+            "publisher": "湖北省油菜办公室",
+            "source_date": "2025-11-07",
+            "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+            "pdf_pages": [
+              1
+            ],
+            "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+            "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+            "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+            "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+            "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          },
+          {
+            "rule_id": "C19",
+            "title": "低洼田积水检查与维护反馈",
+            "pack_version": "融合修订版1.0",
+            "evidence_version": "2026-10-17",
+            "source_id": "Z09",
+            "source_title": "湖北省油菜冬前田间管理技术指导意见",
+            "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+            "source_date": "2025-12-03",
+            "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+            "pdf_pages": [
+              1
+            ],
+            "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+            "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+            "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+            "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+            "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+            "runtime_enabled": false,
+            "status_label": "开发验证，适用性待复核"
+          }
+        ]
+      }
+    ],
+    "missing_fields": [],
+    "clarification_questions": [],
+    "ruleset_version": "融合修订版1.0",
+    "status_label": "开发验证，适用性待复核"
+  },
+  "first_preview": {
+    "id": "1090b844-69a3-47d7-8e0e-a402744211fa",
+    "field_id": "j01-20261019",
+    "expected_draft_version": 1,
+    "expected_fact_version": 0,
+    "expected_plan_id": null,
+    "created_at": "2026-10-19T16:00:00+08:00",
+    "version": {
+      "schema_version": 3,
+      "id": "4d3ce5c5-2b39-42f8-bc2f-99b4d85ec48a",
+      "field_id": "j01-20261019",
+      "parent_id": null,
+      "created_at": "2026-10-19T16:00:00+08:00",
+      "draft_version": 1,
+      "fact_version": 0,
+      "plan": {
+        "schema_version": 2,
+        "id": "a0bb5912-7cae-4069-ac96-297e92c9a9e2",
+        "parent_id": null,
+        "created_at": "2026-10-19T16:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "753f4629-2b2f-4eaf-a480-3e7dc7db9ab7",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "j01-20261019",
+              "name": "完整字段与时段合并模拟田",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": null,
+              "cold_waterlogged": null,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": false,
+              "maintenance_problem_confirmed": false,
+              "moisture": "normal",
+              "ditch_connectivity": "clear",
+              "standing_water": false,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": null,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": 45,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": "2026-10-26",
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": "2026-10-26",
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": "2026-10-19T15:30:00+08:00",
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "j01-20261019-I",
+            "plot_id": "j01-20261019",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "j01-20261019-M",
+            "plot_id": "j01-20261019",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "window_by_date": {},
+            "schedule_status": "not_generated",
+            "duration_minutes": 45,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "已确认不需要，未生成任务",
+            "reason_code": "no_need",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      },
+      "weather_snapshot_id": null,
+      "ruleset_version": "融合修订版1.0",
+      "rule_adoption_ids": [],
+      "source": "demo",
+      "changes": [
+        {
+          "task_id": "j01-20261019-I",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": "2026-10-20T09:00:00+08:00",
+          "new_end_at": "2026-10-20T09:30:00+08:00",
+          "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+        }
+      ],
+      "calculation_basis": [
+        "单地块独立计划；尚未统筹其他地块时间",
+        "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+        "候选规则处于开发验证阶段，适用性待复核"
+      ]
+    },
+    "status": "preview"
+  },
+  "adoption": {
+    "version": {
+      "schema_version": 3,
+      "id": "4d3ce5c5-2b39-42f8-bc2f-99b4d85ec48a",
+      "field_id": "j01-20261019",
+      "parent_id": null,
+      "created_at": "2026-10-19T16:00:00+08:00",
+      "draft_version": 1,
+      "fact_version": 0,
+      "plan": {
+        "schema_version": 2,
+        "id": "a0bb5912-7cae-4069-ac96-297e92c9a9e2",
+        "parent_id": null,
+        "created_at": "2026-10-19T16:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "753f4629-2b2f-4eaf-a480-3e7dc7db9ab7",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "j01-20261019",
+              "name": "完整字段与时段合并模拟田",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": null,
+              "cold_waterlogged": null,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": false,
+              "maintenance_problem_confirmed": false,
+              "moisture": "normal",
+              "ditch_connectivity": "clear",
+              "standing_water": false,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": null,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": 45,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": "2026-10-26",
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": "2026-10-26",
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": "2026-10-19T15:30:00+08:00",
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": "2026-10-19T15:50:00+08:00",
+              "resource_minutes": 0,
+              "intervals": []
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "j01-20261019-I",
+            "plot_id": "j01-20261019",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "j01-20261019-M",
+            "plot_id": "j01-20261019",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "window_by_date": {},
+            "schedule_status": "not_generated",
+            "duration_minutes": 45,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "已确认不需要，未生成任务",
+            "reason_code": "no_need",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      },
+      "weather_snapshot_id": null,
+      "ruleset_version": "融合修订版1.0",
+      "rule_adoption_ids": [],
+      "source": "demo",
+      "changes": [
+        {
+          "task_id": "j01-20261019-I",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": "2026-10-20T09:00:00+08:00",
+          "new_end_at": "2026-10-20T09:30:00+08:00",
+          "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+        }
+      ],
+      "calculation_basis": [
+        "单地块独立计划；尚未统筹其他地块时间",
+        "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+        "候选规则处于开发验证阶段，适用性待复核"
+      ]
+    },
+    "created_new_version": true,
+    "replayed": false
+  },
+  "reopened_history_count": 1,
+  "status": "passed_local_structured_integration",
+  "elapsed_ms": 185.249
+}

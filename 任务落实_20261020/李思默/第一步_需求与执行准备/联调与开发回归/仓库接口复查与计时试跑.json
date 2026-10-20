@@ -1,0 +1,251 @@
+{
+  "checked_at": "2026-10-20T10:29:57.516784+08:00",
+  "commit": "de9c8e2e65af3bb18fca798dca8cf41b1d9303a7",
+  "source_module": "E:\\AIC\\work\\field-planner_de9c8e2_20261020\\src\\nongshi\\__init__.py",
+  "classification": "public_development_contract_checks_not_holdout",
+  "real_model_calls": 0,
+  "real_weather_requests": 0,
+  "checks": {
+    "structured_prerequisite": {
+      "status": "passed",
+      "inspection_end": "2026-10-20T09:30:00+08:00",
+      "maintenance_start": "2026-10-20T09:30:00+08:00",
+      "prerequisites_after_save": [
+        "contract-field-I"
+      ]
+    },
+    "main_form_resave": {
+      "status": "known_issue_reproduced",
+      "before": [
+        "contract-field-I"
+      ],
+      "after": [],
+      "draft_version_after": 2
+    },
+    "fixed_agent_clock": {
+      "status": "passed_in_test_adapter",
+      "received_at": "2026-10-19T16:00:00+08:00",
+      "method": "WorkbenchService now/today注入；Agent模块datetime由离线适配器临时绑定，退出恢复",
+      "production_run_parameter_available": false,
+      "system_prompt": "你是农时窗口的中文农事助手。当前地块 ID 是 contract-field。本轮接收时间为北京时间 2026-10-19 16:00。只能根据本地工具结果解释任务、依据、天气和排程。先读取或核对状态，再按需调用地点搜索、天气、规则、评估或计划预览工具。最多提出三条影响当前判断的问题。相对日期只按本轮接收时的北京时间换算，并在待确认修改里写出完整日期；不能猜测缺失的日期。涉及档案或现场事实的修改只能调用 propose_* 工具，必须向用户逐项说明并等待确认；不能声称草稿已保存、事实已记录或计划已采用。不能编造任务、工时、天气、来源和农艺结论。未知保留为未知。天气预报不代表现场可作业。候选规则标记为开发验证、适用性待复核。最终只做简短解释，不另写一份任务列表；任务、日期、时段、状态和来源都由本地工具结果展示。不要输出私有推理过程。"
+    },
+    "weather_fixture": {
+      "status": "passed",
+      "days": 7,
+      "simulated_failure_codes": {
+        "missing_dates": "missing_dates",
+        "timeout": "timeout"
+      },
+      "method": "httpx.MockTransport",
+      "snapshot": {
+        "id": "38f72102-dff8-4f38-81fd-9d633347d4b8",
+        "field_id": "contract-field",
+        "source": "Open-Meteo Forecast API",
+        "location": {
+          "query": "湖北省武汉市洪山区（模拟查询）",
+          "display_name": "洪山区模拟县级点，未经地理编码核验",
+          "latitude": 30.6,
+          "longitude": 114.3,
+          "timezone": "Asia/Shanghai",
+          "resolution": "county",
+          "administrative_area": [
+            "湖北省",
+            "武汉市",
+            "洪山区"
+          ],
+          "geocoding_source": "synthetic_fixture_not_live"
+        },
+        "requested_latitude": 30.6,
+        "requested_longitude": 114.3,
+        "grid_latitude": 30.6,
+        "grid_longitude": 114.3,
+        "timezone": "Asia/Shanghai",
+        "fetched_at": "2026-10-19T08:00:00Z",
+        "coverage_start": "2026-10-20",
+        "coverage_end": "2026-10-26",
+        "units": {
+          "weather_code": "wmo code",
+          "temperature_2m_max": "°C",
+          "temperature_2m_min": "°C",
+          "precipitation_sum": "mm",
+          "rain_sum": "mm",
+          "showers_sum": "mm",
+          "wind_speed_10m_max": "km/h"
+        },
+        "days": [
+          {
+            "day": "2026-10-20",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-21",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-22",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-23",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-24",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-25",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          },
+          {
+            "day": "2026-10-26",
+            "weather_code": 3,
+            "temperature_max": 22.0,
+            "temperature_min": 13.0,
+            "precipitation_sum": 0.0,
+            "rain_sum": 0.0,
+            "showers_sum": 0.0,
+            "wind_speed_max": 12.0
+          }
+        ],
+        "cache_expires_at": "2026-10-19T14:00:00Z",
+        "is_stale": false
+      }
+    },
+    "local_timing_protocol_trial": {
+      "classification": "public_development_timing_trial_not_formal_acceptance",
+      "definition": "三份各一地七天的独立计划顺序生成，计build_plan_v2纯计算，输入和规则加载在计时外",
+      "excluded": [
+        "联网",
+        "模型",
+        "数据库",
+        "页面渲染",
+        "输入构造",
+        "规则首次加载"
+      ],
+      "warmup_rounds": 1,
+      "rounds": 30,
+      "plans_per_round": 3,
+      "milliseconds": [
+        0.40379999973083613,
+        0.48470000001543667,
+        0.43430000005173497,
+        0.3743000002032204,
+        0.36470000031840755,
+        0.3707000000758853,
+        0.36150000005363836,
+        0.3596999999899708,
+        0.3538000000844477,
+        0.3556000001481152,
+        0.3579999997782579,
+        0.4131000000597851,
+        0.36470000031840755,
+        0.35549999984141323,
+        0.3529000000526139,
+        0.35189999971407815,
+        0.3521000003274821,
+        0.36039999986314797,
+        0.36129999989498174,
+        0.35260000004200265,
+        1.0477999999238818,
+        0.5473000001074979,
+        0.37389999988590716,
+        0.4554000001917302,
+        0.36670000008598436,
+        0.35299999990456854,
+        0.3461999999672116,
+        0.34839999989344506,
+        0.34890000006271293,
+        0.35249999973530066
+      ],
+      "median_ms": 0.36084999987906485,
+      "p95_ms": 0.5473000001074979,
+      "within_2000ms": 30,
+      "failures": 0,
+      "authority": "依据审阅R06及用户2026-10-20授权，固定为本轮评测工作口径v1.0；不是金的签认记录"
+    },
+    "new_input_fields": {
+      "status": "confirmed_from_latest_schema",
+      "fields": {
+        "rice_stubble": "bool | None",
+        "cold_waterlogged": "bool | None",
+        "terrain": "typing.Optional[typing.Literal['lowland', 'hilly', 'flat', 'other']]",
+        "pest_signs": "bool | None",
+        "missing_seedlings": "bool | None",
+        "crowding": "bool | None"
+      },
+      "default": null
+    }
+  },
+  "issues": [
+    {
+      "id": "SYS-01",
+      "severity": "high",
+      "owner": "金麟哲",
+      "finding": "主工作台重新保存地块档案使已有maintenance_prerequisites变为空列表",
+      "reproduction": "结构化保存显式前置→主表单点击保存地块档案→回读profile",
+      "expected": [
+        "contract-field-I"
+      ],
+      "actual": [],
+      "workaround": "正式工程案例经结构化入口写入并回读；修复前不再通过主表单重存该地块"
+    },
+    {
+      "id": "SYS-02",
+      "severity": "medium",
+      "owner": "金麟哲",
+      "finding": "Agent.run的接收时间直接取系统UTC时钟；正式运行接口尚无received_at参数",
+      "workaround": "采用随包离线适配器临时固定Agent时钟；不改业务代码，日志保留注入方法"
+    },
+    {
+      "id": "DOC-01",
+      "severity": "medium",
+      "owner": "团队",
+      "finding": "仓库产品说明与总任务清单仍有联合排程、其他待办旧表述；金的A01确认未记录",
+      "workaround": "本轮需求及评测按A01原件边界；提供逐处同步补丁，未伪造签认"
+    },
+    {
+      "id": "RUN-01",
+      "severity": "medium",
+      "owner": "金麟哲",
+      "finding": "main未找到可直接执行30例三组统一对照的运行器；现有接口和开发测试不等于90份初测工具",
+      "workaround": "D01编题可继续；D03正式初测前固定并验证三组运行器"
+    }
+  ]
+}

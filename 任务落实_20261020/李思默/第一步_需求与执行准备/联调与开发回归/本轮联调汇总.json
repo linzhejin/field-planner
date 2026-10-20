@@ -1,0 +1,56 @@
+{
+  "recorded_at": "2026-10-20T10:25:42.680950+08:00",
+  "run_directory": "E:\\AIC\\第一步补齐_20261020\\联调样例与原始记录\\运行_20261020_102542",
+  "code_commit": "de9c8e2e65af3bb18fca798dca8cf41b1d9303a7",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]"
+  },
+  "sample_file_sha256": "8c05e5f8305ed853b8046dca5cd57910c86ba438e9c5bd73a5ba7423a0cdd219",
+  "integration_cases": 3,
+  "formal_holdout_cases_run": 0,
+  "model_calls": 0,
+  "weather_http_calls": 0,
+  "scope": "只验证本机结构化字段、保存、预览采用、反馈和历史；不证明农业适用性、自然语言入口或在线天气通过",
+  "results": [
+    {
+      "case_id": "J01",
+      "status": "passed_local_structured_integration",
+      "checks": [
+        "连续七天完整",
+        "可选未知保留null",
+        "相邻时段合并",
+        "重新打开仍可读取已采用历史"
+      ],
+      "elapsed_ms": 185.249
+    },
+    {
+      "case_id": "J02",
+      "status": "passed_local_structured_integration",
+      "checks": [
+        "连续七天完整",
+        "可选未知保留null",
+        "相邻时段合并",
+        "关键未知未改写为false或已确认",
+        "关键资料未确认时没有确定排期",
+        "重新打开仍可读取已采用历史"
+      ],
+      "elapsed_ms": 152.803
+    },
+    {
+      "case_id": "J03",
+      "status": "passed_local_structured_integration",
+      "checks": [
+        "连续七天完整",
+        "可选未知保留null",
+        "相邻时段合并",
+        "四类反馈均写入",
+        "观察未知保留null",
+        "预览保留完成状态",
+        "取消预览后事实事件仍在",
+        "重新打开仍可读取已采用历史"
+      ],
+      "elapsed_ms": 280.589
+    }
+  ]
+}

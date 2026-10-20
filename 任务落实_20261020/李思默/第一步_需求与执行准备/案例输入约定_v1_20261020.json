@@ -1,0 +1,48 @@
+{
+  "baseline": "de9c8e2e65af3bb18fca798dca8cf41b1d9303a7",
+  "draft_schema": "FieldDraftV3",
+  "event_schema": "FactEventInputV3/FeedbackV2",
+  "days": 7,
+  "timezone": "Asia/Shanghai",
+  "unknown": null,
+  "additional_fields": {
+    "rice_stubble": null,
+    "cold_waterlogged": null,
+    "terrain": null,
+    "pest_signs": null,
+    "missing_seedlings": null,
+    "crowding": null
+  },
+  "prerequisite_path": "draft.profile.maintenance_prerequisites",
+  "external_metadata": [
+    "case_id",
+    "category",
+    "received_at",
+    "messages",
+    "feedback_events",
+    "source_ids",
+    "unknown_fields",
+    "weather_fixture"
+  ],
+  "reference_constraints": "separate_evaluator_file_not_in_execution_input",
+  "timing": {
+    "classification": "public_development_timing_trial_not_formal_acceptance",
+    "definition": "三份各一地七天的独立计划顺序生成，计build_plan_v2纯计算，输入和规则加载在计时外",
+    "excluded": [
+      "联网",
+      "模型",
+      "数据库",
+      "页面渲染",
+      "输入构造",
+      "规则首次加载"
+    ],
+    "warmup_rounds": 1,
+    "rounds": 30,
+    "plans_per_round": 3,
+    "median_ms": 0.36084999987906485,
+    "p95_ms": 0.5473000001074979,
+    "within_2000ms": 30,
+    "failures": 0,
+    "authority": "依据审阅R06及用户2026-10-20授权，固定为本轮评测工作口径v1.0；不是金的签认记录"
+  }
+}
