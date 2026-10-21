@@ -1,0 +1,229 @@
+- log
+- log
+- link "Skip to main content":
+  - /url: "#stMain"
+- region "Sidebar":
+  - heading "工作空间" [level=3]
+  - paragraph: 数据空间
+  - radiogroup "数据空间":
+    - radio "真实地块" [checked]
+    - paragraph: 真实地块
+    - radio "独立模拟示例"
+    - paragraph: 独立模拟示例
+  - paragraph: 真实地块数据库与模拟示例数据库彼此隔离。
+  - paragraph:
+    - text: 数据文件：
+    - code: ui_acceptance_20261021.sqlite3
+- banner:
+  - button "Expand sidebar":
+    - generic: keyboard_double_arrow_right
+  - button "Deploy":
+    - generic: Deploy
+  - button "Main menu":
+- main:
+  - heading "农时窗口" [level=3]:
+    - text: 农时窗口
+    - link "Link to heading":
+      - /url: "#da904572"
+  - paragraph: 10月22日—28日 · 计划 未采用
+  - paragraph:
+    - generic: 真实地块
+  - paragraph: 已保存
+  - button "历史版本":
+    - generic "历史版本":
+      - paragraph: 历史版本
+  - button "导出计划" [disabled]:
+    - paragraph: 导出计划
+  - tablist:
+    - tab "地块与资源":
+      - paragraph: 地块与资源
+    - tab "计划结果" [selected]:
+      - paragraph: 计划结果
+    - tab "助手与历史":
+      - paragraph: 助手与历史
+  - tabpanel "计划结果":
+    - heading "公开页面验收田（模拟输入） · 结果" [level=4]:
+      - text: 公开页面验收田（模拟输入） · 结果
+      - link "Link to heading":
+        - /url: "#e0e5f793"
+    - button "重新计算计划":
+      - paragraph: 重新计算计划
+    - paragraph: 天气：尚未获取天气
+    - generic: "1"
+    - paragraph:
+      - generic: 已安排
+    - generic: "1"
+    - paragraph:
+      - generic: 待确认
+    - generic: "0"
+    - paragraph:
+      - generic: 未排入
+    - heading "今日与后续安排" [level=4]:
+      - text: 今日与后续安排
+      - link "Link to heading":
+        - /url: "#1fd3ca9a"
+    - heading "七天计划预览" [level=4]:
+      - text: 七天计划预览
+      - link "Link to heading":
+        - /url: "#d98fe6ee"
+    - paragraph: 依据：档案 v2 · 现场事实 v0 · 单地块计算，尚未统筹其他地块时间，不代表合并后可执行
+    - paragraph: 单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行
+    - paragraph: 天气预报仅用于风险展示；现场与天气作业条件仍需分别确认
+    - paragraph: 候选规则处于开发验证阶段，适用性待复核
+    - paragraph: 田里仍有积水记录：积水持续或加重时请先现场核实或联系当地农技人员；系统不替代现场处置
+    - paragraph:
+      - strong: 变化与原因
+    - list:
+      - listitem: field-f10f75827f-I added：无旧时段 → 10-22 09:00–09:30；现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段
+    - list:
+      - listitem: field-f10f75827f-M added：无旧时段 → 未排入；需求或现场问题尚未确认
+    - paragraph:
+      - strong: 巡田苗情墒情虫情与沟渠检查
+      - generic: 已安排
+    - paragraph: 2026-10-22 09:00–09:30 · 30 分钟
+    - paragraph: 现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段
+    - button "查看详情":
+      - paragraph: 查看详情
+    - paragraph:
+      - strong: 既有沟渠维护候选
+      - generic: 待确认
+    - paragraph: 需求或现场问题尚未确认
+    - paragraph: 待补信息：maintenance_problem_confirmed、maintenance_need_confirmed
+    - button "查看详情":
+      - paragraph: 查看详情
+    - button "采用这版安排":
+      - paragraph: 采用这版安排
+    - button "取消预览":
+      - paragraph: 取消预览
+    - paragraph: 以上为当前地块结果；依据可在任务详情查看。
+    - paragraph: 有其他地块？点击左侧「新增地块」继续。
+    - generic "天气与查询位置":
+      - generic: keyboard_arrow_right
+      - paragraph: 天气与查询位置
+    - generic "候选与依据":
+      - generic: keyboard_arrow_right
+      - paragraph: 候选与依据
+    - generic "反馈与历史":
+      - generic: keyboard_arrow_right
+      - paragraph: 反馈与历史
+- button "取消"
+- dialog "任务详情":
+  - button "Close":
+  - heading "任务详情" [level=2]:
+    - paragraph: 任务详情
+  - paragraph:
+    - strong: 任务
+    - text: ：巡田苗情墒情虫情与沟渠检查 · 巡田检查
+  - paragraph:
+    - strong: 编号
+    - text: ：field-f10f75827f-I
+  - paragraph:
+    - strong: 日期与时间
+    - text: ：2026-10-22 09:00–09:30
+  - paragraph:
+    - strong: 预计时长
+    - text: ：30 分钟
+  - paragraph:
+    - strong: 窗口
+    - text: ：可安排
+  - paragraph:
+    - strong: 适用性
+    - text: ：适用
+  - paragraph:
+    - strong: 需求
+    - text: ：需要
+  - paragraph:
+    - strong: 执行状态
+    - text: ：已安排
+  - paragraph:
+    - strong: 安排原因
+    - text: ：现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段
+  - paragraph:
+    - strong: 待确认项
+    - text: ：无
+  - separator
+  - generic "规则依据与来源" [active]:
+    - generic: keyboard_arrow_down
+    - paragraph: 规则依据与来源
+  - paragraph:
+    - strong: C31 · 普通巡田的苗情墒情虫情记录
+  - paragraph: 农业农村部办公厅；种植业管理司网站发布 · 2020-11-24（网页）；2020-11-05（文件落款） · 页码 1 · 开发验证，适用性待复核 · runtime_enabled=false
+  - paragraph: 适用条件：2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。
+  - paragraph: 限制：不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。
+  - paragraph: 原文：组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。
+  - paragraph: 来源指纹：b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e
+  - link "打开来源":
+    - /url: https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm
+    - paragraph: 打开来源
+  - paragraph: ↳ A04-S02 · 2025年湖北省油菜苗期田间管理技术指导意见
+  - paragraph: 湖北省油菜办公室 · 2025-11-07 · 导语及第一部分 清沟降渍 第二部分 移密补稀；对应既有Z15 PDF第1页 · 访问日 2026-10-19
+  - paragraph: 用途限制：苗期证据及偏湿、偏干条件对照；当年天气背景不能当成本年度田况。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd
+  - link "打开补充来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml
+    - paragraph: 打开补充来源
+  - paragraph: ↳ A04-S04 · 2025年冬油菜抗渍涝保播种促壮苗技术意见
+  - paragraph: 农业农村部油菜专家指导组 全国农业技术推广服务中心；福建省农业农村厅转载 · 转载页显示2025-10-22 15:52；URL含20251027，不取代显示日期；原索引日期2025-10-20仍须另核 · 导语及第一部分 抢排水降渍害；对应既有Z04 PDF第1页 · 访问日 2026-10-19
+  - paragraph: 用途限制：持续阴雨、偏湿播栽背景下保留雨后核查与及时处理提示；不转为统一24小时时限。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 4ee79b6497b05e0eda51f20b790a6f94fdd69f30a5edf955d5d579b8e5bdb5cb
+  - link "打开补充来源":
+    - /url: https://nynct.fujian.gov.cn/ztzl/kpxj/zrzhl/202510/t20251027_7026490.htm
+    - paragraph: 打开补充来源
+  - paragraph:
+    - strong: C11 · 巡田记录缺苗和拥挤现象
+  - paragraph: 湖北省油菜办公室 · 2025-11-07 · 页码 1 · 开发验证，适用性待复核 · runtime_enabled=false
+  - paragraph: 适用条件：2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。
+  - paragraph: 限制：Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。
+  - paragraph: 原文：在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。
+  - paragraph: 来源指纹：06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71
+  - link "打开来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml
+    - paragraph: 打开来源
+  - paragraph:
+    - strong: C11 · 巡田记录缺苗和拥挤现象
+  - paragraph: 湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组 · 2025-12-03 · 页码 2 · 开发验证，适用性待复核 · runtime_enabled=false
+  - paragraph: 适用条件：2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。
+  - paragraph: 限制：Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。
+  - paragraph: 原文：在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗
+  - paragraph: 来源指纹：1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca
+  - link "打开来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml
+    - paragraph: 打开来源
+  - paragraph:
+    - strong: C19 · 低洼田积水检查与维护反馈
+  - paragraph: 湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组 · 2025-12-03 · 页码 1 · 开发验证，适用性待复核 · runtime_enabled=false
+  - paragraph: 适用条件：2025年湖北冬前稻茬田、低洼田或冷浸田。
+  - paragraph: 限制：不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。
+  - paragraph: 原文：稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。
+  - paragraph: 来源指纹：1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca
+  - link "打开来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml
+    - paragraph: 打开来源
+  - paragraph: ↳ A04-S01 · 湖北省2026年农业主推技术指南
+  - paragraph: 湖北省农业农村厅 · 页面及发文日期字段2026-01-09；正文落款2026-01-16，二者不一致；URL含20260210，不作为发布日期 · 第九项 油菜耕播集成与农机农艺融合生产技术 二4配套田间管理 三适宜区域 四注意事项 · 访问日 2026-10-19
+  - paragraph: 用途限制：可补充播后沟系维护及墒情管理的方向；不能将整个机械化技术包、尺寸、药肥或增产数据转为本系统结论。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 047ce68816d6b61baedcdcfbdd61dfd6b1d40be455c625b0a8ac0d720c7bb230
+  - link "打开补充来源":
+    - /url: https://nyt.hubei.gov.cn/zfxxgk/zc_GK2020/qtzdgkwj_GK2020/tz/202602/t20260210_5874529.shtml
+    - paragraph: 打开补充来源
+  - paragraph: ↳ A04-S02 · 2025年湖北省油菜苗期田间管理技术指导意见
+  - paragraph: 湖北省油菜办公室 · 2025-11-07 · 导语及第一部分 清沟降渍 第二部分 移密补稀；对应既有Z15 PDF第1页 · 访问日 2026-10-19
+  - paragraph: 用途限制：苗期证据及偏湿、偏干条件对照；当年天气背景不能当成本年度田况。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 d8e8250862d0e5b4d360f592b451eec26cb78daefecf91cfbefd7477e9abf4cd
+  - link "打开补充来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml
+    - paragraph: 打开补充来源
+  - paragraph: ↳ A04-S03 · 湖北省油菜冬前田间管理技术指导意见
+  - paragraph: 湖北省油菜办公室等 · 2025-12-03 · 第一部分 开沟降渍；对应既有Z09 PDF第1页 · 访问日 2026-10-19
+  - paragraph: 用途限制：冬前、田型及干湿差异的原有约束，不能自动扩到所有苗期。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 67936430a6e646a6b47a5803abfb66eed4350d3e9042a2b40571cfafad343dce
+  - link "打开补充来源":
+    - /url: https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml
+    - paragraph: 打开补充来源
+  - paragraph: ↳ A04-S06 · 冷浸田地下水位与农田小气候生境特征研究
+  - paragraph: 王飞等 福建省农业科学院；农业现代化研究 · 2014年5月 第35卷第3期 · PDF第1页 摘要与引言；已查看页图 · 访问日 2026-10-19
+  - paragraph: 用途限制：福建闽侯典型冷浸田与灰泥田的连续两年监测，说明研究涉及水位与生境指标；不产生湖北油菜田的自动分类阈值。
+  - paragraph: A04 补充来源；不改变原卡适用性与启用状态 · 指纹 67361d77ae493263a7547731613d8525e349aa51966261584753933fa079b3c5
+  - link "打开补充来源":
+    - /url: https://nyxdhyj.isa.ac.cn/en/article/pdf/preview/20140322.pdf
+    - paragraph: 打开补充来源

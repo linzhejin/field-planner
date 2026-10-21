@@ -1,2 +1,13 @@
 # Archived source pages are checksum-verified as exact bytes. Do not convert line endings.
 rules/农时窗口_官方资料库_20261016/01_官方原件/*.html -text
+
+# Preserve exact bytes of the 2026-10-21 handoff and its checksum records.
+"任务落实_20261019/A03_规则采用记录/20261020复核/**" -text
+"任务落实_20261019/B04_B06_页面验收_20261021/**" -text
+"任务落实_20261019/A04_缺口答复/A04_收口复核_20261020.md" -text
+"任务落实_20261019/A05_事务状态_20261020.md" -text
+"任务落实_20261019/本轮交付入口_20261021.md" -text
+"任务落实_20261019/本轮交付核验_20261021.json" -text
+"任务落实_20261019/给金麟哲的复核问题_20261021.md" -text
+"AIC claude code/技术报告/农时窗口_技术方案三章与简介_20261020.md" -text
+"src/nongshi/data/rule_adoption_development.json" -text

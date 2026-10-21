@@ -1,0 +1,71 @@
+{
+  "checked_at": "2026-10-21T11:24:58.457888+08:00",
+  "baseline": "e902f7018ae0d4d23c27499223488170ab07f822",
+  "pytest_receipt": {
+    "result": "167 passed",
+    "duration_seconds": 20.61,
+    "scope": "本轮前段执行的现有全量测试；未使用私有候选输入"
+  },
+  "json_files": [
+    "七卡采用结论_待签认.json",
+    "全部任务与依据条目.json",
+    "公开样本实际输出.json",
+    "原文逐页定位核验.json"
+  ],
+  "private_review_count": 36,
+  "human_review_status": "许继哲依据AI辅助意见授权确认；本人未逐条查阅；待李思默独立复核",
+  "formal_adopted": 0,
+  "ui_plan_id": "62d79ebd-0d2a-4b79-9579-3fedc2002060",
+  "ui_export_schema": 3,
+  "ui_export_history_count": 1,
+  "github_pushed": false,
+  "password_scan": "passed; no passwords copied into public outputs",
+  "files_sha256": {
+    "任务落实_20261019/A03_规则采用记录/20261020复核/七卡采用结论_待签认.json": "e754c2f9e46f2565e4424f734a5b79c1abbcb5443f93cdd094fcddad7dc5a254",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/七卡采用结论_待签认.md": "31c8dbcb2ddfbf4f32a5d01d8860079600adfdb86aabe5a6480f88e60f8a22cb",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/全部任务与依据条目.json": "8f31db8b97ca3363cffcf8ee70d0118fd9766fc5e36a5e5b28e5275c74c8e84f",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/公开样本实际输出.json": "8378c369d53299514da028fbd166f48b1e51c34d69f95d6e1a82637fb52cc1eb",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/原文逐页定位核验.json": "d829db79e5102e37824ea3229e9517bd3c8c5a177ecd968d9a56b93925ad9451",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/引用支撑自检.md": "a49987a11b8bfe96f95216ecc345f81270a415e11c559482db9722bc893375d4",
+    "任务落实_20261019/B04_B06_页面验收_20261021/01_任务来源详情.png": "2d70c4824e67dceac5cbfd7ca4a093145083c113dc768da333b04d19eedcb0a8",
+    "任务落实_20261019/B04_B06_页面验收_20261021/01_任务来源详情.txt": "73b0ed61057817b94b0040fcfb03c77a71c0ffc66102d42863a85e8352da72db",
+    "任务落实_20261019/B04_B06_页面验收_20261021/02_计划已采用.png": "086ad0185fd44a0406e8edf97f39670ece724557e2c72158512217820232f78d",
+    "任务落实_20261019/B04_B06_页面验收_20261021/02_计划已采用.txt": "bfa6319d6c8df70652cef4622028f8d82080f97f447902e4ef8031f38d66af0d",
+    "任务落实_20261019/B04_B06_页面验收_20261021/03_刷新后采用版.png": "0a696e095cc15c3b32e64c74da80e08a2c134c240c739bbb782c66a051c0c4de",
+    "任务落实_20261019/B04_B06_页面验收_20261021/03_刷新后采用版.txt": "3d92440c841bffb3ce62913d302e07469641a05b145cdcb5e77f1915313c79a4",
+    "任务落实_20261019/B04_B06_页面验收_20261021/04_历史版本.txt": "b85f75a479e8d59ba60bc013f04be0cc826495bd74e219954df79f3fe74289d2",
+    "任务落实_20261019/B04_B06_页面验收_20261021/05_重启后采用版.png": "a04571f96d90d8d5c868ec5b6f95e04cb00c90e19b920e80759e892fd9db4ca1",
+    "任务落实_20261019/B04_B06_页面验收_20261021/05_重启后采用版.txt": "3d92440c841bffb3ce62913d302e07469641a05b145cdcb5e77f1915313c79a4",
+    "任务落实_20261019/B04_B06_页面验收_20261021/公开验收导出.json": "1eefd0b8b6e48a70a4a6165791705586c12473b9418f99422dd9849e26cbcc27",
+    "任务落实_20261019/B04_B06_页面验收_20261021/公开验收导出.md": "ce9e433e8c5e8fbc610cf8abada7d01810b3155a6e193d6818da9d1debf73175",
+    "任务落实_20261019/B04_B06_页面验收_20261021/页面验收记录.md": "09495805afe5149508db81f3fa49261ffb70820e47a33634394a776cd596c2ac",
+    "任务落实_20261019/本轮交付入口_20261021.md": "434110a1ce6897117142d5bca02231ad4d5cd177d8219cdbe7fd34b986cdeb77",
+    "任务落实_20261019/给金麟哲的复核问题_20261021.md": "19a19931a6cb4e227bc30a6178dc2fba65f7e58edef542527fe4c4edaea7c8d9",
+    "任务落实_20261019/A05_事务状态_20261020.md": "1101d640e1430dfc08fe2d67f78ecb182793b17fef6715e8d34b3332c3b1e755",
+    "任务落实_20261019/A04_缺口答复/A04_收口复核_20261020.md": "0c5ad84561a90ead57b9561b49b849ac4abd31bd56af4ef3c572338418c5de0c",
+    "AIC claude code/技术报告/农时窗口_技术方案三章与简介_20261020.md": "b8f78fcd0aeeb24ea00a990669d28ac8a52fdd574022539c5e39363fcdcb84dc",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/七卡负责人确认记录_20261021.json": "a86815636d4effcfec14c19ab6826a93150a5271e68a0a23774649bfd7e777bc",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/七卡负责人确认记录_20261021.md": "ec5e89d2da8673df917f455e50b1bae78e6a230fc3f569e4705d1ff6b543b1ea",
+    "任务落实_20261019/A03_规则采用记录/20261020复核/负责人确认后工程测试_20261021.log": "12fac03e92af224af9dd7f3a8132e18b5d8f9e304afcd908f6d93a2dd6f9c070",
+    "src/nongshi/data/rule_adoption_development.json": "1f8168a6e79aa2500e290091e32477cbc070b1eca68a835f5d5ed2687bd69c8e"
+  },
+  "owner_confirmation": {
+    "status": "许继哲依据AI辅助意见授权确认",
+    "date": "2026-10-21",
+    "independent_review": "李思默待完成",
+    "personally_read_sources": false
+  },
+  "latest_pytest_receipt": {
+    "result": "167 passed",
+    "duration_seconds": 17.1,
+    "log": "任务落实_20261019/A03_规则采用记录/20261020复核/负责人确认后工程测试_20261021.log"
+  },
+  "updated_at": "2026-10-21T11:36:47.379927+08:00",
+  "runtime_registry_change": "仅版本、日期、说明和decision_status；decision、scope、结构与runtime_enabled不变",
+  "publication_check": {
+    "checked_at": "2026-10-21T11:41:10.296268+08:00",
+    "stage": "推送前检查；github_pushed字段记录此前检查时状态，不作为远端发布凭据",
+    "public_scope": "本次提交仅含公开证据、负责人确认及技术方案材料",
+    "excluded": "口令、明文候选题、辅助推导和答案、SQLite、个人配置、.tools"
+  }
+}

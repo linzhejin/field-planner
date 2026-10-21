@@ -1,0 +1,98 @@
+- log
+- log
+- link "Skip to main content":
+  - /url: "#stMain"
+- region "Sidebar":
+  - heading "工作空间" [level=3]
+  - paragraph: 数据空间
+  - radiogroup "数据空间":
+    - radio "真实地块" [checked]
+    - paragraph: 真实地块
+    - radio "独立模拟示例"
+    - paragraph: 独立模拟示例
+  - paragraph: 真实地块数据库与模拟示例数据库彼此隔离。
+  - paragraph:
+    - text: 数据文件：
+    - code: ui_acceptance_20261021.sqlite3
+- banner:
+  - button "Expand sidebar":
+    - generic: keyboard_double_arrow_right
+  - button "Deploy":
+    - generic: Deploy
+  - button "Main menu":
+- main:
+  - heading "农时窗口" [level=3]:
+    - text: 农时窗口
+    - link "Link to heading":
+      - /url: "#da904572"
+  - paragraph: 10月22日—28日 · 计划 V1
+  - paragraph:
+    - generic: 真实地块
+  - paragraph: 已保存
+  - button "历史版本":
+    - generic "历史版本":
+      - paragraph: 历史版本
+  - button "导出计划":
+    - generic "导出计划":
+      - paragraph: 导出计划
+  - tablist:
+    - tab "地块与资源":
+      - paragraph: 地块与资源
+    - tab "计划结果" [selected]:
+      - paragraph: 计划结果
+    - tab "助手与历史":
+      - paragraph: 助手与历史
+  - tabpanel "计划结果":
+    - heading "公开页面验收田（模拟输入） · 结果" [level=4]:
+      - text: 公开页面验收田（模拟输入） · 结果
+      - link "Link to heading":
+        - /url: "#e0e5f793"
+    - button "重新计算计划":
+      - paragraph: 重新计算计划
+    - paragraph: 天气：尚未获取天气
+    - generic: "1"
+    - paragraph:
+      - generic: 已安排
+    - generic: "1"
+    - paragraph:
+      - generic: 待确认
+    - generic: "0"
+    - paragraph:
+      - generic: 未排入
+    - heading "今日与后续安排" [level=4]:
+      - text: 今日与后续安排
+      - link "Link to heading":
+        - /url: "#1fd3ca9a"
+    - heading "当前采用版" [level=4]:
+      - text: 当前采用版
+      - link "Link to heading":
+        - /url: "#bd1b4aeb"
+    - paragraph:
+      - text: 版本
+      - code: 62d79ebd-0d2a-4b79-9579-3fedc2002060
+      - text: · 2026-10-21 11:20
+    - paragraph:
+      - strong: 巡田苗情墒情虫情与沟渠检查
+      - generic: 已安排
+    - paragraph: 2026-10-22 09:00–09:30 · 30 分钟
+    - paragraph: 现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段
+    - button "查看详情":
+      - paragraph: 查看详情
+    - paragraph:
+      - strong: 既有沟渠维护候选
+      - generic: 待确认
+    - paragraph: 需求或现场问题尚未确认
+    - paragraph: 待补信息：maintenance_problem_confirmed、maintenance_need_confirmed
+    - button "查看详情":
+      - paragraph: 查看详情
+    - paragraph: 以上为当前地块结果；依据可在任务详情查看。
+    - paragraph: 有其他地块？点击左侧「新增地块」继续。
+    - generic "天气与查询位置":
+      - generic: keyboard_arrow_right
+      - paragraph: 天气与查询位置
+    - generic "候选与依据":
+      - generic: keyboard_arrow_right
+      - paragraph: 候选与依据
+    - generic "反馈与历史":
+      - generic: keyboard_arrow_right
+      - paragraph: 反馈与历史

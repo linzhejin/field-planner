@@ -1,0 +1,272 @@
+{
+  "recorded_at": "2026-10-21T11:35:50.869576+08:00",
+  "baseline": "e902f70",
+  "status": "负责人确认已完成；独立复核及正式采用验收待完成",
+  "supersedes": "此前尚未完成双方复核的状态中，负责人确认部分由本轮授权更新；不回填人工查阅或独立核对",
+  "summary": {
+    "owner_confirmed_limited_adopt": 3,
+    "owner_confirmed_defer": 4,
+    "formal_adopted": 0
+  },
+  "records": [
+    {
+      "rule_id": "C11",
+      "decision": "采用",
+      "scope": "仅采用观察记录用途",
+      "applicability": "湖北、用户已确认油菜苗期，有检查需求。Z15是2025年11月苗期指导；Z09是2025年12月冬前指导，两种背景分别展示，不拼成2026年通用处置规则。",
+      "conditions": "可记录叶龄、缺苗、窝堆苗、拥挤和观察时间；不要求检查之前已知这些结果。具体间苗、补苗和药肥处理不在本轮任务范围。",
+      "allowed": "将相关观察项并入同地同次巡田清单；允许用户记录未知；有异常时先保留事实和说明，必要时请当地农技人员判断处置。",
+      "prohibited": "不得以叶龄未知或不在3至5叶区间阻止普通检查；不得自动下达间苗、移栽、追肥或化调任务；不得把Z09的处置顺序变成所有检查和维护的强制前置。",
+      "evidence": [
+        {
+          "source_id": "Z15",
+          "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+          "locator": "二 移密补稀",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+        },
+        {
+          "source_id": "Z09",
+          "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+          "locator": "三 间密补稀 优化群体",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C18",
+      "decision": "暂缓",
+      "scope": "暂缓作为冬前适用和尺寸处置的独立触发规则",
+      "applicability": "原依据为湖北冬前油菜田，尤其抢播整田质量差、沟系配套不足。补充Z15仍是2025年偏湿苗期背景，不能将旧年现场判断当作当前事实。",
+      "conditions": "分别确认阶段、季节背景、田型、沟系现状及排水目的；尺寸应用还需当地农技意见。仅做现状记录时可接受沟深未知。",
+      "allowed": "展示历史技术参考与适用限制；用户有检查需求时，记录沟系是否连通、出口是否受阻，作为巡田观察项，不输出开挖指令。",
+      "prohibited": "不得将20 cm作为所有田块的统一最低线；不得凭“冬前=true”宣告尺寸适用；不得自动加深开挖或把沟深未知当成不合格。",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "及时清理“三沟”，尤其前期因抢播整田质量较差、沟系配套不到位的田块，厢沟深度要达到20cm以上，腰沟、围沟逐渐加深，确保沟沟相通",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C19",
+      "decision": "暂缓",
+      "scope": "暂缓按单一田型标签自动判断适用",
+      "applicability": "Z09为2025年湖北冬前相关田型；Z15第1页提供偏湿苗期的同类内容作为补充，但不证明当前地块湿度、出口或布沟方式。",
+      "conditions": "分别记录前茬是否水稻、是否低洼、冷浸情况及依据；另记田面和沟内积水、出口状态、观测时间。完成维护和水是否退去必须分别记录。",
+      "allowed": "询问并保存田型事实、现场积水及出口情况；保留维护完成事件；没有后续观察时，把排水效果记为未知。",
+      "prohibited": "不得自动新开腰沟，或输出厢宽不超过2米、每30米布沟的普适命令；不得把任务完成等同于雨止田干；不得强迫重叠田型二选一。",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C20",
+      "decision": "暂缓",
+      "scope": "暂缓按丘陵标签自动推定保墒或排水目标",
+      "applicability": "湖北鄂中北、鄂东南等相关丘陵岗地；须核实当前干湿与季节背景。Z09为冬前意见，Z15为偏湿年份的分类苗期指导。",
+      "conditions": "地形、当前墒情、积水、沟渠连通和维护目的分别确认；丘陵与稻茬不必互斥。清理堵塞的目的可能是保持通道，不等于立即排空水分。",
+      "allowed": "展示保墒和排水须因地制宜的限制；偏干且已确认无排水问题时不新增排水任务；有实际堵塞时仍可询问清理目的与需求。",
+      "prohibited": "不得推出“丘陵旱地一律禁止清沟”；不得把3至4米厢宽变为所有丘陵田的施工参数；不得把未知墒情当偏干，或在无需求时自动排水。",
+      "evidence": [
+        {
+          "source_id": "Z09",
+          "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+          "locator": "一 开沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C23",
+      "decision": "采用",
+      "scope": "仅采用经确认的既有沟渠清理候选用途",
+      "applicability": "首版限湖北已确认苗期。Z01为长江流域播后管理的本地资料；其2026年原网页本次未能在线核实。Z15为2025年偏湿苗期，不能作为所有干湿情境的单一依据。",
+      "conditions": "确认既有沟渠的杂物、堵塞、连通或外排问题，以及清理目的和维护需求；只有积水而原因不明，先核实是否属于本产品能处理的沟渠问题。已知现场情况不必再巡田。",
+      "allowed": "对已确认的既有沟渠问题提出清理候选、显示适用来源；再确认需求、时长、可用时间及逐日作业条件。对偏干或目的冲突情境先核实。",
+      "prohibited": "不得因预报下雨自动认定堵塞；不得无需求也安排维护；不得把新开沟、改沟尺寸或药肥措施塞入清理任务；不得把巡田设为统一必选前置。",
+      "evidence": [
+        {
+          "source_id": "Z01",
+          "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+          "locator": "三（一）防范气象灾害",
+          "pdf_pages": [
+            2
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864"
+        },
+        {
+          "source_id": "Z15",
+          "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+          "locator": "一 清沟降渍",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C24",
+      "decision": "暂缓",
+      "scope": "暂缓以实际降雨单字段自动触发该情境规则",
+      "applicability": "长江中下游等受持续阴雨、土壤偏湿影响的冬油菜情境；用于当前湖北苗期须核对实况位置、时间、湿度和积水情况，不以预报替代。",
+      "conditions": "实际降雨与来源、位置、时间；当前积水及变化趋势；现场能否观察或作业。用户报告积水可独立触发现场核实，不必等待雨量接口证明。",
+      "allowed": "保留雨后检查的历史依据与核实提示；积水持续或加重时明确建议尽快联系现场人员或当地农技人员判断，不承诺系统给出了处置期限。",
+      "prohibited": "不得把“积水不过夜”改成统一24小时期限；不得设任意雨量阈值；不得根据雨报认定已下雨、已积水或可下田；不得将急需核实事项静默延后数天。",
+      "evidence": [
+        {
+          "source_id": "Z04",
+          "quote": "降雨后要及时检查田间积水情况，发现问题及时处理，做到积水不过夜，最大程度降低土壤水分。",
+          "locator": "（一）抢排水降渍害",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    },
+    {
+      "rule_id": "C31",
+      "decision": "采用",
+      "scope": "仅采用用户自述观察清单用途",
+      "applicability": "原通知涉及包括湖北在内的冬油菜省份；网页2020年11月24日，文件落款11月5日。本轮仅用于已确认苗期的湖北地块，属于项目限定与迁移设计。",
+      "conditions": "用户提出检查需求，或确认接受检查候选；记录观察时间及来源。苗情、干湿、虫害迹象允许未知，不能要求用户先作专业分级。",
+      "allowed": "整合同一次巡田的苗情、干湿、积水、虫害迹象记录；适用的C11等观察项并入同一任务，避免重复排程；异常保留原始描述。",
+      "prohibited": "不得推出每天、每周固定检查频率或标准工时；不得由普通观察自动诊断病虫种类、给药剂处方或宣布专业苗情等级。",
+      "evidence": [
+        {
+          "source_id": "Z16",
+          "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+          "locator": "五 加强技术指导",
+          "pdf_pages": [
+            1
+          ],
+          "verification": "已与本地原件逐字匹配，仅规范空白及Unicode兼容字符",
+          "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e"
+        }
+      ],
+      "analysis_by": "Codex辅助文献与产品语义分析",
+      "owner_confirmation": {
+        "name": "许继哲",
+        "confirmed_at": "2026-10-21T11:35:50.869576+08:00",
+        "method": "依据AI辅助意见授权确认拟定结论",
+        "personally_reviewed_each_source": false,
+        "instruction": "我没时间看，按照你的意见来，你觉得可以就可以"
+      },
+      "independent_reviewer": "李思默",
+      "independent_reviewed_at": null,
+      "independent_conclusion": null,
+      "decision_status": "负责人依据AI辅助意见确认；待李思默独立复核",
+      "formal_adopted": false
+    }
+  ],
+  "open_engineering_issue": "XU01 暂缓卡在计划任务详情和导出中未与当前依据明确隔离；由金修正"
+}
