@@ -11,3 +11,7 @@ rules/农时窗口_官方资料库_20261016/01_官方原件/*.html -text
 "任务落实_20261019/给金麟哲的复核问题_20261021.md" -text
 "AIC claude code/技术报告/农时窗口_技术方案三章与简介_20261020.md" -text
 "src/nongshi/data/rule_adoption_development.json" -text
+
+# Preserve follow-up presentation and handoff fingerprints.
+"AIC claude code/答辩材料/**" -text
+"任务落实_20261019/交付收尾记录_20261021.md" -text

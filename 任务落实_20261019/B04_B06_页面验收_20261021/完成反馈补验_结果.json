@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-10-21T12:01:33.181641+08:00",
+  "classification": "公开模拟输入的UI补验；不是独立留出、真实农情或人工体验测试",
+  "setup": "服务API预置模拟08:00时钟的V1，仅用于准备已到开始时间的公开任务；没有预置完成事件",
+  "field_id": "public-completion-20261021",
+  "events_after_first_and_duplicate_attempt": 1,
+  "plan_history_count": 2,
+  "initial_plan_id": "f5b36554-8adf-4874-b802-47551d4b9307",
+  "current_plan_id": "66f5d41e-e8ac-421f-9be1-081681e7042f",
+  "completed_task_original_interval_retained": true,
+  "duplicate_completion_rejected": true,
+  "duplicate_error_message": "完成事实未保存：任务已记录完成；同一任务不能重复提交完成事件",
+  "ui_refresh_completed_retained": true,
+  "application_restart_completed_retained": true,
+  "first_public_field_plan_untouched": true,
+  "model_calls": 0,
+  "weather_calls": 0,
+  "private_candidates_used": false
+}

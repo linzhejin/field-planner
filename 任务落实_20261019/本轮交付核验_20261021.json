@@ -38,16 +38,28 @@
     "任务落实_20261019/B04_B06_页面验收_20261021/05_重启后采用版.txt": "3d92440c841bffb3ce62913d302e07469641a05b145cdcb5e77f1915313c79a4",
     "任务落实_20261019/B04_B06_页面验收_20261021/公开验收导出.json": "1eefd0b8b6e48a70a4a6165791705586c12473b9418f99422dd9849e26cbcc27",
     "任务落实_20261019/B04_B06_页面验收_20261021/公开验收导出.md": "ce9e433e8c5e8fbc610cf8abada7d01810b3155a6e193d6818da9d1debf73175",
-    "任务落实_20261019/B04_B06_页面验收_20261021/页面验收记录.md": "09495805afe5149508db81f3fa49261ffb70820e47a33634394a776cd596c2ac",
-    "任务落实_20261019/本轮交付入口_20261021.md": "434110a1ce6897117142d5bca02231ad4d5cd177d8219cdbe7fd34b986cdeb77",
+    "任务落实_20261019/B04_B06_页面验收_20261021/页面验收记录.md": "ad2563a62df170f6c857633d3005f9999dfaf27c4619e38a6fe6aa7549a1c60e",
+    "任务落实_20261019/本轮交付入口_20261021.md": "32272365193768ce5a2550ccc06037fd6bcac2b680267ecbc429a06257d970f0",
     "任务落实_20261019/给金麟哲的复核问题_20261021.md": "19a19931a6cb4e227bc30a6178dc2fba65f7e58edef542527fe4c4edaea7c8d9",
     "任务落实_20261019/A05_事务状态_20261020.md": "1101d640e1430dfc08fe2d67f78ecb182793b17fef6715e8d34b3332c3b1e755",
     "任务落实_20261019/A04_缺口答复/A04_收口复核_20261020.md": "0c5ad84561a90ead57b9561b49b849ac4abd31bd56af4ef3c572338418c5de0c",
-    "AIC claude code/技术报告/农时窗口_技术方案三章与简介_20261020.md": "b8f78fcd0aeeb24ea00a990669d28ac8a52fdd574022539c5e39363fcdcb84dc",
+    "AIC claude code/技术报告/农时窗口_技术方案三章与简介_20261020.md": "6717b0046d7895a69f3f2c13b14ce316cde3bd9f60f0bc3a8f545e159ccbab5b",
     "任务落实_20261019/A03_规则采用记录/20261020复核/七卡负责人确认记录_20261021.json": "a86815636d4effcfec14c19ab6826a93150a5271e68a0a23774649bfd7e777bc",
     "任务落实_20261019/A03_规则采用记录/20261020复核/七卡负责人确认记录_20261021.md": "ec5e89d2da8673df917f455e50b1bae78e6a230fc3f569e4705d1ff6b543b1ea",
     "任务落实_20261019/A03_规则采用记录/20261020复核/负责人确认后工程测试_20261021.log": "12fac03e92af224af9dd7f3a8132e18b5d8f9e304afcd908f6d93a2dd6f9c070",
-    "src/nongshi/data/rule_adoption_development.json": "1f8168a6e79aa2500e290091e32477cbc070b1eca68a835f5d5ed2687bd69c8e"
+    "src/nongshi/data/rule_adoption_development.json": "1f8168a6e79aa2500e290091e32477cbc070b1eca68a835f5d5ed2687bd69c8e",
+    "AIC claude code/答辩材料/农时窗口_答辩草稿_待补实测_20261021.pdf": "2c8c0be7909eac0feeb93460e2958f74e2ae623332db433c7a6e09001fd154eb",
+    "AIC claude code/答辩材料/农时窗口_答辩草稿_待补实测_20261021.pptx": "32011bc10b27f5b5c6277eef1e5a4bc5baf79dcebf7d35197fbea3d7f72476d4",
+    "AIC claude code/答辩材料/农时窗口_答辩逐页讲稿_20261021.md": "9e35cc69e288168bba121bc53f5945a6d74ec7854211726eb0a9e5e0532f0974",
+    "AIC claude code/答辩材料/材料状态与待补证据.md": "d2a478f7409cf623282bd0cf37491e6820187e1af7deba97644a36932ea10314",
+    "任务落实_20261019/B04_B06_页面验收_20261021/完成反馈补验_准备说明.json": "e24c049830eee328027d2fa42c08513dddb665eb9d065bee94367a247e59969f",
+    "任务落实_20261019/B04_B06_页面验收_20261021/完成反馈补验_回读.json": "44442cfc448e374ec1790b69e707588155a1ca4cb1ff44f39f0c8530a20e991a",
+    "任务落实_20261019/B04_B06_页面验收_20261021/完成反馈补验_结果.json": "9932677c3126d3e8e61e61c0312cbc8cbda474f4f5e562a6e8be63d8a8ea290b",
+    "任务落实_20261019/B04_B06_页面验收_20261021/06_重复完成被拒绝.png": "29d8ce7a15bed2dd0a29749953cbff516162d6bf8b43be57641f471ed890511f",
+    "任务落实_20261019/B04_B06_页面验收_20261021/06_重复完成被拒绝.txt": "02d06ff8100e9f496fac2a105ff1afc8c3e96e30bc51bd5862322f52ab410447",
+    "任务落实_20261019/B04_B06_页面验收_20261021/07_完成后重启回读.png": "9f2b87bc94467f2c2998baaeb807797bbd10d973fe6bdb4f3a137d0bd238512a",
+    "任务落实_20261019/B04_B06_页面验收_20261021/07_完成后重启回读.txt": "f31a2efcfd634e64ca0cab43aaa1ea3f78c31926d786118df7bc3ae987ca03c0",
+    "任务落实_20261019/交付收尾记录_20261021.md": "4144413266eb639464000a890a950063545067ff8d38718026c61ca35f5d7cc2"
   },
   "owner_confirmation": {
     "status": "许继哲依据AI辅助意见授权确认",
@@ -67,5 +79,16 @@
     "stage": "推送前检查；github_pushed字段记录此前检查时状态，不作为远端发布凭据",
     "public_scope": "本次提交仅含公开证据、负责人确认及技术方案材料",
     "excluded": "口令、明文候选题、辅助推导和答案、SQLite、个人配置、.tools"
+  },
+  "followup_check": {
+    "date": "2026-10-21",
+    "private_assisted_cases": 36,
+    "private_issue_count": 7,
+    "private_reference_opened": false,
+    "pptx_slides": 8,
+    "pdf_pages": 8,
+    "pptx_validation": "artifact-tool finalizer passed; every slide visually inspected",
+    "pdf_validation": "PowerPoint export; Poppler page render; all 8 pages visually inspected",
+    "completion_ui": "one saved completion; duplicate rejected; V2 and restart readback passed"
   }
 }

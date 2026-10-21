@@ -1,0 +1,10 @@
+{
+  "type": "公开模拟输入；API预置起始状态，后续由UI操作",
+  "field_id": "public-completion-20261021",
+  "baseline": "c0c9c4e",
+  "simulated_plan_clock": "2026-10-21T08:00:00+08:00",
+  "scheduled_item": "2026-10-21T09:00:00+08:00 至 09:30:00+08:00",
+  "fixture_source": "金麟哲公开B04/B06验收输入；不使用36例候选",
+  "before_events": 0,
+  "plan_id": "f5b36554-8adf-4874-b802-47551d4b9307"
+}
