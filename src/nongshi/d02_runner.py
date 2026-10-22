@@ -137,6 +137,14 @@ def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
             "deferred_reference_rule_ids": sorted(
                 {e.rule_id for e in item.evidence if "暂缓" in e.status_label}
             ),
+            "evidence_summaries": [
+                {
+                    "rule_id": e.rule_id,
+                    "status_label": e.status_label,
+                    "source_context_summary": e.source_context_summary,
+                }
+                for e in item.evidence
+            ],
             "reason_code": item.reason_code,
             "reason": item.reason,
         }

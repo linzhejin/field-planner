@@ -234,6 +234,7 @@ class RuleEvidenceV2(BaseModel):
     source_sha256: str
     runtime_enabled: bool = False
     status_label: str = "开发验证，适用性待复核"
+    source_context_summary: str = ""
 
 
 class PlanItemV2(BaseModel):

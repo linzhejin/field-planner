@@ -414,13 +414,33 @@ class WorkbenchServiceV3:
                 when = f"{item.start_at:%Y-%m-%d %H:%M}–{item.end_at:%H:%M}"
             else:
                 when = "未排入"
-            current = [e.rule_id for e in item.evidence if "暂缓" not in e.status_label]
-            deferred = [e.rule_id for e in item.evidence if "暂缓" in e.status_label]
+            current = [
+                (e.rule_id, e.source_context_summary)
+                for e in item.evidence
+                if "暂缓" not in e.status_label
+            ]
+            deferred = [
+                (e.rule_id, e.source_context_summary)
+                for e in item.evidence
+                if "暂缓" in e.status_label
+            ]
             evidence_parts = []
             if current:
-                evidence_parts.append("依据：" + "、".join(dict.fromkeys(current)))
+                evidence_parts.append(
+                    "依据："
+                    + "、".join(
+                        f"{rid}（{ctx}）" if ctx else rid
+                        for rid, ctx in current
+                    )
+                )
             if deferred:
-                evidence_parts.append("暂缓参考：" + "、".join(dict.fromkeys(deferred)))
+                evidence_parts.append(
+                    "暂缓参考："
+                    + "、".join(
+                        f"{rid}（{ctx}）" if ctx else rid
+                        for rid, ctx in deferred
+                    )
+                )
             evidence = "；".join(evidence_parts) or "无直接依据"
             lines.append(
                 f"- {when}｜{item.title}｜{item.reason}｜依据：{evidence}｜任务：{item.task_id}"

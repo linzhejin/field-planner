@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
@@ -105,6 +106,79 @@ def _rule_ids_for(plot: FieldProfile, task_type: str) -> list[str]:
     return list(dict.fromkeys(rules))
 
 
+def build_source_context_summary(raw: dict[str, Any]) -> str:
+    """从 evidence_for 返回的 dict 里拼一段来源背景摘要。
+
+    取年份、地区级别、阶段、田型/干湿、限制摘要；不动原卡或 evidence_for 签名。
+    """
+    date_text = raw.get("source_date", "")
+    publisher = raw.get("publisher", "")
+    applicability = raw.get("applicability_text", "")
+    quote = raw.get("quote", "")
+    limits = raw.get("limits", "")
+    combined = f"{applicability} {quote}"
+
+    parts: list[str] = []
+
+    # 年份
+    year_match = re.search(r"(\d{4})", date_text)
+    if year_match:
+        parts.append(f"{year_match.group(1)}年")
+
+    # 地区级别
+    national_kws = ("农业农村部办公厅", "农业农村部", "农业部", "全国农业技术推广", "全国农技推广")
+    provincial_kws = ("省", "湖北", "长江流域")
+    city_kws = ("市农业", "市农技", "市农业农村")
+    if any(kw in publisher for kw in national_kws):
+        parts.append("国家/部委")
+    elif any(kw in publisher for kw in city_kws):
+        parts.append("市级")
+    elif any(kw in publisher for kw in provincial_kws[:1]) or any(
+        kw in applicability for kw in provincial_kws[1:]
+    ):
+        parts.append("省级")
+
+    # 阶段
+    phase_map = [
+        ("冬前", "冬前"),
+        ("苗期", "苗期"),
+        ("播后", "播后"),
+        ("扩种", "扩种通知"),
+        ("持续阴雨", "持续阴雨"),
+        ("抗渍涝", "抗渍涝"),
+        ("苗情监测", "苗情监测"),
+    ]
+    for kw, label in phase_map:
+        if kw in applicability:
+            parts.append(label)
+            break
+
+    # 田型/干湿
+    field_keywords = []
+    if "稻茬田" in combined:
+        field_keywords.append("稻茬田")
+    if "低洼田" in combined or "冷浸田" in combined:
+        field_keywords.append("低洼/冷浸田")
+    if "丘陵岗地" in combined or "易旱" in combined:
+        field_keywords.append("丘陵岗地/易旱")
+    if "湿度偏大" in combined or "排水" in combined or "降渍" in combined:
+        if "偏湿" not in field_keywords:
+            field_keywords.append("偏湿情境")
+    if "墒情" in combined and not field_keywords:
+        field_keywords.append("墒情相关")
+    if field_keywords:
+        parts.append("·".join(field_keywords))
+
+    # 限制摘要
+    if limits:
+        limit_trimmed = limits.strip().rstrip("。；;，,")
+        if len(limit_trimmed) > 60:
+            limit_trimmed = limit_trimmed[:60] + "…"
+        parts.append(f"限制：{limit_trimmed}")
+
+    return "｜".join(parts)
+
+
 def _make_evidence(
     catalog: RuleCatalog,
     plot: FieldProfile,
@@ -126,6 +200,7 @@ def _make_evidence(
         user_status = status_by_rule.get(rule_id)
         if user_status == "rejected":
             continue
+        raw["source_context_summary"] = build_source_context_summary(raw)
         evidence = RuleEvidenceV2(**raw)
         if user_status == "adopted":
             evidence.status_label = "已采用（限用途）"

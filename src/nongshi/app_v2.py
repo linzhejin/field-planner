@@ -134,6 +134,8 @@ def _render_rule_evidence(item: PlanItemV2) -> None:
                 f"{evidence.status_label}｜规则包 {evidence.pack_version}｜"
                 f"来源 {evidence.source_id}"
             )
+            if evidence.source_context_summary:
+                st.caption(f"来源背景：{evidence.source_context_summary}")
             st.write(f"发布机构：{evidence.publisher} · 日期：{evidence.source_date}")
             st.write(f"适用条件：{evidence.applicability_text} {evidence.condition_text}")
             st.write(f"原文位置：PDF 第 {', '.join(map(str, evidence.pdf_pages))} 页")

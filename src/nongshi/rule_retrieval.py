@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from nongshi.planning_v2 import build_source_context_summary
 from nongshi.rules import RuleCatalog, load_rule_catalog
 from nongshi.schema_v2 import RuleEvidenceV2
 from nongshi.schema_v3 import (
@@ -94,7 +95,12 @@ class RuleRetrieverV3:
 
     def _hit(self, rule_id: str, query: RuleSearchQueryV3) -> RuleSearchHitV3:
         card = self.catalog.cards[rule_id]
-        evidence = [RuleEvidenceV2(**row) for row in self.catalog.evidence_for([rule_id])]
+        evidence = [
+            RuleEvidenceV2(
+                **{**row, "source_context_summary": build_source_context_summary(row)}
+            )
+            for row in self.catalog.evidence_for([rule_id])
+        ]
         supplementary = [
             RuleSupplementarySourceV3(**row) for row in self.catalog.supplementary_for([rule_id])
         ]
