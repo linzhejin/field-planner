@@ -131,7 +131,12 @@ def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
             "start_at": item.start_at.isoformat() if item.start_at else None,
             "end_at": item.end_at.isoformat() if item.end_at else None,
             "missing_fields": list(item.missing_fields),
-            "evidence_rule_ids": sorted({evidence.rule_id for evidence in item.evidence}),
+            "current_evidence_rule_ids": sorted(
+                {e.rule_id for e in item.evidence if "暂缓" not in e.status_label}
+            ),
+            "deferred_reference_rule_ids": sorted(
+                {e.rule_id for e in item.evidence if "暂缓" in e.status_label}
+            ),
             "reason_code": item.reason_code,
             "reason": item.reason,
         }

@@ -111,15 +111,29 @@ def _make_evidence(
     task_type: str,
     review_status: dict[str, str] | None = None,
 ) -> list[RuleEvidenceV2]:
+    """为每个证据条覆写 status_label，区分限用途当前依据与暂缓历史参考。
+
+    优先级：用户 review_status > catalog 分类（正式确认）> 默认。
+    不改 _rule_ids_for 返回值，暂缓卡仍出现在列表中但 label 不同。
+    formal_adopted 仍为 0；仅表达负责人确认 + 待李思默独立复核的状态。
+    """
     status_by_rule = review_status or {}
+    deferred = catalog.deferred_rule_ids
+    limited = catalog.limited_adopt_rule_ids
     result: list[RuleEvidenceV2] = []
     for raw in catalog.evidence_for(_rule_ids_for(plot, task_type)):
-        status = status_by_rule.get(raw["rule_id"])
-        if status == "rejected":
+        rule_id = raw["rule_id"]
+        user_status = status_by_rule.get(rule_id)
+        if user_status == "rejected":
             continue
         evidence = RuleEvidenceV2(**raw)
-        if status == "adopted":
+        if user_status == "adopted":
             evidence.status_label = "已采用（限用途）"
+        elif rule_id in deferred:
+            evidence.status_label = "暂缓自动适用，仅作历史参考"
+        elif rule_id in limited:
+            evidence.status_label = "限用途采用（负责人确认，待独立复核）"
+        # 其他默认保持 schema_v2 的默认值
         result.append(evidence)
     return result
 
