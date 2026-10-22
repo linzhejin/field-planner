@@ -1,0 +1,100 @@
+{
+  "classification": "公开模拟农情；模型与天气为真实接口；非农艺或独立评测",
+  "started_at": "2026-10-22T06:53:55.896143+00:00",
+  "model": "deepseek-flash",
+  "input": {
+    "field_name": "公开模拟油菜田",
+    "province": "湖北",
+    "crop": "油菜",
+    "stage": "苗期",
+    "start_date": "2026-10-23",
+    "duration_source": "模拟用户估计：巡田30分钟，沟渠清理45分钟",
+    "site_and_weather_workability": "模拟用户逐日确认，非预报推定"
+  },
+  "steps": {
+    "blank_saved": 1,
+    "natural_language": {
+      "status": "error",
+      "model_requests": 3,
+      "tools": [
+        {
+          "name": "read_field",
+          "status": "success"
+        },
+        {
+          "name": "propose_field_update",
+          "status": "invalid_arguments"
+        },
+        {
+          "name": "propose_field_update",
+          "status": "success"
+        }
+      ],
+      "prompt_tokens": 9399,
+      "completion_tokens": 328,
+      "proposal_count": 1,
+      "elapsed_ms": 2409,
+      "error": "本轮最多请求模型三次；工具结果已保留，请检查后重试。"
+    },
+    "proposal_confirmed": true,
+    "location_selected": {
+      "display_name": "湖北省 · 武汉市 · 洪山区",
+      "resolution": "county",
+      "geocoding_source": "GeoNames.org 湖北离线地名索引"
+    },
+    "weather": {
+      "status": "success",
+      "source": "Open-Meteo Forecast API",
+      "coverage_start": "2026-10-23",
+      "coverage_end": "2026-10-29",
+      "days": 7,
+      "timezone": "Asia/Shanghai",
+      "fetched_at": "2026-10-22T06:53:59.119237+00:00",
+      "grid_latitude": 30.544815,
+      "grid_longitude": 114.35294,
+      "units": {
+        "time": "iso8601",
+        "weather_code": "wmo code",
+        "temperature_2m_max": "°C",
+        "temperature_2m_min": "°C",
+        "precipitation_sum": "mm",
+        "rain_sum": "mm",
+        "showers_sum": "mm",
+        "wind_speed_10m_max": "km/h"
+      }
+    },
+    "rules": {
+      "status": "matched",
+      "roles": [
+        "historical_reference",
+        "limited_support"
+      ]
+    },
+    "v1": {
+      "adopted": true,
+      "version_id": "91f69d3c-abed-4f48-9407-ed50b0170108",
+      "scheduled_inspection": true
+    },
+    "feedback": {
+      "fact_version": 1,
+      "event_count": 2,
+      "plan_stale": true
+    },
+    "v2": {
+      "adopted": true,
+      "version_id": "9cc46ab5-65c9-438c-87e3-e909957c32d2",
+      "history_count": 2,
+      "completed_locked": true,
+      "reopened_fact_version": 1,
+      "json_export_history_count": 2,
+      "markdown_export_bytes": 1610
+    },
+    "four_fields": {
+      "count": 4,
+      "other_plan_history_empty": true
+    }
+  },
+  "errors": [],
+  "elapsed_ms": 4891.458,
+  "passed": false
+}

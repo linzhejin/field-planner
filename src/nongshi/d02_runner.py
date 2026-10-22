@@ -9,7 +9,7 @@
 
 - 正式候选默认只做静态校验（validate），不运行、不产生计划输出；
 - 执行模式需要显式 --mode execute，正式候选报告只能写到仓库外；
-- A/B 组必须真实调用语言模型；离线运行不生成对照结果，记为“待模型授权”，避免伪造评测数据。
+- A/B 组仅在 --enable-model 下调用真实模型；离线模式明确记录未执行。
 
 记录输入快照、任务与状态、错误、耗时与成本；评分阶段按 g1/g2/g3 隐藏组名。
 """
@@ -28,7 +28,12 @@ from datetime import UTC, date, datetime, timedelta
 from datetime import time as clock_time
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
+import httpx
+
+from nongshi.config import Settings
+from nongshi.d02_model_groups import run_model_group
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.schema_v2 import LOCAL_ZONE, FeedbackV2, TimeWindow
 from nongshi.schema_v3 import (
@@ -50,7 +55,7 @@ DEFAULT_CASES = (
     / "不计分联调样例_3例.jsonl"
 )
 
-RUNNER_VERSION = "1.1"
+RUNNER_VERSION = "1.2"
 GROUP_KEY = {
     "g1": "A 直接生成（需真实语言模型）",
     "g2": "B 加检索（需真实语言模型）",
@@ -68,10 +73,6 @@ SCRIPT_OPERATIONS = {
     "read_history",
     "request",
     "chat",
-}
-# 系统当前没有“关联已完成任务的新建维护请求”入口，按能力缺口记录，不伪造任务。
-UNSUPPORTED_OPERATIONS = {
-    "request": "系统尚无“关联已完成任务的新建维护请求”入口；记录能力缺口，不伪造新任务",
 }
 MODEL_OPERATIONS = {"chat"}
 EXPECTED_WEATHER_STATUSES = {
@@ -113,6 +114,20 @@ def _code_commit() -> str:
         return "unknown"
 
 
+def _code_worktree_dirty() -> bool | None:
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return bool(completed.stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
 def _parse_moment(value: object) -> datetime:
     moment = datetime.fromisoformat(str(value))
     if moment.tzinfo is None:
@@ -132,16 +147,18 @@ def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
             "end_at": item.end_at.isoformat() if item.end_at else None,
             "missing_fields": list(item.missing_fields),
             "current_evidence_rule_ids": sorted(
-                {e.rule_id for e in item.evidence if "暂缓" not in e.status_label}
+                {e.rule_id for e in item.evidence if e.usage_role == "limited_support"}
             ),
             "deferred_reference_rule_ids": sorted(
-                {e.rule_id for e in item.evidence if "暂缓" in e.status_label}
+                {e.rule_id for e in item.evidence if e.usage_role == "historical_reference"}
             ),
             "evidence_summaries": [
                 {
                     "rule_id": e.rule_id,
                     "status_label": e.status_label,
+                    "usage_role": e.usage_role,
                     "source_context_summary": e.source_context_summary,
+                    "project_use_limit": e.project_use_limit,
                 }
                 for e in item.evidence
             ],
@@ -265,7 +282,9 @@ def validate_case(case: dict[str, Any]) -> dict[str, Any]:
 
     fixture = case.get("weather_fixture") or {}
     weather_status = str(fixture.get("status") or "missing")
-    if weather_status not in EXPECTED_WEATHER_STATUSES:
+    if not scripted and weather_status == "missing":
+        pass  # 旧联调格式只有逐日确认，不要求独立天气夹具。
+    elif weather_status not in EXPECTED_WEATHER_STATUSES:
         problems.append({"code": "weather_status", "detail": f"未知天气夹具状态 {weather_status}"})
     if weather_status == "success":
         coverage = [str(item) for item in fixture.get("coverage_dates") or []]
@@ -284,13 +303,25 @@ def validate_case(case: dict[str, Any]) -> dict[str, Any]:
         numbers = [step.get("step") for step in steps]
         if numbers != sorted(numbers):
             problems.append({"code": "step_order", "detail": "脚本步骤未按 step 升序"})
-        for code, reason in UNSUPPORTED_OPERATIONS.items():
-            if code in operations:
-                warnings.append({"code": f"unsupported:{code}", "detail": reason})
         if any(code in MODEL_OPERATIONS for code in operations):
             warnings.append(
                 {"code": "requires_model", "detail": "脚本含 chat 步骤，C 组离线只能记为待模型授权"}
             )
+        for step in steps:
+            if step.get("operation") == "request":
+                demand = (step.get("payload") or {}).get("new_task_request") or {}
+                if not (
+                    demand.get("related_completed_task_id")
+                    and demand.get("maintenance_need_confirmed") is True
+                    and demand.get("maintenance_problem_confirmed") is True
+                    and demand.get("maintenance_purpose") == "clear_existing_ditch"
+                ):
+                    warnings.append(
+                        {
+                            "code": "request_missing_confirmation",
+                            "detail": "新需求缺少已完成任务关联或三项明确确认；执行时会拒绝",
+                        }
+                    )
 
     status = "invalid" if problems else ("warning" if warnings else "ok")
     return {
@@ -341,6 +372,7 @@ class _ScriptSession:
         *,
         database: Path,
         enable_model: bool = False,
+        settings: Settings | None = None,
     ) -> None:
         self.case = case
         self.case_id = str(case.get("case_id") or "case")
@@ -362,6 +394,7 @@ class _ScriptSession:
         self.weather_status = str((case.get("weather_fixture") or {}).get("status") or "missing")
         self.weather_injected = False
         self._enable_model = enable_model
+        self._settings = settings or Settings()
         self._agent = None
 
     def _operation_id(self, step: dict[str, Any], suffix: str = "") -> str:
@@ -465,17 +498,8 @@ class _ScriptSession:
         payload = step.get("payload") or {}
         binding = str(payload.get("plan_binding") or "initial_preview")
         preview_id = self.bindings.get(binding)
-        note = None
         if preview_id is None:
-            preview = self.service.preview_plan(
-                self.field_id,
-                operation_id=self._operation_id(step, "-implicit"),
-                source="demo",
-            )
-            preview_id = preview.id
-            self.bindings.setdefault("initial_preview", preview_id)
-            self.bindings[f"preview_{step.get('step')}"] = preview_id
-            note = f"脚本引用 {binding} 没有对应预览；按产品流程先生成预览再采用"
+            return "failed", {}, f"脚本引用 {binding} 没有对应预览，未暗中补建"
         preview = self.store.load_preview(preview_id)
         result = self.service.adopt_plan(
             preview_id,
@@ -493,7 +517,7 @@ class _ScriptSession:
                 "replayed": result.replayed,
                 "item_count": len(result.version.plan.items),
             },
-            note,
+            None,
         )
 
     def _op_cancel_preview(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
@@ -549,8 +573,60 @@ class _ScriptSession:
         )
 
     def _op_request(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
-        reason = UNSUPPORTED_OPERATIONS["request"]
-        return "unsupported_capability", {"requested": step.get("payload") or {}}, reason
+        payload = (step.get("payload") or {}).get("new_task_request") or {}
+        completed_id = self._map_task_id(payload.get("related_completed_task_id"))
+        current = self.service.get_current_plan(self.field_id)
+        completed_events = self.service.list_events(self.field_id)
+        if (
+            not current
+            or not any(item.task_id == completed_id for item in current.items)
+            or not any(
+                event.feedback
+                and event.feedback.kind == "completed"
+                and event.feedback.task_id == completed_id
+                for event in completed_events
+            )
+        ):
+            return "failed", {}, "新需求必须关联已完成且存在的任务 ID"
+        if not (
+            payload.get("maintenance_need_confirmed") is True
+            and payload.get("maintenance_problem_confirmed") is True
+            and payload.get("maintenance_purpose") == "clear_existing_ditch"
+        ):
+            return "failed", {}, "缺少新需求、现场问题或清理既有沟渠目的的明确确认"
+        events = [
+            FactEventInputV3(
+                feedback=FeedbackV2(
+                    kind="observation",
+                    plot_id=self.field_id,
+                    field=field,
+                    value=value,
+                    at=self.clock.now(),
+                ),
+                source="user",
+            )
+            for field, value in (
+                ("maintenance_problem_confirmed", True),
+                ("maintenance_purpose", "clear_existing_ditch"),
+                ("maintenance_need_confirmed", True),
+            )
+        ]
+        state = self.service.get_field(self.field_id)
+        result = self.service.commit_events(
+            self.field_id,
+            events,
+            operation_id=self._operation_id(step),
+            expected_fact_version=state.fact_version,
+        )
+        return (
+            "ok",
+            {
+                "related_completed_task_id": completed_id,
+                "event_ids": [event.event_id for event in result.events],
+                "fact_version": result.fact_version,
+            },
+            None,
+        )
 
     def _op_chat(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
         if not self._enable_model:
@@ -561,9 +637,8 @@ class _ScriptSession:
             )
         if self._agent is None:
             from nongshi.agent import AgentServiceV3
-            from nongshi.config import Settings
 
-            self._agent = AgentServiceV3(Settings(), self.service)
+            self._agent = AgentServiceV3(self._settings, self.service)
         response = self._agent.run(
             self.field_id,
             str(step.get("user_message") or ""),
@@ -605,6 +680,9 @@ class _ScriptSession:
             "bindings": dict(self.bindings),
             "weather_status": self.weather_status,
             "weather_injected": self.weather_injected,
+            "agent_runs": [
+                run.model_dump(mode="json") for run in self.store.list_agent_runs(self.field_id)
+            ],
         }
 
 
@@ -613,12 +691,13 @@ def run_scripted_case(
     *,
     database: Path,
     enable_model: bool = False,
+    settings: Settings | None = None,
 ) -> dict[str, Any]:
     """按 interaction_script 执行一例；失败即停并保留已完成步骤，不重试、不覆盖。"""
     errors: list[str] = []
     step_rows: list[dict[str, Any]] = []
     started = time.perf_counter()
-    session = _ScriptSession(case, database=database, enable_model=enable_model)
+    session = _ScriptSession(case, database=database, enable_model=enable_model, settings=settings)
     steps = list(case.get("interaction_script") or [])
     failed_at: int | None = None
     for index, step in enumerate(steps):
@@ -637,6 +716,9 @@ def run_scripted_case(
         note = None
         try:
             status, output, note = session.execute_step(step)
+            if status == "failed":
+                errors.append(f"步骤 {step.get('step')} {step.get('operation')}: {note or '失败'}")
+                failed_at = index
         except Exception as error:  # noqa: BLE001 - 记录失败而非中断整批
             status = "failed"
             output = {}
@@ -670,12 +752,23 @@ def run_scripted_case(
         status = "partial"
     else:
         status = "executed"
+    agent_runs = result.get("agent_runs", [])
     return {
         "status": status,
         "elapsed_ms": elapsed_ms,
-        "model_calls": 0,
+        "model_calls": sum(run["request_count"] for run in agent_runs),
+        "token_usage": {
+            "prompt": sum(run["prompt_tokens"] or 0 for run in agent_runs)
+            if agent_runs and all(run["prompt_tokens"] is not None for run in agent_runs)
+            else None,
+            "completion": sum(run["completion_tokens"] or 0 for run in agent_runs)
+            if agent_runs and all(run["completion_tokens"] is not None for run in agent_runs)
+            else None,
+        },
+        "tool_records": [metric for run in agent_runs for metric in run.get("tool_metrics", [])],
         "weather_http_calls": 0,
-        "cost": 0,
+        "cost": None,
+        "cost_status": "unknown",
         "errors": errors,
         "notes": list(session.notes),
         "steps": step_rows,
@@ -808,27 +901,30 @@ def run_group_c(case: dict[str, Any], *, database: Path) -> dict[str, Any]:
     except Exception as error:  # noqa: BLE001 - 记录失败而非中断整批
         errors.append(f"{type(error).__name__}: {error}")
     elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-    status = "executed" if not errors else "failed"
+    status = "failed" if errors else "partial" if notes else "executed"
     return {
         "status": status,
         "elapsed_ms": elapsed_ms,
         "model_calls": 0,
         "weather_http_calls": 0,
-        "cost": 0,
+        "token_usage": {"prompt": None, "completion": None},
+        "cost": None,
+        "cost_status": "unknown",
         "errors": errors,
         "notes": notes,
         "result": result,
     }
 
 
-def _pending_group(group_code: str) -> dict[str, Any]:
+def _not_run_group() -> dict[str, Any]:
     return {
-        "status": "pending_model_authorization",
+        "status": "not_run_model_disabled",
         "model_calls": 0,
         "weather_http_calls": 0,
-        "cost": 0,
+        "cost": None,
+        "cost_status": "unknown",
         "errors": [],
-        "detail": "A/B 组必须真实调用语言模型；离线运行不生成对照结果，避免伪造评测数据。",
+        "detail": "本次未启用模型，A/B 组没有执行。",
     }
 
 
@@ -838,58 +934,97 @@ def build_run(
     run_directory: Path,
     extra_paths: tuple[Path, ...] = (),
     enable_model: bool = False,
+    settings: Settings | None = None,
+    model_transport: httpx.BaseTransport | None = None,
+    blind: bool = False,
 ) -> dict[str, Any]:
     paths = [cases_path, *extra_paths]
     loaded = [(path, case) for path in paths for case in _load_cases(path)]
     records: list[dict[str, Any]] = []
+    private_group_map: dict[str, str] = {}
     for path, case in loaded:
         validation = validate_case(case)
-        if "interaction_script" in case:
+        valid = validation["status"] != "invalid"
+        if not valid:
+            outcome = {
+                "status": "input_invalid",
+                "scorable": False,
+                "model_calls": 0,
+                "weather_http_calls": 0,
+                "cost": None,
+                "cost_status": "unknown",
+                "errors": [item["detail"] for item in validation["problems"]],
+            }
+        elif "interaction_script" in case:
             outcome = run_scripted_case(
                 case,
                 database=run_directory / f"{case['case_id']}.sqlite3",
                 enable_model=enable_model,
+                settings=settings,
             )
         else:
             outcome = run_group_c(case, database=run_directory / f"{case['case_id']}.sqlite3")
-        records.append(
-            {
-                "case_id": case["case_id"],
-                "group_code": "g3",
-                "source": str(path),
-                "validation": validation,
-                **outcome,
+
+        def append_record(
+            group: str,
+            result: dict[str, Any],
+            *,
+            case_id: str = case["case_id"],
+            source: Path = path,
+            checked: dict[str, Any] = validation,
+        ) -> None:
+            result_id = uuid4().hex
+            private_group_map[result_id] = group
+            record = {
+                "case_id": case_id,
+                "result_id": result_id,
+                "source": str(source),
+                "validation": checked,
+                "scorable": result.get("scorable", result["status"] == "executed"),
+                **result,
             }
-        )
-        for group_code in ("g1", "g2"):
-            records.append(
-                {
-                    "case_id": case["case_id"],
-                    "group_code": group_code,
-                    "source": str(path),
-                    "validation": validation,
-                    **_pending_group(group_code),
-                }
-            )
+            if not blind:
+                record["group_code"] = group
+            records.append(record)
+
+        append_record("g3", outcome)
+        for group, model_group in (("g1", "A"), ("g2", "B")):
+            if not valid:
+                model_outcome = outcome
+            elif enable_model:
+                model_outcome = run_model_group(
+                    case,
+                    model_group,
+                    settings=settings,
+                    transport=model_transport,
+                )
+            else:
+                model_outcome = _not_run_group()
+            append_record(group, model_outcome)
     executed = sum(1 for row in records if row["status"] == "executed")
     partial = sum(1 for row in records if row["status"] == "partial")
     failed = sum(1 for row in records if row["status"] == "failed")
-    pending = sum(1 for row in records if row["status"] == "pending_model_authorization")
+    not_run = sum(1 for row in records if row["status"] == "not_run_model_disabled")
+    invalid = sum(1 for row in records if row["status"] == "input_invalid")
+    missing_credentials = sum(1 for row in records if row["status"] == "missing_credential")
     return {
         "runner_version": RUNNER_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         "classification": (
-            "D02/D03 统一运行；C 为本地确定性结果，A/B 待模型授权；"
-            "不计入独立留出成绩，不代表农业适用性"
+            "D02/D03 统一运行；A/B 仅在启用模型时产生真实输出；不计入独立留出成绩，不代表农业适用性"
         ),
         "code_commit": _code_commit(),
+        "code_worktree_dirty": _code_worktree_dirty(),
         "cases_source": [
             str(path.relative_to(PROJECT_ROOT)) if path.is_relative_to(PROJECT_ROOT) else str(path)
             for path in paths
         ],
         "cases_sha256": {str(path.name): _file_sha256(path) for path in paths},
-        "group_key": GROUP_KEY,
-        "masking_note": "评分阶段隐藏 group_key；对外记录只用 g1/g2/g3。",
+        **({"group_key": GROUP_KEY} if not blind else {}),
+        "masking_note": "结果编号随机生成；组别映射另存，不应交给评分方。"
+        if blind
+        else "开发运行未盲化。",
+        "_private_group_map": private_group_map,
         "environment": {
             "platform": platform.platform(),
             "python": platform.python_version(),
@@ -900,7 +1035,9 @@ def build_run(
             "executed": executed,
             "partial": partial,
             "failed": failed,
-            "pending_model_authorization": pending,
+            "not_run_model_disabled": not_run,
+            "input_invalid": invalid,
+            "missing_credentials": missing_credentials,
         },
     }
 
@@ -908,7 +1045,8 @@ def build_run(
 def write_report(report: dict[str, Any], output: Path | None = None) -> Path:
     target = output or (OUTPUT_DIR / "d02_development_run.json")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    public = {key: value for key, value in report.items() if key != "_private_group_map"}
+    target.write_text(json.dumps(public, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return target
 
 
@@ -926,6 +1064,9 @@ def main() -> None:
         "--output", type=Path, default=None, help="报告输出路径（正式候选须在仓库外）"
     )
     parser.add_argument("--enable-model", action="store_true", help="允许 chat 步骤真实调用模型")
+    parser.add_argument("--env-file", type=Path, default=None, help="本机 .env 路径，不写入报告")
+    parser.add_argument("--blind", action="store_true", help="随机结果编号，组别映射另存")
+    parser.add_argument("--mapping-output", type=Path, help="盲化组别映射路径，须与结果分开保管")
     args = parser.parse_args()
 
     paths = [args.cases, *([args.boundary] if args.boundary else [])]
@@ -946,12 +1087,21 @@ def main() -> None:
 
     if args.output is not None and scripted and args.output.resolve().is_relative_to(PROJECT_ROOT):
         raise SystemExit("正式候选运行报告不要写入公开仓库；请用 --output 指定仓库外位置。")
+    if scripted and args.output is None:
+        raise SystemExit("脚本候选执行必须用 --output 指定仓库外的结果文件。")
+    blind = args.blind or scripted
+    if blind and (args.mapping_output is None or args.output is None):
+        raise SystemExit("盲化运行须同时提供 --output 和 --mapping-output。")
+    if args.mapping_output and args.mapping_output.resolve().is_relative_to(PROJECT_ROOT):
+        raise SystemExit("组别映射必须保存在仓库外。")
     with tempfile.TemporaryDirectory(prefix="nongshi_d02_") as directory:
         report = build_run(
             paths[0],
             run_directory=Path(directory),
             extra_paths=tuple(paths[1:]),
             enable_model=args.enable_model,
+            settings=Settings(_env_file=args.env_file) if args.env_file else None,
+            blind=blind,
         )
     output = args.output
     if output is None and not scripted:
@@ -959,12 +1109,21 @@ def main() -> None:
     if output is not None:
         write_report(report, output)
         print(f"报告：{output}")
+    if blind and args.mapping_output is not None:
+        args.mapping_output.parent.mkdir(parents=True, exist_ok=True)
+        args.mapping_output.write_text(
+            json.dumps(report["_private_group_map"], ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"组别映射：{args.mapping_output}")
     summary = report["summary"]
     print(
-        f"案例 {summary['cases']} 例；C 执行 {summary['executed']}，部分 {summary['partial']}，"
-        f"失败 {summary['failed']}，A/B 待授权 {summary['pending_model_authorization']}"
+        f"案例 {summary['cases']} 例；执行 {summary['executed']}，部分 {summary['partial']}，"
+        f"失败 {summary['failed']}，输入无效 {summary['input_invalid']}，"
+        f"未运行模型 {summary['not_run_model_disabled']}，"
+        f"缺少密钥 {summary['missing_credentials']}"
     )
-    if summary["failed"]:
+    if summary["failed"] or summary["input_invalid"] or summary["missing_credentials"]:
         raise SystemExit(1)
 
 

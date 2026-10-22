@@ -1,0 +1,49 @@
+{
+  "review_date": "2026-10-21",
+  "issues": [
+    {
+      "id": "LI-A03-01",
+      "priority": "高",
+      "title": "暂缓卡仍混入当前任务依据",
+      "finding": "在c0c9c4e复用PUB01至PUB06，12个任务中7个已排、3个待确认、2个不生成；7个已排任务中6个带暂缓卡，标签仍为开发验证。",
+      "impact": "当前建议引用适用性与依据展示；阻止整体验收通过，不否定所有观察或维护任务本身。",
+      "reproduction": "从许方公开样本读取原始input，按固定模拟时刻构造PlanRequestV2并调用build_plan_v2；查看任务evidence和status_label。",
+      "locations": [
+        "src/nongshi/planning_v2.py:_rule_ids_for/_make_evidence",
+        "src/nongshi/rules.py:RuleCatalog.evidence_for"
+      ],
+      "acceptance": "检索、任务详情、模型可见工具输出和导出一致区分当前限用途支撑与暂缓历史参考；原卡和runtime_enabled不因显示修复改变。",
+      "owner": "金麟哲",
+      "status": "本轮公开输入已重现，待工程修正"
+    },
+    {
+      "id": "LI-A03-02",
+      "priority": "中",
+      "title": "来源背景与项目转化说明需落实到每条引用",
+      "finding": "C11并列苗期与冬前材料，C31原对象为专家农技人员，C23并列不同年度干湿背景；统一开发标签不能单独解释当前用途。",
+      "impact": "避免读者把原文处置或专业职责理解成当前自动建议。",
+      "reproduction": "查看C11两条来源、C31专家调查句与C23两条来源对应的任务引用说明。",
+      "locations": [
+        "rules/农时窗口_规则卡片_融合修订版_20261017/结构化资料/规则卡片.json",
+        "src/nongshi/rules.py:RuleCatalog.evidence_for"
+      ],
+      "acceptance": "逐来源显示年份、地区、阶段/干湿背景以及本项目只观察或既有沟渠清理的转化限制；不把工程约定写成农业原文。",
+      "owner": "金麟哲；许、李核对文字",
+      "status": "李方已给出收紧表述，待展示复核"
+    },
+    {
+      "id": "LI-A03-03",
+      "priority": "中",
+      "title": "首发日期及版本未决项继续保留",
+      "finding": "Z01、Z04原网址本轮未取得正文；官方转载支持使用段落，但不能证明原首发日期和全文版本一致。A04-S01页面字段与正文落款不同。",
+      "impact": "来源可追溯与日期表述准确性。",
+      "reproduction": "比较本轮官方网页核对记录与五份原件索引，不用URL日期或转载日期覆盖原记录。",
+      "locations": [
+        "证据/官方网页交叉核对_20261021.json"
+      ],
+      "acceptance": "保留原PDF和指纹；分别登记原索引、转载日期、实际访问结果及未核实项。",
+      "owner": "许继哲；李复核",
+      "status": "本轮已如实登记，原首发及全文版本核验仍未完成"
+    }
+  ]
+}

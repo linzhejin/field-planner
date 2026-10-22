@@ -417,29 +417,22 @@ class WorkbenchServiceV3:
             current = [
                 (e.rule_id, e.source_context_summary)
                 for e in item.evidence
-                if "暂缓" not in e.status_label
+                if e.usage_role == "limited_support"
             ]
             deferred = [
                 (e.rule_id, e.source_context_summary)
                 for e in item.evidence
-                if "暂缓" in e.status_label
+                if e.usage_role == "historical_reference"
             ]
             evidence_parts = []
             if current:
                 evidence_parts.append(
-                    "依据："
-                    + "、".join(
-                        f"{rid}（{ctx}）" if ctx else rid
-                        for rid, ctx in current
-                    )
+                    "依据：" + "、".join(f"{rid}（{ctx}）" if ctx else rid for rid, ctx in current)
                 )
             if deferred:
                 evidence_parts.append(
                     "暂缓参考："
-                    + "、".join(
-                        f"{rid}（{ctx}）" if ctx else rid
-                        for rid, ctx in deferred
-                    )
+                    + "、".join(f"{rid}（{ctx}）" if ctx else rid for rid, ctx in deferred)
                 )
             evidence = "；".join(evidence_parts) or "无直接依据"
             lines.append(
@@ -530,7 +523,16 @@ class WorkbenchServiceV3:
             completed_maintenance = [
                 item
                 for item in previous.items
-                if item.completed and item.task_type == "maintenance"
+                if item.task_type == "maintenance"
+                and (
+                    item.completed
+                    or any(
+                        event.feedback
+                        and event.feedback.kind == "completed"
+                        and event.feedback.task_id == item.task_id
+                        for event in active_events
+                    )
+                )
             ]
             new_demand = next(
                 (
@@ -704,6 +706,7 @@ class WorkbenchServiceV3:
             "inspection_requested": "是否需要巡田",
             "maintenance_need_confirmed": "是否确认需要沟渠维护",
             "maintenance_problem_confirmed": "是否确认存在需要处理的问题",
+            "maintenance_purpose": "是否为清理既有沟渠、改善已确认的连通问题",
             "duration_minutes": "任务预计需要多少分钟",
             "resource_minutes": "每天可用的作业分钟数",
             "site_workability": "当天现场能否进入作业",

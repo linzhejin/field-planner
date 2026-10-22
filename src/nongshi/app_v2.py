@@ -136,6 +136,8 @@ def _render_rule_evidence(item: PlanItemV2) -> None:
             )
             if evidence.source_context_summary:
                 st.caption(f"来源背景：{evidence.source_context_summary}")
+            if evidence.project_use_limit:
+                st.caption(f"本项目用途：{evidence.project_use_limit}")
             st.write(f"发布机构：{evidence.publisher} · 日期：{evidence.source_date}")
             st.write(f"适用条件：{evidence.applicability_text} {evidence.condition_text}")
             st.write(f"原文位置：PDF 第 {', '.join(map(str, evidence.pdf_pages))} 页")

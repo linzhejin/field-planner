@@ -422,6 +422,19 @@ def _render_field_form(
                 ),
                 key=f"maintenance_problem:{key_suffix}",
             )
+            purpose_options = {
+                "未知": None,
+                "清理既有沟渠，改善已确认的连通问题": "clear_existing_ditch",
+                "其他目的（本版暂不自动安排）": "other",
+            }
+            purpose_label = st.selectbox(
+                "本次沟渠作业目的",
+                list(purpose_options),
+                index=list(purpose_options).index(
+                    _enum_label(purpose_options, profile.maintenance_purpose if profile else None)
+                ),
+                key=f"maintenance_purpose:{key_suffix}",
+            )
             duration_left, duration_right = st.columns(2)
             inspection_minutes = duration_left.number_input(
                 "巡田预计时长（分钟）",
@@ -525,6 +538,7 @@ def _render_field_form(
                 "inspection_requested": BOOL_OPTIONS[inspect_label],
                 "maintenance_need_confirmed": BOOL_OPTIONS[maintenance_label],
                 "maintenance_problem_confirmed": BOOL_OPTIONS[problem_label],
+                "maintenance_purpose": purpose_options[purpose_label],
                 "moisture": moisture_options[moisture],
                 "ditch_connectivity": ditch_options[ditch],
                 "standing_water": BOOL_OPTIONS[water],
@@ -1074,6 +1088,8 @@ def _render_evidence(item) -> None:  # type: ignore[no-untyped-def]
                 f"{evidence.status_label} · runtime_enabled={str(evidence.runtime_enabled).lower()}"
             )
             st.write(f"适用条件：{evidence.applicability_text or '未提供'}")
+            st.write(f"来源背景：{evidence.source_context_summary}")
+            st.write(f"本项目用途：{evidence.project_use_limit}")
             st.write(f"限制：{evidence.limits or '未提供'}")
             if evidence.quote:
                 st.write(f"原文：{evidence.quote}")
@@ -1390,6 +1406,14 @@ def _render_feedback(
         "土壤墒情": ("moisture", {"未知": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}),
         "维护需求": ("maintenance_need_confirmed", BOOL_OPTIONS),
         "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
+        "维护目的": (
+            "maintenance_purpose",
+            {
+                "未知": None,
+                "清理既有沟渠": "clear_existing_ditch",
+                "其他目的": "other",
+            },
+        ),
         "是否有实际降雨": ("actual_rain_observed", BOOL_OPTIONS),
         "虫害迹象": ("pest_signs", BOOL_OPTIONS),
         "缺苗情况": ("missing_seedlings", BOOL_OPTIONS),
@@ -1497,17 +1521,112 @@ def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> s
     raise ValueError("此修改建议格式无效")
 
 
-def _render_quick_actions(field_id: str) -> None:
-    """右栏快捷动作：预选反馈类型，供中栏反馈区展开对应表单。"""
+def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str) -> None:
+    """在窄屏助手页签直接呈现可操作的反馈表单。"""
+    state = _field_state(service, field_id)
+    if state is None:
+        st.info("请先保存地块档案。")
+        return
+    if kind == "observation":
+        fields = {
+            "沟渠连通": ("ditch_connectivity", {"未知": None, "通畅": "clear", "受阻": "impaired"}),
+            "积水情况": ("standing_water", BOOL_OPTIONS),
+            "维护需求": ("maintenance_need_confirmed", BOOL_OPTIONS),
+            "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
+            "维护目的": (
+                "maintenance_purpose",
+                {"未知": None, "清理既有沟渠": "clear_existing_ditch", "其他目的": "other"},
+            ),
+        }
+        label = st.selectbox("观察项目", list(fields), key=f"quick_observation_field:{field_id}")
+        field, choices = fields[label]
+        with st.form(f"quick_observation_form:{field_id}:{state.fact_version}"):
+            value_label = st.selectbox(
+                "记录值", list(choices), key=f"quick_observation_value:{field_id}:{label}"
+            )
+            submitted = st.form_submit_button(
+                "保存观察事实", key=f"quick_save_observation:{field_id}:{state.fact_version}"
+            )
+        if submitted:
+            try:
+                _commit_feedback(
+                    service,
+                    state,
+                    FeedbackV2(
+                        kind="observation",
+                        plot_id=field_id,
+                        field=field,
+                        value=choices[value_label],
+                        at=_now(),
+                    ),
+                )
+                st.rerun()
+            except ValueError as error:
+                st.error(f"观察未保存：{error}")
+    elif kind == "completed":
+        current = service.get_current_plan(field_id)
+        eligible = (
+            [
+                item
+                for item in current.items
+                if item.start_at and not item.completed and item.start_at.astimezone(ZONE) <= _now()
+            ]
+            if current
+            else []
+        )
+        if not eligible:
+            st.info("当前没有已到计划开始时间且尚未完成的任务。")
+            return
+        with st.form(f"quick_completion_form:{field_id}:{state.fact_version}"):
+            task = st.selectbox("已完成的已安排任务", eligible, format_func=lambda item: item.title)
+            submitted = st.form_submit_button("记录完成")
+        if submitted:
+            try:
+                _commit_feedback(
+                    service, state, FeedbackV2(kind="completed", task_id=task.task_id, at=_now())
+                )
+                st.rerun()
+            except ValueError as error:
+                st.error(f"完成事实未保存：{error}")
+    elif kind == "resource":
+        start = state.draft.start_date or (_today() + timedelta(days=1))
+        with st.form(f"quick_resource_form:{field_id}:{state.fact_version}"):
+            day = st.date_input(
+                "资源变化日期", value=start, min_value=start, max_value=start + timedelta(days=6)
+            )
+            minutes = st.number_input("人员可用分钟数", min_value=0, max_value=1440, step=15)
+            intervals = st.text_input("可用时段", placeholder="09:00-11:00;13:00-15:00")
+            submitted = st.form_submit_button("保存资源变化")
+        if submitted:
+            try:
+                _commit_feedback(
+                    service,
+                    state,
+                    FeedbackV2(
+                        kind="resource",
+                        day=day,
+                        resource_minutes=int(minutes),
+                        intervals=_parse_intervals(intervals),
+                        at=_now(),
+                    ),
+                )
+                st.rerun()
+            except (ValueError, ValidationError) as error:
+                st.error(f"资源变化未保存：{error}")
+
+
+def _render_quick_actions(service: WorkbenchServiceV3, field_id: str) -> None:
+    """右栏快捷动作：在当前页签展开对应反馈表单。"""
     if st.button("补充现场观察", key=f"quick_observe:{field_id}", type="primary", width="stretch"):
-        st.session_state[f"feedback_kind:{field_id}"] = "observation"
-        st.rerun()
+        st.session_state[f"quick_feedback_kind:{field_id}"] = "observation"
     if st.button("记录任务完成", key=f"quick_complete:{field_id}", width="stretch"):
-        st.session_state[f"feedback_kind:{field_id}"] = "completed"
-        st.rerun()
+        st.session_state[f"quick_feedback_kind:{field_id}"] = "completed"
     if st.button("修改可用时间", key=f"quick_resource:{field_id}", width="stretch"):
-        st.session_state[f"feedback_kind:{field_id}"] = "resource"
-        st.rerun()
+        st.session_state[f"quick_feedback_kind:{field_id}"] = "resource"
+    kind = st.session_state.get(f"quick_feedback_kind:{field_id}")
+    if kind:
+        with st.container(border=True):
+            _quick_feedback_dialog(service, field_id, kind)
 
 
 def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[str, str]]) -> None:
@@ -1844,7 +1963,7 @@ def main() -> None:
         agent_tab, recent_tab = st.tabs(["农事助手", "最近操作"])
         with agent_tab:
             _render_agent(service, agent, field_id, current)
-            _render_quick_actions(field_id)
+            _render_quick_actions(service, field_id)
         with recent_tab:
             if current:
                 for event in service.list_events(field_id):

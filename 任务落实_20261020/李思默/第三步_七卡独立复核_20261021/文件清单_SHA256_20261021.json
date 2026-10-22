@@ -1,0 +1,57 @@
+{
+  "version": "LI-A03-1.0",
+  "created_at": "2026-10-21T13:09:16.588797+08:00",
+  "scope": "本清单覆盖本交付目录所有文件，除清单自身；不包含仓库原件、QA渲染或私有留出。",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2284,
+      "sha256": "e02b49607ca332113ceaeb39bab48c1d7606c84b071914a9531a46ed69ebc330"
+    },
+    {
+      "path": "七卡工程交接与未决项_20261021.json",
+      "bytes": 2941,
+      "sha256": "bce9f24233b6d84d03d0f83024fdddd6e8aef625dc7af839d9f140eaa4383d3e"
+    },
+    {
+      "path": "七卡李方复核记录_20261021.json",
+      "bytes": 18887,
+      "sha256": "d2cc6ebee3c76f1bf7b1cd1965f75710f516e6f23c39086c90cff8ee116208e8"
+    },
+    {
+      "path": "交付校验_20261021.json",
+      "bytes": 1586,
+      "sha256": "ef25a8793f83696916ddfd2c61935a26ecaf36cde737da208af4063eabdec6d6"
+    },
+    {
+      "path": "农时窗口_七卡独立复核记录_李思默_20261021.docx",
+      "bytes": 45805,
+      "sha256": "159109b8de15e53c7d43b2e4b7beaa0f8ec5467e40d122e0b1fd3425dbd5e2a4"
+    },
+    {
+      "path": "农时窗口_七卡独立复核记录_李思默_20261021.md",
+      "bytes": 15099,
+      "sha256": "890479d29c7653816f1d6cc4057830745becc4772b4beb076492435a0dd15c87"
+    },
+    {
+      "path": "证据/五份原件与九处引文核验_20261021.json",
+      "bytes": 8694,
+      "sha256": "315ac2817537b31d1b6bdce75ee5a777dea9178d19b24be567ac2971d8aa9e81"
+    },
+    {
+      "path": "证据/公开六例依据重现_20261021.json",
+      "bytes": 143837,
+      "sha256": "1f835a3b00ca11a789e3132bd10a8f73d0b3b2a545bca8ee9bab6f80129d7e6b"
+    },
+    {
+      "path": "证据/公开开发语义_8项核对_20261021.json",
+      "bytes": 4153,
+      "sha256": "61efb168286dbb2d44245ea8e254aea30e1e0f705ad016438bf05c27a47dd784"
+    },
+    {
+      "path": "证据/官方网页交叉核对_20261021.json",
+      "bytes": 2352,
+      "sha256": "c9ef2eef3d5d4fab89e0e691e2323331e05bb5a149fd6dfb374ef46202a0ef09"
+    }
+  ]
+}

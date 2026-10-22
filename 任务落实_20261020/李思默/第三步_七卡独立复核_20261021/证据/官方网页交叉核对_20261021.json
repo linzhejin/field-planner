@@ -1,0 +1,46 @@
+{
+  "review_date": "2026-10-21",
+  "method": "本轮使用网页阅读工具直接查看官方页面和官方转载；不把阅读记录写成新下载的原网页快照。",
+  "records": [
+    {
+      "source": "Z09",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+      "result": "取得省厅正文，核对冬前导语、第一及第三节；原文及时间苗用字保留。"
+    },
+    {
+      "source": "Z15",
+      "url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+      "result": "取得省厅正文，核对偏湿导语、第一及第二节；留熵为页面原字，未擅改为阈值或参数。"
+    },
+    {
+      "source": "Z16",
+      "url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+      "result": "取得部委正文；网页日2020-11-24、落款2020-11-05及第五节可核对。"
+    },
+    {
+      "source": "Z01原网址",
+      "url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+      "result": "本轮网页工具未取得正文；不能据此判定原件为假，也不宣布首发日或全文版本已在线证实。"
+    },
+    {
+      "source": "Z04原网址",
+      "url": "https://www.ntv.cn/content/1/575/991575066.html",
+      "result": "本轮网页工具未取得正文；保留本地快照及其原日期。"
+    },
+    {
+      "source": "A04-S04",
+      "url": "https://nynct.fujian.gov.cn/ztzl/kpxj/zrzhl/202510/t20251027_7026490.htm",
+      "result": "取得省厅转载正文，页面显示2025-10-22；核对持续阴雨背景和雨后积水段，不能替代原索引首发日期。"
+    },
+    {
+      "source": "A04-S05",
+      "url": "https://nync.pingliang.gov.cn/xwdt/syjs/art/2026/art_7cc42d9bae9e473085986689fb43c29b.html",
+      "result": "取得市局转载正文，页面显示2026-09-14；核对长江中游含湖北及第三部分清除杂物段，未做与Z01全文逐字版本等同性核验。"
+    },
+    {
+      "source": "A04-S01",
+      "url": "https://nyt.hubei.gov.cn/zfxxgk/zc_GK2020/qtzdgkwj_GK2020/tz/202602/t20260210_5874529.shtml",
+      "result": "取得省厅正文；核对第九项二4及四1至2。页面/发文字段2026-01-09与正文落款2026-01-16不一致，照实保留；技术包效果数字不归为本系统效果。"
+    }
+  ]
+}

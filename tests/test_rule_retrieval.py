@@ -107,6 +107,7 @@ def test_hilly_blocked_ditch_is_not_rejected_while_deferred_card_stays_reference
             problem="ditch",
             problem_confirmed=True,
             maintenance_requested=True,
+            maintenance_purpose="clear_existing_ditch",
             task_type="all",
         )
     )

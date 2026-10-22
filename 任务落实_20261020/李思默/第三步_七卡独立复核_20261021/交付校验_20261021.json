@@ -1,0 +1,41 @@
+{
+  "checked_at": "2026-10-21T13:09:16.565522+08:00",
+  "version": "LI-A03-1.0",
+  "repository_commit": "c0c9c4e9483beaafd6b40092c63ed98cf31324f6",
+  "review_records": 7,
+  "decisions": {
+    "limited_use": 3,
+    "deferred": 4
+  },
+  "source_files_verified": 5,
+  "quotes_located": 9,
+  "source_pages_visually_checked": 7,
+  "public_cases_reproduced": 6,
+  "public_development_semantic_checks": {
+    "passed": 8,
+    "failed": 0
+  },
+  "word": {
+    "file": "农时窗口_七卡独立复核记录_李思默_20261021.docx",
+    "sha256": "159109b8de15e53c7d43b2e4b7beaa0f8ec5467e40d122e0b1fd3425dbd5e2a4",
+    "pages": 7,
+    "tables": 2,
+    "external_source_links": 8,
+    "visual_inspection": "7页已逐页查看，最终仅工程页补充内容后重看第6页；其余分页及正文未变。"
+  },
+  "protected_paths": {
+    "src_unchanged": true,
+    "rules_unchanged": true,
+    "tests_unchanged": true
+  },
+  "runtime_and_formal_adoption_unchanged": true,
+  "formal_adopted": 0,
+  "citation_acceptance": "未通过，LI-A03-01和LI-A03-02待工程修正与复核",
+  "source_version_questions": "Z01/Z04原首发及全文版本、A04-S01日期差异已登记，尚未全部核实",
+  "private_holdout_cases_read_or_run": 0,
+  "live_model_calls": 0,
+  "weather_calls": 0,
+  "review_method": "非盲法AI辅助证据重核，不代填自然人逐页亲阅、签名或专家认证",
+  "github_upload": "本轮未推送；本地复核分支review/li-seven-cards-20261021",
+  "qa_render_delivery": "不包含检查用PDF和页面图片"
+}

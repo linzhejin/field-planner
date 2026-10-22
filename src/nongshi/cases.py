@@ -59,6 +59,11 @@ def make_reference_request() -> PlanRequestV2:
                 area_mu=raw.get("area_mu"),
                 inspection_requested=inspect,
                 maintenance_need_confirmed=maintenance_need,
+                # 旧参考算例只有“维护”类型；这里仅为重放旧版排程明确声明
+                # 开发模拟前提，不能反写为用户现场确认或正式规则采用。
+                maintenance_purpose=(
+                    "clear_existing_ditch" if maintenance_need is True and task_m else None
+                ),
                 maintenance_problem_confirmed=(
                     True
                     if raw.get("ditch_connectivity") == "impaired"
@@ -240,6 +245,18 @@ def replay_reference_history() -> list[PlanVersionV2]:
     v3 = apply_feedback_v2(
         v3,
         FeedbackV2(
+            kind="observation",
+            plot_id="B",
+            field="maintenance_purpose",
+            value="clear_existing_ditch",
+            at=_fixed_datetime(reference["V3"]["as_of"]),
+        ),
+    )
+    v3.reference_version = "V3 · 开发模拟清理目的"
+    history.append(v3)
+    v3 = apply_feedback_v2(
+        v3,
+        FeedbackV2(
             kind="workability",
             plot_id="B",
             day=date(2026, 10, 20),
@@ -336,6 +353,7 @@ def run_guardrail_cases() -> list[dict[str, Any]]:
     plan = build_plan_v2(
         _guardrail_request(
             maintenance_need_confirmed=True,
+            maintenance_purpose="clear_existing_ditch",
             maintenance_problem_confirmed=True,
             ditch_connectivity="impaired",
         )
@@ -429,6 +447,7 @@ def run_guardrail_cases() -> list[dict[str, Any]]:
         _guardrail_request(
             inspection_requested=True,
             maintenance_need_confirmed=True,
+            maintenance_purpose="clear_existing_ditch",
             maintenance_problem_confirmed=True,
             ditch_connectivity="impaired",
             standing_water=True,
@@ -443,6 +462,7 @@ def run_guardrail_cases() -> list[dict[str, Any]]:
     plan = build_plan_v2(
         _guardrail_request(
             maintenance_need_confirmed=True,
+            maintenance_purpose="clear_existing_ditch",
             maintenance_problem_confirmed=True,
             ditch_connectivity="impaired",
         )
@@ -551,6 +571,8 @@ def _case_request(case: dict[str, Any]) -> PlanRequestV2:
         field_type="lowland_rice_stubble",
         inspection_requested=inspection,
         maintenance_need_confirmed=need,
+        # 仅用于旧开发案例重放；这些案例的“维护”指既有沟渠清理。
+        maintenance_purpose="clear_existing_ditch" if need is True else None,
         maintenance_problem_confirmed=(True if issue == "impaired" else None),
         ditch_connectivity={"impaired": "impaired", "clear": "clear"}.get(
             values.get("ditch_connectivity", issue), None

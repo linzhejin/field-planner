@@ -1,0 +1,78 @@
+{
+  "classification": "公开开发语义检查，不是留出、真实服务或农业适用性验收",
+  "commit": "c0c9c4e9483beaafd6b40092c63ed98cf31324f6",
+  "executed_at": "2026-10-21T12:14:39.610266+08:00",
+  "command_template": "python -m pytest -q -p no:cacheprovider <本文件records中8个nodeid> --junitxml=<本地证据路径>",
+  "execution_context": "使用项目已有虚拟环境，PYTHONPATH指向本轮复核工作树src；未联网、未读留出。",
+  "result": {
+    "tests": 8,
+    "passed": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit_code": 0
+  },
+  "original_local_junit_sha256": "05c4f718647b9c3b8beb0e6fe74a0bf4fd0143fd8e3fe474debc4533e5fd5224",
+  "records": [
+    {
+      "nodeid": "tests/test_planning_v2.py::test_unknown_observations_do_not_block_requested_inspection",
+      "topic": "未知观察项",
+      "checked_behavior": "观察项未知不拦截有需求的普通巡田，未确认维护保持待确认。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_unknown_scope_and_unknown_daily_workability_remain_distinct",
+      "topic": "范围与日条件",
+      "checked_behavior": "生育期未确认与单日现场条件未确认分别保存。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_capacity_shortage_does_not_change_available_work_window",
+      "topic": "工时",
+      "checked_behavior": "90分钟任务不能塞进30分钟连续时段；窗口可作业与排程失败分别记录。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_minute_scheduler_places_contiguous_tasks_without_overlap_and_respects_predecessor",
+      "topic": "显式前置",
+      "checked_behavior": "显式声明的前置任务优先完成，连续时段不重叠；不由此新增统一巡田前置。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_completion_and_effect_observation_are_separate_records",
+      "topic": "完成与效果",
+      "checked_behavior": "维护完成与之后仍有积水的观察可同时存在。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_completed_task_keeps_original_slot_duration_and_evidence",
+      "topic": "历史保留",
+      "checked_behavior": "编辑后续时长不改写已完成任务的原时段、工时与证据。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_planning_v2.py::test_completed_maintenance_never_rewrites_standing_water_fact",
+      "topic": "反馈事实",
+      "checked_behavior": "确认维护完成不会自动把积水事实改为无积水。",
+      "result": "passed",
+      "source_file_sha256": "7448a901f859a5956b6a6e3217b19fc40a68866dc08b8ddf2fb88f2149f98370"
+    },
+    {
+      "nodeid": "tests/test_reference_replay.py::test_reference_versions_are_recomputed_and_match_required_differences",
+      "topic": "公开手工参考",
+      "checked_behavior": "重算V1/V2/V3，保留完成事实、未受影响地块时段及反馈后的条件变化。",
+      "result": "passed",
+      "source_file_sha256": "1a6eb7467abb91ae3adb41a819204d74eb0a8c1eb4c0618b3a21fc7bbff91854"
+    }
+  ],
+  "private_holdout_cases_run": 0,
+  "live_model_calls": 0,
+  "weather_calls": 0,
+  "limits": "这些断言只验证已声明工程语义；不证明每个农业来源适用于当前建议，不覆盖所有UI、检索、模型工具输出或导出。"
+}

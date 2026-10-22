@@ -1,0 +1,3429 @@
+{
+  "classification": "public_development_reproduction_not_holdout_not_agronomic_acceptance",
+  "commit": "c0c9c4e9483beaafd6b40092c63ed98cf31324f6",
+  "source_file": "任务落实_20261019/A03_规则采用记录/20261020复核/公开样本实际输出.json",
+  "source_file_sha256": "8378c369d53299514da028fbd166f48b1e51c34d69f95d6e1a82637fb52cc1eb",
+  "public_cases": 6,
+  "task_count": 12,
+  "status_distribution": {
+    "scheduled": 7,
+    "pending": 3,
+    "not_generated": 2
+  },
+  "scheduled_tasks_with_deferred_references": 6,
+  "findings": [
+    {
+      "case_id": "PUB01",
+      "task_id": "PUB01-I",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB01",
+      "task_id": "PUB01-M",
+      "schedule_status": "pending",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB02",
+      "task_id": "PUB02-I",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB02",
+      "task_id": "PUB02-M",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB03",
+      "task_id": "PUB03-I",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C20"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB03",
+      "task_id": "PUB03-M",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C20"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB04",
+      "task_id": "PUB04-I",
+      "schedule_status": "scheduled",
+      "deferred_rule_ids": [
+        "C18",
+        "C19",
+        "C24"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB04",
+      "task_id": "PUB04-M",
+      "schedule_status": "pending",
+      "deferred_rule_ids": [
+        "C18",
+        "C19",
+        "C24"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB06",
+      "task_id": "PUB06-I",
+      "schedule_status": "not_generated",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    },
+    {
+      "case_id": "PUB06",
+      "task_id": "PUB06-M",
+      "schedule_status": "not_generated",
+      "deferred_rule_ids": [
+        "C19"
+      ],
+      "status_labels": [
+        "开发验证，适用性待复核"
+      ]
+    }
+  ],
+  "private_holdout_cases_run": 0,
+  "live_model_calls": 0,
+  "weather_calls": 0,
+  "records": [
+    {
+      "case_id": "PUB01",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB01",
+        "mode": "real",
+        "profile": {
+          "id": "PUB01",
+          "name": "PUB01（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": "lowland_rice_stubble",
+          "rice_stubble": true,
+          "cold_waterlogged": false,
+          "terrain": "lowland",
+          "area_mu": null,
+          "inspection_requested": true,
+          "maintenance_need_confirmed": null,
+          "maintenance_problem_confirmed": null,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": false,
+          "winter_before_context_confirmed": null,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": null,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "86622580-bf8c-4eb1-85f9-5077b3790718",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "40997228-f551-4209-8348-423de0f154df",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB01",
+              "name": "PUB01（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": true,
+              "cold_waterlogged": false,
+              "terrain": "lowland",
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": false,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": null,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB01-I",
+            "plot_id": "PUB01",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB01-M",
+            "plot_id": "PUB01",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": null,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "需求或现场问题尚未确认",
+            "reason_code": "necessity_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "maintenance_need_confirmed"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    },
+    {
+      "case_id": "PUB02",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB02",
+        "mode": "real",
+        "profile": {
+          "id": "PUB02",
+          "name": "PUB02（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": "lowland_rice_stubble",
+          "rice_stubble": true,
+          "cold_waterlogged": false,
+          "terrain": "lowland",
+          "area_mu": null,
+          "inspection_requested": true,
+          "maintenance_need_confirmed": true,
+          "maintenance_problem_confirmed": true,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": false,
+          "winter_before_context_confirmed": null,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": 60,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "4cb7c08e-8c91-4d65-b88c-9fd569ff8437",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "7803dc8f-d7c7-4753-a2a6-9b316bac3bd9",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB02",
+              "name": "PUB02（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": true,
+              "cold_waterlogged": false,
+              "terrain": "lowland",
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": true,
+              "maintenance_problem_confirmed": true,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": false,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": 60,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB02-I",
+            "plot_id": "PUB02",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB02-M",
+            "plot_id": "PUB02",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 60,
+            "start_at": "2026-10-20T09:30:00+08:00",
+            "end_at": "2026-10-20T10:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    },
+    {
+      "case_id": "PUB03",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB03",
+        "mode": "real",
+        "profile": {
+          "id": "PUB03",
+          "name": "PUB03（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": "dry_hilly",
+          "rice_stubble": false,
+          "cold_waterlogged": false,
+          "terrain": "hilly",
+          "area_mu": null,
+          "inspection_requested": true,
+          "maintenance_need_confirmed": true,
+          "maintenance_problem_confirmed": true,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": false,
+          "winter_before_context_confirmed": null,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": 60,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "908e36d0-8d10-4f35-9194-2d403839f768",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "3fdf6ae0-b074-4132-aa7c-b0b8a0239c4e",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB03",
+              "name": "PUB03（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "dry_hilly",
+              "rice_stubble": false,
+              "cold_waterlogged": false,
+              "terrain": "hilly",
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": true,
+              "maintenance_problem_confirmed": true,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": false,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": 60,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB03-I",
+            "plot_id": "PUB03",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C20",
+                "title": "易旱丘陵的保墒与排水边界",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+                "applicability_text": "湖北相关丘陵岗地，土壤湿度相对较小、冬春易旱。",
+                "condition_text": "核实地形、干湿、沟系现状及排灌目的。",
+                "limits": "不是“干旱禁止全部维护”；田型与地形不能仅靠互斥标签处理。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB03-M",
+            "plot_id": "PUB03",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 60,
+            "start_at": "2026-10-20T09:30:00+08:00",
+            "end_at": "2026-10-20T10:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C20",
+                "title": "易旱丘陵的保墒与排水边界",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "鄂中北、鄂东南等丘陵岗地土壤湿度相对较小、冬春易旱的地区厢宽可适当放宽至3-4米，顺坡低洼处开沟，维持底墒足表土爽即可，增强抗旱抗寒能力促冬发。",
+                "applicability_text": "湖北相关丘陵岗地，土壤湿度相对较小、冬春易旱。",
+                "condition_text": "核实地形、干湿、沟系现状及排灌目的。",
+                "limits": "不是“干旱禁止全部维护”；田型与地形不能仅靠互斥标签处理。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    },
+    {
+      "case_id": "PUB04",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB04",
+        "mode": "real",
+        "profile": {
+          "id": "PUB04",
+          "name": "PUB04（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": "lowland_rice_stubble",
+          "rice_stubble": true,
+          "cold_waterlogged": false,
+          "terrain": "lowland",
+          "area_mu": null,
+          "inspection_requested": true,
+          "maintenance_need_confirmed": null,
+          "maintenance_problem_confirmed": null,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": true,
+          "winter_before_context_confirmed": true,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": null,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "da86827b-a0e0-4a3a-a17e-0953d4cf64e1",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "63852f94-5c84-4095-84ab-041af7fac217",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB04",
+              "name": "PUB04（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": true,
+              "cold_waterlogged": false,
+              "terrain": "lowland",
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": true,
+              "winter_before_context_confirmed": true,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": null,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB04-I",
+            "plot_id": "PUB04",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C18",
+                "title": "冬前沟渠现状检查",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "及时清理“三沟”，尤其前期因抢播整田质量较差、沟系配套不到位的田块，厢沟深度要达到20cm以上，腰沟、围沟逐渐加深，确保沟沟相通",
+                "applicability_text": "2025年湖北冬前意见，尤其抢播整田质量差、沟系配套不足的田块。",
+                "condition_text": "当前地块苗期已确认，且存在沟渠检查需求；是否适用冬前参数另行确认。",
+                "limits": "不把20cm设为所有田型通用底线，不凭尺寸自动加深开挖。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C24",
+                "title": "雨后积水检查候选",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z04",
+                "source_title": "2025年冬油菜抗渍涝保播种促壮苗技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2025-10-20",
+                "source_url": "https://www.ntv.cn/content/1/575/991575066.html",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "降雨后要及时检查田间积水情况，发现问题及时处理，做到积水不过夜，最大程度降低土壤水分。",
+                "applicability_text": "2025年持续阴雨、土壤偏湿的抗渍涝管理情境；应用到当前地块须核实。",
+                "condition_text": "当地确有降雨记录或现场报告，并确认相关田况；预报降雨仅作提前提示。",
+                "limits": "不设任意雨量阈值或固定24小时截止；不据降雨自动认定积水或可下田。",
+                "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB04-M",
+            "plot_id": "PUB04",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": null,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "需求或现场问题尚未确认",
+            "reason_code": "necessity_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "maintenance_need_confirmed"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C18",
+                "title": "冬前沟渠现状检查",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "及时清理“三沟”，尤其前期因抢播整田质量较差、沟系配套不到位的田块，厢沟深度要达到20cm以上，腰沟、围沟逐渐加深，确保沟沟相通",
+                "applicability_text": "2025年湖北冬前意见，尤其抢播整田质量差、沟系配套不足的田块。",
+                "condition_text": "当前地块苗期已确认，且存在沟渠检查需求；是否适用冬前参数另行确认。",
+                "limits": "不把20cm设为所有田型通用底线，不凭尺寸自动加深开挖。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C24",
+                "title": "雨后积水检查候选",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z04",
+                "source_title": "2025年冬油菜抗渍涝保播种促壮苗技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2025-10-20",
+                "source_url": "https://www.ntv.cn/content/1/575/991575066.html",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "降雨后要及时检查田间积水情况，发现问题及时处理，做到积水不过夜，最大程度降低土壤水分。",
+                "applicability_text": "2025年持续阴雨、土壤偏湿的抗渍涝管理情境；应用到当前地块须核实。",
+                "condition_text": "当地确有降雨记录或现场报告，并确认相关田况；预报降雨仅作提前提示。",
+                "limits": "不设任意雨量阈值或固定24小时截止；不据降雨自动认定积水或可下田。",
+                "source_sha256": "e6ad1c599ce9b823953e6a24bd337eb266ad668c1a40d2ee0377fc2baf5cb059",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    },
+    {
+      "case_id": "PUB05",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB05",
+        "mode": "real",
+        "profile": {
+          "id": "PUB05",
+          "name": "PUB05（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": null,
+          "rice_stubble": null,
+          "cold_waterlogged": false,
+          "terrain": null,
+          "area_mu": null,
+          "inspection_requested": true,
+          "maintenance_need_confirmed": null,
+          "maintenance_problem_confirmed": null,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": false,
+          "winter_before_context_confirmed": null,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": null,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "dd1957d9-d4b4-4404-bcd0-14808acb7e22",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "96aaef58-7338-458e-8b67-15e2614f9db1",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB05",
+              "name": "PUB05（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": null,
+              "rice_stubble": null,
+              "cold_waterlogged": false,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": true,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": false,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": null,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB05-I",
+            "plot_id": "PUB05",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-20": "available",
+              "2026-10-21": "available",
+              "2026-10-22": "available",
+              "2026-10-23": "available",
+              "2026-10-24": "available",
+              "2026-10-25": "available",
+              "2026-10-26": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB05-M",
+            "plot_id": "PUB05",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": null,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "范围信息待确认",
+            "reason_code": "scope_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "maintenance_need_confirmed",
+              "field_type"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    },
+    {
+      "case_id": "PUB06",
+      "input_origin": "existing_public_sample_only",
+      "input": {
+        "schema_version": 3,
+        "field_id": "PUB06",
+        "mode": "real",
+        "profile": {
+          "id": "PUB06",
+          "name": "PUB06（开发模拟）",
+          "province": "湖北",
+          "province_confirmed": true,
+          "crop": "油菜",
+          "crop_confirmed": true,
+          "stage": "苗期",
+          "stage_confirmed": true,
+          "field_type": "lowland_rice_stubble",
+          "rice_stubble": true,
+          "cold_waterlogged": false,
+          "terrain": "lowland",
+          "area_mu": null,
+          "inspection_requested": false,
+          "maintenance_need_confirmed": false,
+          "maintenance_problem_confirmed": null,
+          "moisture": null,
+          "ditch_connectivity": "impaired",
+          "standing_water": true,
+          "leaf_count": null,
+          "pest_signs": null,
+          "missing_seedlings": null,
+          "crowding": null,
+          "actual_rain_observed": false,
+          "winter_before_context_confirmed": null,
+          "workability_by_date": {},
+          "inspection_duration_minutes": 30,
+          "maintenance_duration_minutes": null,
+          "inspection_priority": 2,
+          "maintenance_priority": 2,
+          "inspection_earliest_date": null,
+          "inspection_due_date": null,
+          "maintenance_earliest_date": null,
+          "maintenance_due_date": null,
+          "maintenance_prerequisites": [],
+          "maintenance_task_id": null,
+          "completed_maintenance_task_ids": [],
+          "observed_at": null,
+          "observation_source": "synthetic"
+        },
+        "location": null,
+        "start_date": "2026-10-20",
+        "days": [
+          {
+            "day": "2026-10-20",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-21",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-22",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-23",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-24",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-25",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          },
+          {
+            "day": "2026-10-26",
+            "site_workable": true,
+            "weather_workable": true,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 120,
+            "intervals": [
+              {
+                "start": "09:00:00",
+                "end": "11:00:00"
+              }
+            ]
+          }
+        ],
+        "notes": "",
+        "input_source": "user",
+        "source_plan_id": null
+      },
+      "output": {
+        "schema_version": 2,
+        "id": "605d779e-472d-4fc5-9e5a-645e17bc23ee",
+        "parent_id": null,
+        "created_at": "2026-10-19T18:00:00+08:00",
+        "reference_version": null,
+        "not_before": "2026-10-20T00:00:00+08:00",
+        "request": {
+          "schema_version": 2,
+          "id": "1ec6b346-b4b6-4aeb-89bb-18be0e2baa99",
+          "start_date": "2026-10-20",
+          "plots": [
+            {
+              "id": "PUB06",
+              "name": "PUB06（开发模拟）",
+              "province": "湖北",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": "lowland_rice_stubble",
+              "rice_stubble": true,
+              "cold_waterlogged": false,
+              "terrain": "lowland",
+              "area_mu": null,
+              "inspection_requested": false,
+              "maintenance_need_confirmed": false,
+              "maintenance_problem_confirmed": null,
+              "moisture": null,
+              "ditch_connectivity": "impaired",
+              "standing_water": true,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": false,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 30,
+              "maintenance_duration_minutes": null,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-20",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-21",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-22",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-23",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-24",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-25",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            },
+            {
+              "day": "2026-10-26",
+              "site_workable": true,
+              "weather_workable": true,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 120,
+              "intervals": [
+                {
+                  "start": "09:00:00",
+                  "end": "11:00:00"
+                }
+              ]
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "synthetic": true,
+          "completed_at": {},
+          "rule_review_status": {}
+        },
+        "items": [
+          {
+            "task_id": "PUB06-I",
+            "plot_id": "PUB06",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "window_by_date": {},
+            "schedule_status": "not_generated",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "已确认不需要，未生成任务",
+            "reason_code": "no_need",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          },
+          {
+            "task_id": "PUB06-M",
+            "plot_id": "PUB06",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "window_by_date": {},
+            "schedule_status": "not_generated",
+            "duration_minutes": null,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "已确认不需要，未生成任务",
+            "reason_code": "no_need",
+            "missing_fields": [],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              },
+              {
+                "rule_id": "C19",
+                "title": "低洼田积水检查与维护反馈",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "稻茬田、低洼田、冷浸田要保证厢宽2米以内，并每30米加开腰沟，做到雨止田干、沟无积水。",
+                "applicability_text": "2025年湖北冬前稻茬田、低洼田或冷浸田。",
+                "condition_text": "相关田型已确认，存在检查需求或维护后反馈。",
+                "limits": "不自动新开腰沟；田型标签可重叠，遇丘陵易旱情境与C20一并核实目标。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "开发验证，适用性待复核"
+              }
+            ]
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      }
+    }
+  ]
+}

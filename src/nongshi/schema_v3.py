@@ -98,6 +98,12 @@ class FactEventInputV3(BaseModel):
                 raise ValueError(f"{field} 的现场值必须是是/否/未知")
             if field == "ditch_connectivity" and value not in {None, "clear", "impaired"}:
                 raise ValueError("沟渠连通情况只能是通畅、受阻或未知")
+            if field == "maintenance_purpose" and value not in {
+                None,
+                "clear_existing_ditch",
+                "other",
+            }:
+                raise ValueError("维护目的只能是清理既有沟渠、其他或未知")
             if field == "moisture" and value not in {None, "dry", "normal", "wet"}:
                 raise ValueError("土壤墒情只能是偏干、适中、偏湿或未知")
             if field == "leaf_count" and (
@@ -217,6 +223,7 @@ class RuleSearchQueryV3(BaseModel):
     problem: str | None = None
     problem_confirmed: bool | None = None
     maintenance_requested: bool | None = None
+    maintenance_purpose: Literal["clear_existing_ditch", "other"] | None = None
     winter_before_context_confirmed: bool | None = None
     actual_rain_observed: bool | None = None
 

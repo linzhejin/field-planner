@@ -1,0 +1,1149 @@
+{
+  "runner_version": "1.2",
+  "generated_at": "2026-10-22T07:18:31.118833+00:00",
+  "classification": "D02/D03 统一运行；A/B 仅在启用模型时产生真实输出；不计入独立留出成绩，不代表农业适用性",
+  "code_commit": "b97ece7eddfeaa46b4f319ef0ce53bc5b0202c4f",
+  "code_worktree_dirty": true,
+  "cases_source": [
+    "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl"
+  ],
+  "cases_sha256": {
+    "不计分联调样例_3例.jsonl": "8c05e5f8305ed853b8046dca5cd57910c86ba438e9c5bd73a5ba7423a0cdd219"
+  },
+  "group_key": {
+    "g1": "A 直接生成（需真实语言模型）",
+    "g2": "B 加检索（需真实语言模型）",
+    "g3": "C 完整系统（本地确定性，离线可运行）"
+  },
+  "masking_note": "开发运行未盲化。",
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.15"
+  },
+  "records": [
+    {
+      "case_id": "J01",
+      "result_id": "08f29b4db76f43cdb98f38435444abc1",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J01",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "elapsed_ms": 53.817,
+      "model_calls": 0,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": null,
+        "completion": null
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "errors": [],
+      "notes": [],
+      "result": {
+        "profile_ready": true,
+        "missing_fields": [],
+        "evaluation_items": [
+          {
+            "task_id": "j01-20261019-I",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "schedule_status": "scheduled",
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "scheduled",
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+          },
+          {
+            "task_id": "j01-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "schedule_status": "not_generated",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "no_need",
+            "reason": "已确认不需要，未生成任务"
+          }
+        ],
+        "adopted_version_id": "c64afbef-e16c-453a-8ad5-9fdc3fd19833",
+        "current_plan_items": [
+          {
+            "task_id": "j01-20261019-I",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "required",
+            "schedule_status": "scheduled",
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "scheduled",
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+          },
+          {
+            "task_id": "j01-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "schedule_status": "not_generated",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "no_need",
+            "reason": "已确认不需要，未生成任务"
+          }
+        ],
+        "committed_feedback": 0,
+        "feedback_notes": [],
+        "events_after": 0
+      },
+      "group_code": "g3"
+    },
+    {
+      "case_id": "J01",
+      "result_id": "1db29638a2b64210959ce573b9db4f74",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J01",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 1539,
+        "completion": 339
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [],
+      "first_result": "{\"tasks\":[{\"task_type\":\"inspection\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":\"2026-10-20T09:00:00+08:00\",\"end_at\":\"2026-10-20T09:30:00+08:00\",\"reason\":\"已确认苗期且请求巡查；2026-10-20 有可用作业时段（09:00–10:00、10:00–11:00），巡查时长 30 分钟，巡查截止日期 2026-10-26。\",\"evidence_rule_ids\":[]}],\"missing_fields\":[\"maintenance_need_confirmed\",\"maintenance_problem_confirmed\",\"maintenance_prerequisites\",\"maintenance_task_id\",\"maintenance_earliest_date\",\"maintenance_due_date\",\"maintenance_duration_minutes\",\"rice_stubble\",\"cold_waterlogged\",\"terrain\",\"area_mu\",\"leaf_count\",\"pest_signs\",\"missing_seedlings\",\"crowding\",\"actual_rain_observed\",\"winter_before_context_confirmed\",\"workability_by_date\"],\"explanation\":\"仅依据输入生成候选任务：巡查已确认请求，故生成 1 条 inspection 候选，安排在 2026-10-20 首个可用时段 09:00–09:30（Asia/Shanghai）。维护任务因 maintenance_need_confirmed 与 maintenance_problem_confirmed 均为 false 且无已确认问题，不生成 maintenance 候选。天气与地块可作业性均为 synthetic 模拟数据，未作现场确认；未知字段保持待确认，未补造规则或证据。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "inspection",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "reason": "已确认苗期且请求巡查；2026-10-20 有可用作业时段（09:00–10:00、10:00–11:00），巡查时长 30 分钟，巡查截止日期 2026-10-26。",
+            "evidence_rule_ids": []
+          }
+        ],
+        "missing_fields": [
+          "maintenance_need_confirmed",
+          "maintenance_problem_confirmed",
+          "maintenance_prerequisites",
+          "maintenance_task_id",
+          "maintenance_earliest_date",
+          "maintenance_due_date",
+          "maintenance_duration_minutes",
+          "rice_stubble",
+          "cold_waterlogged",
+          "terrain",
+          "area_mu",
+          "leaf_count",
+          "pest_signs",
+          "missing_seedlings",
+          "crowding",
+          "actual_rain_observed",
+          "winter_before_context_confirmed",
+          "workability_by_date"
+        ],
+        "explanation": "仅依据输入生成候选任务：巡查已确认请求，故生成 1 条 inspection 候选，安排在 2026-10-20 首个可用时段 09:00–09:30（Asia/Shanghai）。维护任务因 maintenance_need_confirmed 与 maintenance_problem_confirmed 均为 false 且无已确认问题，不生成 maintenance 候选。天气与地块可作业性均为 synthetic 模拟数据，未作现场确认；未知字段保持待确认，未补造规则或证据。"
+      },
+      "errors": [],
+      "elapsed_ms": 2351.568,
+      "group_code": "g1"
+    },
+    {
+      "case_id": "J01",
+      "result_id": "91f60082f7104dd1a793d1302d9b29bd",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J01",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 2539,
+        "completion": 237
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [
+        {
+          "name": "search_rules",
+          "status": "matched",
+          "query": {
+            "province": "湖北",
+            "province_confirmed": true,
+            "crop": "油菜",
+            "crop_confirmed": true,
+            "stage": "苗期",
+            "stage_confirmed": true,
+            "field_type": "lowland_rice_stubble",
+            "task_type": "all",
+            "problem": null,
+            "problem_confirmed": false,
+            "maintenance_requested": false,
+            "maintenance_purpose": null,
+            "winter_before_context_confirmed": null,
+            "actual_rain_observed": null
+          }
+        }
+      ],
+      "first_result": "{\"tasks\":[{\"task_type\":\"inspection\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":\"2026-10-20T09:00:00+08:00\",\"end_at\":\"2026-10-20T09:30:00+08:00\",\"reason\":\"用户已确认巡田需求；仅安排检查，不生成维护任务。\",\"evidence_rule_ids\":[\"C31\",\"C11\"]}],\"missing_fields\":[\"maintenance_need_confirmed\",\"maintenance_problem_confirmed\",\"rice_stubble\",\"cold_waterlogged\",\"terrain\",\"area_mu\",\"leaf_count\",\"pest_signs\",\"missing_seedlings\",\"crowding\",\"actual_rain_observed\",\"winter_before_context_confirmed\"],\"explanation\":\"依据已确认的湖北油菜苗期及巡田请求，生成一项检查候选，安排在2026-10-20首个可用时段09:00-09:30（检查时长30分钟）。维护需求与问题均未确认，故不生成维护任务。天气与作业条件为模拟数据，未作现场确认；缺失字段保持待确认。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "inspection",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": "2026-10-20T09:00:00+08:00",
+            "end_at": "2026-10-20T09:30:00+08:00",
+            "reason": "用户已确认巡田需求；仅安排检查，不生成维护任务。",
+            "evidence_rule_ids": [
+              "C31",
+              "C11"
+            ]
+          }
+        ],
+        "missing_fields": [
+          "maintenance_need_confirmed",
+          "maintenance_problem_confirmed",
+          "rice_stubble",
+          "cold_waterlogged",
+          "terrain",
+          "area_mu",
+          "leaf_count",
+          "pest_signs",
+          "missing_seedlings",
+          "crowding",
+          "actual_rain_observed",
+          "winter_before_context_confirmed"
+        ],
+        "explanation": "依据已确认的湖北油菜苗期及巡田请求，生成一项检查候选，安排在2026-10-20首个可用时段09:00-09:30（检查时长30分钟）。维护需求与问题均未确认，故不生成维护任务。天气与作业条件为模拟数据，未作现场确认；缺失字段保持待确认。"
+      },
+      "errors": [],
+      "elapsed_ms": 1745.746,
+      "group_code": "g2"
+    },
+    {
+      "case_id": "J02",
+      "result_id": "a79c07bfa4d54db980fac1f4ba6f3588",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J02",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "elapsed_ms": 48.292,
+      "model_calls": 0,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": null,
+        "completion": null
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "errors": [],
+      "notes": [],
+      "result": {
+        "profile_ready": true,
+        "missing_fields": [
+          "province",
+          "crop",
+          "stage",
+          "inspection_requested",
+          "maintenance_problem_confirmed",
+          "ditch_connectivity",
+          "standing_water",
+          "maintenance_need_confirmed",
+          "maintenance_purpose"
+        ],
+        "evaluation_items": [
+          {
+            "task_id": "j02-20261019-I",
+            "task_type": "inspection",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "province",
+              "crop",
+              "stage",
+              "inspection_requested"
+            ],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              }
+            ],
+            "reason_code": "scope_pending",
+            "reason": "范围信息待确认"
+          },
+          {
+            "task_id": "j02-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "province",
+              "crop",
+              "stage",
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose"
+            ],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              }
+            ],
+            "reason_code": "scope_pending",
+            "reason": "范围信息待确认"
+          }
+        ],
+        "adopted_version_id": "a382c3b5-11cf-4ab4-8a62-b6cdb87514fd",
+        "current_plan_items": [
+          {
+            "task_id": "j02-20261019-I",
+            "task_type": "inspection",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "province",
+              "crop",
+              "stage",
+              "inspection_requested"
+            ],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              }
+            ],
+            "reason_code": "scope_pending",
+            "reason": "范围信息待确认"
+          },
+          {
+            "task_id": "j02-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "province",
+              "crop",
+              "stage",
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose"
+            ],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              }
+            ],
+            "reason_code": "scope_pending",
+            "reason": "范围信息待确认"
+          }
+        ],
+        "committed_feedback": 0,
+        "feedback_notes": [],
+        "events_after": 0
+      },
+      "group_code": "g3"
+    },
+    {
+      "case_id": "J02",
+      "result_id": "43f9df69e8e244f08ef6936eaf9a6e4e",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J02",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 1526,
+        "completion": 417
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [],
+      "first_result": "{\"tasks\":[{\"task_type\":\"inspection\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":null,\"end_at\":null,\"reason\":\"巡检请求未确认（inspection_requested 未知），巡检时长未知，现场与天气可作业性均未确认，无法排定具体时段\",\"evidence_rule_ids\":[]},{\"task_type\":\"maintenance\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":null,\"end_at\":null,\"reason\":\"维护需求与问题均未确认，维护时长未知，前置条件为空且未核验，无法排定具体时段\",\"evidence_rule_ids\":[]}],\"missing_fields\":[\"crop\",\"crop_confirmed\",\"stage\",\"stage_confirmed\",\"field_type\",\"rice_stubble\",\"cold_waterlogged\",\"terrain\",\"area_mu\",\"inspection_requested\",\"maintenance_need_confirmed\",\"maintenance_problem_confirmed\",\"moisture\",\"ditch_connectivity\",\"standing_water\",\"leaf_count\",\"pest_signs\",\"missing_seedlings\",\"crowding\",\"actual_rain_observed\",\"winter_before_context_confirmed\",\"inspection_duration_minutes\",\"maintenance_duration_minutes\",\"inspection_earliest_date\",\"maintenance_earliest_date\",\"maintenance_prerequisites\",\"province_confirmed\",\"site_workable\",\"weather_workable\"],\"explanation\":\"仅依据输入生成巡检与维护两类候选任务，均为待确认状态，未排定开始与结束时间。作物、生育期、地块属性、巡检与维护需求及问题、作业时长、最早可作业日期、前置条件、现场与天气可作业性等均未知，需现场确认；2026-10-20 有 120 分钟可用时段（09:00-10:00、10:00-11:00），其余日期资源为 0，但因时长与可作业性未确认，未据此排程。天气为合成模拟，非实时预报，不作为作业依据。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "inspection",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "reason": "巡检请求未确认（inspection_requested 未知），巡检时长未知，现场与天气可作业性均未确认，无法排定具体时段",
+            "evidence_rule_ids": []
+          },
+          {
+            "task_type": "maintenance",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "reason": "维护需求与问题均未确认，维护时长未知，前置条件为空且未核验，无法排定具体时段",
+            "evidence_rule_ids": []
+          }
+        ],
+        "missing_fields": [
+          "crop",
+          "crop_confirmed",
+          "stage",
+          "stage_confirmed",
+          "field_type",
+          "rice_stubble",
+          "cold_waterlogged",
+          "terrain",
+          "area_mu",
+          "inspection_requested",
+          "maintenance_need_confirmed",
+          "maintenance_problem_confirmed",
+          "moisture",
+          "ditch_connectivity",
+          "standing_water",
+          "leaf_count",
+          "pest_signs",
+          "missing_seedlings",
+          "crowding",
+          "actual_rain_observed",
+          "winter_before_context_confirmed",
+          "inspection_duration_minutes",
+          "maintenance_duration_minutes",
+          "inspection_earliest_date",
+          "maintenance_earliest_date",
+          "maintenance_prerequisites",
+          "province_confirmed",
+          "site_workable",
+          "weather_workable"
+        ],
+        "explanation": "仅依据输入生成巡检与维护两类候选任务，均为待确认状态，未排定开始与结束时间。作物、生育期、地块属性、巡检与维护需求及问题、作业时长、最早可作业日期、前置条件、现场与天气可作业性等均未知，需现场确认；2026-10-20 有 120 分钟可用时段（09:00-10:00、10:00-11:00），其余日期资源为 0，但因时长与可作业性未确认，未据此排程。天气为合成模拟，非实时预报，不作为作业依据。"
+      },
+      "errors": [],
+      "elapsed_ms": 2409.249,
+      "group_code": "g1"
+    },
+    {
+      "case_id": "J02",
+      "result_id": "72d703249e7b4491b73734ca5adec73d",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J02",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 2425,
+        "completion": 276
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [
+        {
+          "name": "search_rules",
+          "status": "pending",
+          "query": {
+            "province": null,
+            "province_confirmed": false,
+            "crop": null,
+            "crop_confirmed": false,
+            "stage": null,
+            "stage_confirmed": false,
+            "field_type": null,
+            "task_type": "all",
+            "problem": null,
+            "problem_confirmed": null,
+            "maintenance_requested": null,
+            "maintenance_purpose": null,
+            "winter_before_context_confirmed": null,
+            "actual_rain_observed": null
+          }
+        }
+      ],
+      "first_result": "{\"tasks\":[{\"task_type\":\"inspection\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":null,\"end_at\":null,\"reason\":\"巡田检查候选；地区、作物、生育期及现场作业条件均待确认，无法排定具体时间\",\"evidence_rule_ids\":[\"C31\",\"C11\"]}],\"missing_fields\":[\"province\",\"crop\",\"stage\",\"field_type\",\"rice_stubble\",\"cold_waterlogged\",\"terrain\",\"area_mu\",\"inspection_requested\",\"maintenance_need_confirmed\",\"maintenance_problem_confirmed\",\"moisture\",\"ditch_connectivity\",\"standing_water\",\"leaf_count\",\"pest_signs\",\"missing_seedlings\",\"crowding\",\"actual_rain_observed\",\"winter_before_context_confirmed\",\"inspection_duration_minutes\",\"maintenance_duration_minutes\",\"inspection_earliest_date\",\"maintenance_earliest_date\",\"site_workable\",\"weather_workable\"],\"explanation\":\"输入为模拟数据，地区、作物、生育期等关键信息均未确认，规则适用性为待确认。仅生成巡田检查候选任务，不生成维护任务；因缺少作业时长、最早可作业日期及现场与天气可作业性确认，任务时间保持待定，需用户补充确认。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "inspection",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "reason": "巡田检查候选；地区、作物、生育期及现场作业条件均待确认，无法排定具体时间",
+            "evidence_rule_ids": [
+              "C31",
+              "C11"
+            ]
+          }
+        ],
+        "missing_fields": [
+          "province",
+          "crop",
+          "stage",
+          "field_type",
+          "rice_stubble",
+          "cold_waterlogged",
+          "terrain",
+          "area_mu",
+          "inspection_requested",
+          "maintenance_need_confirmed",
+          "maintenance_problem_confirmed",
+          "moisture",
+          "ditch_connectivity",
+          "standing_water",
+          "leaf_count",
+          "pest_signs",
+          "missing_seedlings",
+          "crowding",
+          "actual_rain_observed",
+          "winter_before_context_confirmed",
+          "inspection_duration_minutes",
+          "maintenance_duration_minutes",
+          "inspection_earliest_date",
+          "maintenance_earliest_date",
+          "site_workable",
+          "weather_workable"
+        ],
+        "explanation": "输入为模拟数据，地区、作物、生育期等关键信息均未确认，规则适用性为待确认。仅生成巡田检查候选任务，不生成维护任务；因缺少作业时长、最早可作业日期及现场与天气可作业性确认，任务时间保持待定，需用户补充确认。"
+      },
+      "errors": [],
+      "elapsed_ms": 2057.708,
+      "group_code": "g2"
+    },
+    {
+      "case_id": "J03",
+      "result_id": "9b4a82ac8f7c413a9cb0c05638af22d5",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J03",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": false,
+      "status": "partial",
+      "elapsed_ms": 87.732,
+      "model_calls": 0,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": null,
+        "completion": null
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "errors": [],
+      "notes": [
+        "反馈 0（completed）无法解析，已跳过"
+      ],
+      "result": {
+        "profile_ready": true,
+        "missing_fields": [
+          "maintenance_purpose"
+        ],
+        "evaluation_items": [
+          {
+            "task_id": "j03-20261019-I",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "schedule_status": "not_generated",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "no_need",
+            "reason": "已确认不需要，未生成任务"
+          },
+          {
+            "task_id": "j03-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "maintenance_purpose"
+            ],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "necessity_pending",
+            "reason": "需求或现场问题尚未确认"
+          }
+        ],
+        "adopted_version_id": "1f959223-247a-4081-96ae-105ef451de1b",
+        "current_plan_items": [
+          {
+            "task_id": "j03-20261019-I",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "no_need",
+            "schedule_status": "not_generated",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [],
+            "current_evidence_rule_ids": [
+              "C11",
+              "C31"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C31",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "no_need",
+            "reason": "已确认不需要，未生成任务"
+          },
+          {
+            "task_id": "j03-20261019-M",
+            "task_type": "maintenance",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "missing_fields": [
+              "maintenance_purpose"
+            ],
+            "current_evidence_rule_ids": [
+              "C23"
+            ],
+            "deferred_reference_rule_ids": [
+              "C19"
+            ],
+            "evidence_summaries": [
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              },
+              {
+                "rule_id": "C19",
+                "status_label": "暂缓自动适用，仅作历史参考",
+                "usage_role": "historical_reference",
+                "source_context_summary": "2025年湖北冬前稻茬、低洼及冷浸田背景；含厢宽和布沟参数",
+                "project_use_limit": "历史参考；田型及积水如实记录，不自动新开沟或套用尺寸"
+              }
+            ],
+            "reason_code": "necessity_pending",
+            "reason": "需求或现场问题尚未确认"
+          }
+        ],
+        "committed_feedback": 3,
+        "feedback_notes": [
+          "反馈 0（completed）无法解析，已跳过"
+        ],
+        "events_after": 3
+      },
+      "group_code": "g3"
+    },
+    {
+      "case_id": "J03",
+      "result_id": "496215075dfe4f1689769451d83cb590",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J03",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 1818,
+        "completion": 252
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [],
+      "first_result": "{\"tasks\":[{\"task_type\":\"maintenance\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":null,\"end_at\":null,\"reason\":\"已确认需要维护且维护问题已确认；排水沟连通性受损（impaired），土壤偏湿（wet）；维护最早/截止日期均为2026-10-26，但可用作业时段与现场可作业性待确认\",\"evidence_rule_ids\":[]}],\"missing_fields\":[\"maintenance_earliest_date\",\"maintenance_prerequisites\",\"workability_by_date.2026-10-21.site_workable\",\"standing_water\"],\"explanation\":\"依据输入：维护需求与问题均已确认，无额外巡田要求，故仅生成维护候选；未生成巡田任务。2026-10-20 有可用时段（09:00-11:00，资源120分钟，维护时长45分钟），但维护最早日期为空、前置条件为空，且反馈显示2026-10-21现场可作业性未知、仅09:00-09:15可用，故不排定具体开始/结束时间，保持待确认。所有天气与可作业性均为模拟数据，未作现场确认。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "maintenance",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "reason": "已确认需要维护且维护问题已确认；排水沟连通性受损（impaired），土壤偏湿（wet）；维护最早/截止日期均为2026-10-26，但可用作业时段与现场可作业性待确认",
+            "evidence_rule_ids": []
+          }
+        ],
+        "missing_fields": [
+          "maintenance_earliest_date",
+          "maintenance_prerequisites",
+          "workability_by_date.2026-10-21.site_workable",
+          "standing_water"
+        ],
+        "explanation": "依据输入：维护需求与问题均已确认，无额外巡田要求，故仅生成维护候选；未生成巡田任务。2026-10-20 有可用时段（09:00-11:00，资源120分钟，维护时长45分钟），但维护最早日期为空、前置条件为空，且反馈显示2026-10-21现场可作业性未知、仅09:00-09:15可用，故不排定具体开始/结束时间，保持待确认。所有天气与可作业性均为模拟数据，未作现场确认。"
+      },
+      "errors": [],
+      "elapsed_ms": 2045.022,
+      "group_code": "g1"
+    },
+    {
+      "case_id": "J03",
+      "result_id": "00a328db6957470d90d3864a21a8cb84",
+      "source": "任务落实_20261020\\李思默\\第一步_需求与执行准备\\联调与开发回归\\不计分联调样例_3例.jsonl",
+      "validation": {
+        "case_id": "J03",
+        "format": "legacy",
+        "status": "ok",
+        "operations": [],
+        "problems": [],
+        "warnings": []
+      },
+      "scorable": true,
+      "status": "executed",
+      "model": "deepseek-flash",
+      "model_calls": 1,
+      "weather_http_calls": 0,
+      "token_usage": {
+        "prompt": 2830,
+        "completion": 232
+      },
+      "cost": null,
+      "cost_status": "unknown",
+      "tool_records": [
+        {
+          "name": "search_rules",
+          "status": "pending",
+          "query": {
+            "province": "湖北",
+            "province_confirmed": true,
+            "crop": "油菜",
+            "crop_confirmed": true,
+            "stage": "苗期",
+            "stage_confirmed": true,
+            "field_type": "lowland_rice_stubble",
+            "task_type": "all",
+            "problem": null,
+            "problem_confirmed": true,
+            "maintenance_requested": true,
+            "maintenance_purpose": null,
+            "winter_before_context_confirmed": null,
+            "actual_rain_observed": null
+          }
+        }
+      ],
+      "first_result": "{\"tasks\":[{\"task_type\":\"maintenance\",\"task_id\":null,\"schedule_status\":\"pending\",\"start_at\":null,\"end_at\":null,\"reason\":\"维护需求已确认，但现场问题与清理既有沟渠的目的待确认；规则检索状态为 pending，C23 适用性待确认，不能推定维护必要性。\",\"evidence_rule_ids\":[\"C23\"]}],\"missing_fields\":[\"maintenance_problem\",\"maintenance_purpose\",\"maintenance_earliest_date\",\"maintenance_prerequisites\",\"maintenance_task_id\",\"workability_by_date\"],\"explanation\":\"输入确认需要维护且无额外先巡田要求，故仅生成 maintenance 候选，不生成 inspection。维护开始/结束时间未排定：2026-10-20 有可用时段，但维护最早日期、前置条件及现场问题/清沟目的均待确认；后续反馈中 2026-10-21 现场可作业性未知且仅 09:00-09:15 可用，不能据此排期。所有未知字段保持待确认，未补造天气或农业规则。\"}",
+      "result": {
+        "tasks": [
+          {
+            "task_type": "maintenance",
+            "task_id": null,
+            "schedule_status": "pending",
+            "start_at": null,
+            "end_at": null,
+            "reason": "维护需求已确认，但现场问题与清理既有沟渠的目的待确认；规则检索状态为 pending，C23 适用性待确认，不能推定维护必要性。",
+            "evidence_rule_ids": [
+              "C23"
+            ]
+          }
+        ],
+        "missing_fields": [
+          "maintenance_problem",
+          "maintenance_purpose",
+          "maintenance_earliest_date",
+          "maintenance_prerequisites",
+          "maintenance_task_id",
+          "workability_by_date"
+        ],
+        "explanation": "输入确认需要维护且无额外先巡田要求，故仅生成 maintenance 候选，不生成 inspection。维护开始/结束时间未排定：2026-10-20 有可用时段，但维护最早日期、前置条件及现场问题/清沟目的均待确认；后续反馈中 2026-10-21 现场可作业性未知且仅 09:00-09:15 可用，不能据此排期。所有未知字段保持待确认，未补造天气或农业规则。"
+      },
+      "errors": [],
+      "elapsed_ms": 2008.463,
+      "group_code": "g2"
+    }
+  ],
+  "summary": {
+    "cases": 3,
+    "executed": 8,
+    "partial": 1,
+    "failed": 0,
+    "not_run_model_disabled": 0,
+    "input_invalid": 0,
+    "missing_credentials": 0
+  },
+  "code_commit_note": "HEAD为运行时基线；实现尚未提交，不能把该提交号视为完整运行版本"
+}

@@ -203,10 +203,10 @@ def test_validate_reports_invalid_dates_and_capability_gaps() -> None:
     ]
     gap = validate_case(_case(script=gap_script))
     assert gap["status"] == "warning"
-    assert any(item["code"] == "unsupported:request" for item in gap["warnings"])
+    assert any(item["code"] == "request_missing_confirmation" for item in gap["warnings"])
 
 
-def test_unsupported_and_model_steps_are_recorded_as_partial() -> None:
+def test_incomplete_new_request_stops_without_inventing_task() -> None:
     script = [
         {"step": 1, "at": "2026-10-20T18:10:00+08:00", "operation": "save_draft", "payload": {}},
         {
@@ -225,10 +225,71 @@ def test_unsupported_and_model_steps_are_recorded_as_partial() -> None:
     with tempfile.TemporaryDirectory() as directory:
         outcome = run_scripted_case(_case(script=script), database=Path(directory) / "t01.sqlite3")
 
-    assert outcome["status"] == "partial"
+    assert outcome["status"] == "failed"
     assert [row["status"] for row in outcome["steps"]] == [
         "ok",
-        "unsupported_capability",
-        "pending_model_authorization",
+        "failed",
+        "skipped_after_failure",
     ]
     assert outcome["result"]["draft_version"] == 1
+
+
+def test_explicit_new_demand_links_completed_task_and_preserves_it() -> None:
+    case = _case()
+    case["draft"]["profile"].update(
+        inspection_requested=False,
+        maintenance_need_confirmed=True,
+        maintenance_problem_confirmed=True,
+        maintenance_purpose="clear_existing_ditch",
+        ditch_connectivity="impaired",
+        maintenance_duration_minutes=30,
+    )
+    case["interaction_script"] = [
+        {"step": 1, "at": "2026-10-20T18:10:00+08:00", "operation": "save_draft"},
+        {"step": 2, "at": "2026-10-20T18:11:00+08:00", "operation": "evaluate"},
+        {"step": 3, "at": "2026-10-20T18:12:00+08:00", "operation": "adopt"},
+        {
+            "step": 4,
+            "at": "2026-10-21T09:30:00+08:00",
+            "operation": "commit_feedback",
+            "payload": {
+                "events": [
+                    {
+                        "feedback": {
+                            "kind": "completed",
+                            "task_id": "sim-t01-M",
+                            "at": "2026-10-21T09:30:00+08:00",
+                        }
+                    }
+                ]
+            },
+        },
+        {
+            "step": 5,
+            "at": "2026-10-21T10:00:00+08:00",
+            "operation": "request",
+            "payload": {
+                "new_task_request": {
+                    "related_completed_task_id": "sim-t01-M",
+                    "maintenance_need_confirmed": True,
+                    "maintenance_problem_confirmed": True,
+                    "maintenance_purpose": "clear_existing_ditch",
+                }
+            },
+        },
+        {"step": 6, "at": "2026-10-21T10:01:00+08:00", "operation": "preview"},
+        {
+            "step": 7,
+            "at": "2026-10-21T10:02:00+08:00",
+            "operation": "adopt",
+            "payload": {"plan_binding": "preview_6"},
+        },
+    ]
+    with tempfile.TemporaryDirectory() as directory:
+        outcome = run_scripted_case(case, database=Path(directory) / "recurrence.sqlite3")
+
+    assert outcome["status"] == "executed", outcome["errors"]
+    assert outcome["result"]["event_count"] == 4
+    items = outcome["result"]["current_plan_items"]
+    assert len([item for item in items if item["task_type"] == "maintenance"]) == 2, outcome
+    assert any(item["schedule_status"] == "completed" for item in items)

@@ -250,7 +250,7 @@ def test_rule_adoption_status_shapes_evidence_before_planning(tmp_path: Path) ->
 
     assert "C23" not in maintenance_rules
     assert inspection["C31"].status_label == "已采用（限用途）"
-    assert inspection["C11"].status_label == "限用途采用（负责人确认，待独立复核）"
+    assert inspection["C11"].status_label == "当前限用途依据（AI辅助复核已交付，正式采用待确认）"
     assert "暂缓" in inspection["C19"].status_label
 
     preview = service.preview_plan("field-1")
@@ -666,6 +666,7 @@ def test_completed_maintenance_remains_historical_when_a_new_need_is_confirmed(
                     "inspection_requested": False,
                     "maintenance_need_confirmed": True,
                     "maintenance_problem_confirmed": True,
+                    "maintenance_purpose": "clear_existing_ditch",
                     "maintenance_duration_minutes": 60,
                 }
             )

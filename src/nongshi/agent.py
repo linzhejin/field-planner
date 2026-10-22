@@ -401,6 +401,11 @@ class AgentServiceV3:
                     }
                 )
 
+        if (proposals or previews) and traces and traces[-1].status == "success":
+            return finish(
+                "success",
+                text="已生成待确认内容，请逐项核对后再保存或采用。",
+            )
         return finish(
             "error",
             text=last_tool_summary,
@@ -618,6 +623,7 @@ class AgentServiceV3:
             "inspection_requested",
             "maintenance_need_confirmed",
             "maintenance_problem_confirmed",
+            "maintenance_purpose",
             "moisture",
             "ditch_connectivity",
             "standing_water",

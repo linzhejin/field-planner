@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from nongshi.planning_v2 import build_source_context_summary
+from nongshi.planning_v2 import build_rule_evidence
 from nongshi.rules import RuleCatalog, load_rule_catalog
-from nongshi.schema_v2 import RuleEvidenceV2
 from nongshi.schema_v3 import (
     RuleSearchHitV3,
     RuleSearchQueryV3,
@@ -95,12 +94,7 @@ class RuleRetrieverV3:
 
     def _hit(self, rule_id: str, query: RuleSearchQueryV3) -> RuleSearchHitV3:
         card = self.catalog.cards[rule_id]
-        evidence = [
-            RuleEvidenceV2(
-                **{**row, "source_context_summary": build_source_context_summary(row)}
-            )
-            for row in self.catalog.evidence_for([rule_id])
-        ]
+        evidence = build_rule_evidence(self.catalog, [rule_id])
         supplementary = [
             RuleSupplementarySourceV3(**row) for row in self.catalog.supplementary_for([rule_id])
         ]
@@ -131,12 +125,18 @@ class RuleRetrieverV3:
                 applicability, reason = "pending", "需要先确认田型。"
             elif query.field_type == "other":
                 applicability, reason = "out_of_scope", "当前田型超出维护候选的首版适用范围。"
+            elif query.maintenance_purpose == "other":
+                applicability, reason = "out_of_scope", "当前目的不是清理既有沟渠，超出本规则用途。"
             elif query.problem_confirmed is False or query.maintenance_requested is False:
                 applicability, reason = "out_of_scope", "用户已确认无相应问题或不需要维护。"
-            elif query.problem_confirmed is not True or query.maintenance_requested is not True:
+            elif (
+                query.problem_confirmed is not True
+                or query.maintenance_requested is not True
+                or query.maintenance_purpose is None
+            ):
                 applicability, reason = (
                     "pending",
-                    "现场问题和维护需求都需要用户确认；资料不能推定现场确有堵塞或需要维护。",
+                    "现场问题、清理既有沟渠的目的和维护需求都需要用户确认；资料不能推定现场需要维护。",
                 )
             else:
                 applicability, reason = (

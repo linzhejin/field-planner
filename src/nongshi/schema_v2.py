@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, time
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -96,6 +96,7 @@ class FieldProfile(BaseModel):
     inspection_requested: bool | None = None
     maintenance_need_confirmed: bool | None = None
     maintenance_problem_confirmed: bool | None = None
+    maintenance_purpose: Literal["clear_existing_ditch", "other"] | None = None
     moisture: Literal["dry", "normal", "wet"] | None = None
     ditch_connectivity: Literal["clear", "impaired"] | None = None
     standing_water: bool | None = None
@@ -234,7 +235,25 @@ class RuleEvidenceV2(BaseModel):
     source_sha256: str
     runtime_enabled: bool = False
     status_label: str = "开发验证，适用性待复核"
+    usage_role: Literal["limited_support", "historical_reference", "development_candidate"] = (
+        "development_candidate"
+    )
     source_context_summary: str = ""
+    project_use_limit: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_legacy_usage_role(cls, value: Any) -> Any:
+        """Read older stored snapshots without rewriting their evidence rows."""
+        if isinstance(value, dict) and "usage_role" not in value:
+            result = dict(value)
+            label = str(result.get("status_label") or "")
+            if "暂缓" in label:
+                result["usage_role"] = "historical_reference"
+            elif "限用途" in label:
+                result["usage_role"] = "limited_support"
+            return result
+        return value
 
 
 class PlanItemV2(BaseModel):
@@ -265,6 +284,7 @@ class FeedbackV2(BaseModel):
         Literal[
             "maintenance_need_confirmed",
             "maintenance_problem_confirmed",
+            "maintenance_purpose",
             "moisture",
             "ditch_connectivity",
             "standing_water",

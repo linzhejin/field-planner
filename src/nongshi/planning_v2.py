@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import re
+import json
 from datetime import UTC, date, datetime, time, timedelta
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from nongshi.rules import RuleCatalog, load_rule_catalog
@@ -75,17 +77,31 @@ def _task_state(plot: FieldProfile, task_type: str) -> tuple[str, str, list[str]
     else:
         problem, problem_missing = _problem_state(plot)
         if problem is True:
-            necessity = "required"
+            if plot.maintenance_purpose == "clear_existing_ditch":
+                necessity = "required"
+            elif plot.maintenance_purpose is None:
+                necessity = "unknown"
+                missing.append("maintenance_purpose")
+            else:
+                necessity = "unknown"
         else:
             necessity = "unknown"
             missing.extend(problem_missing or ["maintenance_problem_confirmed"])
 
     applicability = scope
+    if (
+        task_type == "maintenance"
+        and plot.maintenance_need_confirmed is not False
+        and plot.maintenance_purpose is None
+    ):
+        missing.append("maintenance_purpose")
     if task_type == "maintenance" and necessity != "no_need" and applicability == "matched":
         if plot.field_type is None:
             applicability = "pending"
             missing.append("field_type")
         elif plot.field_type == "other":
+            applicability = "out_of_scope"
+        elif plot.maintenance_purpose == "other":
             applicability = "out_of_scope"
     return applicability, necessity, list(dict.fromkeys(missing))
 
@@ -106,77 +122,45 @@ def _rule_ids_for(plot: FieldProfile, task_type: str) -> list[str]:
     return list(dict.fromkeys(rules))
 
 
+@lru_cache(maxsize=1)
+def _source_context_records() -> dict[str, dict[str, str]]:
+    path = Path(__file__).with_name("data") / "rule_source_context.json"
+    return json.loads(path.read_text(encoding="utf-8"))["records"]
+
+
 def build_source_context_summary(raw: dict[str, Any]) -> str:
-    """从 evidence_for 返回的 dict 里拼一段来源背景摘要。
+    """Only use the reviewed context for this exact rule and source pair."""
+    key = f"{raw['rule_id']}/{raw['source_id']}"
+    return _source_context_records().get(key, {}).get("source_context_summary", "来源背景待复核")
 
-    取年份、地区级别、阶段、田型/干湿、限制摘要；不动原卡或 evidence_for 签名。
-    """
-    date_text = raw.get("source_date", "")
-    publisher = raw.get("publisher", "")
-    applicability = raw.get("applicability_text", "")
-    quote = raw.get("quote", "")
-    limits = raw.get("limits", "")
-    combined = f"{applicability} {quote}"
 
-    parts: list[str] = []
-
-    # 年份
-    year_match = re.search(r"(\d{4})", date_text)
-    if year_match:
-        parts.append(f"{year_match.group(1)}年")
-
-    # 地区级别
-    national_kws = ("农业农村部办公厅", "农业农村部", "农业部", "全国农业技术推广", "全国农技推广")
-    provincial_kws = ("省", "湖北", "长江流域")
-    city_kws = ("市农业", "市农技", "市农业农村")
-    if any(kw in publisher for kw in national_kws):
-        parts.append("国家/部委")
-    elif any(kw in publisher for kw in city_kws):
-        parts.append("市级")
-    elif any(kw in publisher for kw in provincial_kws[:1]) or any(
-        kw in applicability for kw in provincial_kws[1:]
-    ):
-        parts.append("省级")
-
-    # 阶段
-    phase_map = [
-        ("冬前", "冬前"),
-        ("苗期", "苗期"),
-        ("播后", "播后"),
-        ("扩种", "扩种通知"),
-        ("持续阴雨", "持续阴雨"),
-        ("抗渍涝", "抗渍涝"),
-        ("苗情监测", "苗情监测"),
-    ]
-    for kw, label in phase_map:
-        if kw in applicability:
-            parts.append(label)
-            break
-
-    # 田型/干湿
-    field_keywords = []
-    if "稻茬田" in combined:
-        field_keywords.append("稻茬田")
-    if "低洼田" in combined or "冷浸田" in combined:
-        field_keywords.append("低洼/冷浸田")
-    if "丘陵岗地" in combined or "易旱" in combined:
-        field_keywords.append("丘陵岗地/易旱")
-    if "湿度偏大" in combined or "排水" in combined or "降渍" in combined:
-        if "偏湿" not in field_keywords:
-            field_keywords.append("偏湿情境")
-    if "墒情" in combined and not field_keywords:
-        field_keywords.append("墒情相关")
-    if field_keywords:
-        parts.append("·".join(field_keywords))
-
-    # 限制摘要
-    if limits:
-        limit_trimmed = limits.strip().rstrip("。；;，,")
-        if len(limit_trimmed) > 60:
-            limit_trimmed = limit_trimmed[:60] + "…"
-        parts.append(f"限制：{limit_trimmed}")
-
-    return "｜".join(parts)
+def build_rule_evidence(
+    catalog: RuleCatalog,
+    rule_ids: list[str],
+    review_status: dict[str, str] | None = None,
+) -> list[RuleEvidenceV2]:
+    """Shared evidence contract for planning, search, tool results, and exports."""
+    result: list[RuleEvidenceV2] = []
+    for raw in catalog.evidence_for(rule_ids):
+        rule_id = raw["rule_id"]
+        user_status = (review_status or {}).get(rule_id)
+        if user_status == "rejected":
+            continue
+        context = _source_context_records().get(f"{rule_id}/{raw['source_id']}", {})
+        raw["source_context_summary"] = build_source_context_summary(raw)
+        raw["project_use_limit"] = context.get("project_use_limit", "仅供查阅，项目用途待复核")
+        evidence = RuleEvidenceV2(**raw)
+        if rule_id in catalog.deferred_rule_ids:
+            evidence.usage_role = "historical_reference"
+            evidence.status_label = "暂缓自动适用，仅作历史参考"
+        elif user_status == "adopted":
+            evidence.usage_role = "limited_support"
+            evidence.status_label = "已采用（限用途）"
+        elif rule_id in catalog.limited_adopt_rule_ids:
+            evidence.usage_role = "limited_support"
+            evidence.status_label = "当前限用途依据（AI辅助复核已交付，正式采用待确认）"
+        result.append(evidence)
+    return result
 
 
 def _make_evidence(
@@ -189,28 +173,9 @@ def _make_evidence(
 
     优先级：用户 review_status > catalog 分类（正式确认）> 默认。
     不改 _rule_ids_for 返回值，暂缓卡仍出现在列表中但 label 不同。
-    formal_adopted 仍为 0；仅表达负责人确认 + 待李思默独立复核的状态。
+    formal_adopted 仍为 0；AI 辅助复核交付不等于成员签认或正式采用。
     """
-    status_by_rule = review_status or {}
-    deferred = catalog.deferred_rule_ids
-    limited = catalog.limited_adopt_rule_ids
-    result: list[RuleEvidenceV2] = []
-    for raw in catalog.evidence_for(_rule_ids_for(plot, task_type)):
-        rule_id = raw["rule_id"]
-        user_status = status_by_rule.get(rule_id)
-        if user_status == "rejected":
-            continue
-        raw["source_context_summary"] = build_source_context_summary(raw)
-        evidence = RuleEvidenceV2(**raw)
-        if user_status == "adopted":
-            evidence.status_label = "已采用（限用途）"
-        elif rule_id in deferred:
-            evidence.status_label = "暂缓自动适用，仅作历史参考"
-        elif rule_id in limited:
-            evidence.status_label = "限用途采用（负责人确认，待独立复核）"
-        # 其他默认保持 schema_v2 的默认值
-        result.append(evidence)
-    return result
+    return build_rule_evidence(catalog, _rule_ids_for(plot, task_type), review_status)
 
 
 def _effective_workability(plot: FieldProfile, day: DayWindow) -> tuple[bool | None, bool | None]:
@@ -490,11 +455,7 @@ def build_plan_v2(
     current_ids = {item.task_id for item in items}
     if previous:
         for old in previous.items:
-            if (
-                old.completed
-                and old.task_id in request.completed_at
-                and old.task_id not in current_ids
-            ):
+            if old.task_id in request.completed_at and old.task_id not in current_ids:
                 items.append(old.model_copy(deep=True))
 
     floor = datetime.combine(request.start_date, time.min, tzinfo=LOCAL_ZONE)

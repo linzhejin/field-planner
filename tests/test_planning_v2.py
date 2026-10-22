@@ -34,6 +34,7 @@ def request_v2(**field_overrides: object) -> PlanRequestV2:
         "inspection_requested": True,
         "maintenance_need_confirmed": True,
         "maintenance_problem_confirmed": True,
+        "maintenance_purpose": "clear_existing_ditch",
         "moisture": "wet",
         "ditch_connectivity": "impaired",
         "standing_water": False,

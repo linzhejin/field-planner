@@ -1,0 +1,84 @@
+"""The A/B arms must call a model and keep invalid output unscorable."""
+
+from __future__ import annotations
+
+import json
+
+import httpx
+
+from nongshi.config import Settings
+from nongshi.d02_model_groups import run_model_group
+
+
+def _case() -> dict:
+    return {
+        "case_id": "D01",
+        "received_at": "2026-10-21T18:00:00+08:00",
+        "draft": {
+            "field_id": "demo-1",
+            "profile": {
+                "id": "demo-1",
+                "name": "模拟田",
+                "province": "湖北",
+                "province_confirmed": True,
+                "crop": "油菜",
+                "crop_confirmed": True,
+                "stage": "苗期",
+                "stage_confirmed": True,
+                "field_type": "lowland_rice_stubble",
+                "inspection_requested": True,
+            },
+        },
+        "feedback_events": [],
+        "expected_answer": {"secret": "must not enter prompt"},
+    }
+
+
+def _settings() -> Settings:
+    return Settings(llm_api_key="test-key", llm_model="deepseek-flash")
+
+
+def test_a_and_b_make_real_requests_with_same_case_and_b_retrieval() -> None:
+    requests: list[dict] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == "Bearer test-key"
+        body = json.loads(request.content)
+        requests.append(body)
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"message": {"content": json.dumps({"tasks": [], "missing_fields": []})}}
+                ],
+                "usage": {"prompt_tokens": 23, "completion_tokens": 7},
+            },
+        )
+
+    transport = httpx.MockTransport(respond)
+    a = run_model_group(_case(), "A", settings=_settings(), transport=transport)
+    b = run_model_group(_case(), "B", settings=_settings(), transport=transport)
+    assert a["status"] == b["status"] == "executed", b["errors"]
+    assert a["model_calls"] == b["model_calls"] == 1
+    assert a["token_usage"] == b["token_usage"] == {"prompt": 23, "completion": 7}
+    assert a["cost"] is None and b["cost"] is None
+    assert a["tool_records"] == []
+    assert b["tool_records"][0]["name"] == "search_rules"
+    assert "must not enter prompt" not in json.dumps(requests, ensure_ascii=False)
+    assert requests[0]["temperature"] == requests[1]["temperature"] == 0
+    assert requests[0]["model"] == requests[1]["model"]
+    assert "limited_support" in json.dumps(requests[1], ensure_ascii=False)
+
+
+def test_bad_model_output_is_unscorable() -> None:
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "not json"}}]},
+        )
+    )
+    row = run_model_group(_case(), "A", settings=_settings(), transport=transport)
+    assert row["status"] == "failed"
+    assert row["scorable"] is False
+    assert row["model_calls"] == 1
+    assert row["first_result"] == "not json"

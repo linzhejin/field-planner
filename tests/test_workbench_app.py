@@ -53,6 +53,25 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     assert saved.draft.profile.observed_at is None
 
 
+def test_narrow_assistant_quick_observation_saves_fact(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+
+    app.button(key=f"quick_observe:{field_id}").click().run()
+    assert not app.exception
+    assert app.session_state[f"quick_feedback_kind:{field_id}"] == "observation"
+    app.selectbox(key=f"quick_observation_field:{field_id}").set_value("积水情况").run()
+    app.selectbox(key=f"quick_observation_value:{field_id}:积水情况").set_value("是")
+    app.button(key=f"quick_save_observation:{field_id}:0").click().run()
+
+    assert not app.exception
+    assert WorkbenchStoreV3(database).get_field(field_id).fact_version == 1
+
+
 def test_saving_confirmed_field_observations_records_their_source_and_time(
     tmp_path: Path, monkeypatch
 ) -> None:  # type: ignore[no-untyped-def]
