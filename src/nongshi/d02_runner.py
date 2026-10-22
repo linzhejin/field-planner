@@ -36,7 +36,7 @@ import httpx
 from nongshi.config import Settings
 from nongshi.d02_model_groups import run_model_group, shared_rule_query
 from nongshi.repository_v3 import WorkbenchStoreV3
-from nongshi.schema_v2 import LOCAL_ZONE, FeedbackV2, TimeWindow
+from nongshi.schema_v2 import LOCAL_ZONE, FeedbackV2, PlanItemV2, TimeWindow
 from nongshi.schema_v3 import (
     FactEventInputV3,
     FieldDraftV3,
@@ -68,6 +68,7 @@ OUTPUT_DIR = PROJECT_ROOT / "reports"
 
 SCRIPT_OPERATIONS = {
     "save_draft",
+    "save_additional_field",
     "evaluate",
     "preview",
     "adopt",
@@ -76,6 +77,7 @@ SCRIPT_OPERATIONS = {
     "read_history",
     "request",
     "chat",
+    "confirm_feedback",
 }
 MODEL_OPERATIONS = {"chat"}
 EXPECTED_WEATHER_STATUSES = {
@@ -138,6 +140,17 @@ def _parse_moment(value: object) -> datetime:
     return moment.astimezone(UTC)
 
 
+def injected_failure_for_step(case: dict[str, Any], step: dict[str, Any]) -> dict[str, Any] | None:
+    """Read only a failure explicitly scheduled for this user turn."""
+    fixture = case.get("adapter_failure_fixture") or {}
+    if fixture.get("operation") not in {None, step.get("operation")}:
+        return None
+    for item in fixture.get("attempts") or [fixture]:
+        if item.get("inject_at_step") == step.get("step"):
+            return item.get("response") or item
+    return None
+
+
 def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
     return [
         {
@@ -192,6 +205,21 @@ class _FixedWeatherService:
         self.now = now
 
     def search_locations(self, query: str) -> list[GeocodingResultV3]:
+        lookup = self.case.get("location_lookup_fixture") or {}
+        if query.strip() and query.strip().casefold() == str(lookup.get("query") or "").casefold():
+            return [
+                GeocodingResultV3(
+                    id=str(raw["candidate_id"]),
+                    name=str(raw.get("display_name") or raw.get("query") or ""),
+                    latitude=float(raw["latitude"]),
+                    longitude=float(raw["longitude"]),
+                    timezone=str(raw.get("timezone") or "Asia/Shanghai"),
+                    query=str(raw.get("query") or query),
+                    match_source="local_gazetteer",
+                    resolution=str(raw.get("resolution") or "unknown"),
+                )
+                for raw in lookup.get("candidates") or []
+            ]
         raw = (self.case.get("weather_fixture") or {}).get("location") or {}
         location = _weather_location(raw)
         if location is None or not query.strip():
@@ -224,6 +252,20 @@ class _FixedWeatherService:
         end_date: date,
     ) -> WeatherSnapshotV3:
         fixture = self.case.get("weather_fixture") or {}
+        if fixture.get("attempts"):
+            available = [
+                attempt
+                for attempt in fixture["attempts"]
+                if _parse_moment(attempt["at"]) <= self.now().astimezone(UTC)
+            ]
+            if not available:
+                raise WeatherServiceError("invalid", "模拟天气响应尚未到达")
+            attempt = available[-1]
+            fixture = {
+                **fixture,
+                **attempt,
+                "fetched_at": attempt["at"] if attempt.get("status") == "success" else None,
+            }
         status = fixture.get("status")
         if status != "success":
             code = {
@@ -232,7 +274,7 @@ class _FixedWeatherService:
                 "missing_dates": "missing_dates",
             }.get(status, "invalid")
             raise WeatherServiceError(code, f"固定天气夹具状态：{status}")
-        snapshot = _weather_snapshot(self.case)
+        snapshot = _weather_snapshot({**self.case, "weather_fixture": fixture})
         if (
             snapshot is None
             or snapshot.coverage_start != start_date
@@ -379,7 +421,9 @@ def validate_case(case: dict[str, Any]) -> dict[str, Any]:
                 {"code": "requires_model", "detail": "脚本含 chat 步骤，C 组离线只能记为待模型授权"}
             )
         for step in steps:
-            if step.get("operation") == "request":
+            if step.get("operation") == "request" and (step.get("payload") or {}).get(
+                "new_task_request"
+            ):
                 demand = (step.get("payload") or {}).get("new_task_request") or {}
                 if not (
                     demand.get("related_completed_task_id")
@@ -468,6 +512,9 @@ class _ScriptSession:
         self._settings = settings or Settings()
         self._agent = None
         self._active_step = 0
+        self._chat_proposals: dict[int, list[Any]] = {}
+        self._conversation: list[dict[str, str]] = []
+        self._displayed_result: dict[str, Any] | None = None
 
     def _operation_id(self, step: dict[str, Any], suffix: str = "") -> str:
         return f"{self.case_id}-s{step.get('step')}{suffix}"
@@ -505,6 +552,8 @@ class _ScriptSession:
             expected_version=expected,
             operation_id=self._operation_id(step),
         )
+        if step.get("user_message"):
+            self._conversation.append({"role": "user", "content": str(step["user_message"])})
         self._inject_weather()
         return (
             "ok",
@@ -513,6 +562,29 @@ class _ScriptSession:
                 "fact_version": state.fact_version,
                 "field_id": state.id,
                 "weather_injected": self.weather_injected,
+            },
+            None,
+        )
+
+    def _op_save_additional_field(
+        self, step: dict[str, Any]
+    ) -> tuple[str, dict[str, Any], str | None]:
+        """Save a separate field using only the user-supplied companion draft."""
+        reference = (step.get("payload") or {}).get("draft_ref")
+        if reference != "companion_field_draft" or reference not in self.case:
+            return "rejected", {}, "附加地块缺少可核对的用户档案"
+        draft = FieldDraftV3.model_validate(copy.deepcopy(self.case[reference]))
+        if draft.field_id == self.field_id:
+            return "rejected", {}, "附加地块 ID 与当前地块重复"
+        state = self.service.save_field_draft(
+            draft, expected_version=None, operation_id=self._operation_id(step)
+        )
+        return (
+            "ok",
+            {
+                "field_id": state.id,
+                "draft_version": state.draft_version,
+                "independent_schedule_only": True,
             },
             None,
         )
@@ -599,6 +671,16 @@ class _ScriptSession:
         if preview_id is None:
             return "failed", {}, f"脚本引用 {binding} 没有对应预览，无法取消"
         preview = self.service.cancel_preview(preview_id)
+        current = self.service.get_current_plan(self.field_id)
+        self._displayed_result = {
+            "tasks": _plan_rows(list(current.items)) if current else [],
+            "missing_fields": list(
+                dict.fromkeys(field for item in current.items for field in item.missing_fields)
+            )
+            if current
+            else [],
+            "source": "adopted_after_cancel",
+        }
         return "ok", {"preview_id": preview.id, "status": preview.status}, None
 
     def _op_commit_feedback(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
@@ -723,7 +805,47 @@ class _ScriptSession:
             self.field_id,
             str(step.get("user_message") or ""),
             received_at=self.clock.now(),
+            conversation=list(self._conversation),
         )
+        self._conversation.extend(
+            [
+                {"role": "user", "content": str(step.get("user_message") or "")},
+                {"role": "assistant", "content": response.text or response.error_message},
+            ]
+        )
+        self._chat_proposals[int(step["step"])] = list(response.proposals)
+        artifacts: dict[str, Any] = {}
+        for trace in response.tools:
+            if trace.name == "evaluate_field" and trace.status == "success" and trace.result:
+                items = [PlanItemV2.model_validate(row) for row in trace.result.get("items", [])]
+                self._remember_tasks(items)
+                artifacts["items"] = _plan_rows(items)
+                artifacts["missing_fields"] = trace.result.get("missing_fields", [])
+        if response.previews:
+            preview = response.previews[-1]
+            self.bindings.setdefault("initial_preview", preview.id)
+            self.bindings[f"preview_{step['step']}"] = preview.id
+            binding = (step.get("payload") or {}).get("preview_binding")
+            if binding:
+                self.bindings[str(binding)] = preview.id
+            self._remember_tasks(list(preview.version.plan.items))
+            artifacts.update(
+                preview_id=preview.id,
+                items=_plan_rows(list(preview.version.plan.items)),
+                missing_fields=list(
+                    dict.fromkeys(
+                        field
+                        for item in preview.version.plan.items
+                        for field in item.missing_fields
+                    )
+                ),
+            )
+        if "items" in artifacts:
+            self._displayed_result = {
+                "tasks": artifacts["items"],
+                "missing_fields": artifacts.get("missing_fields", []),
+                "step": step["step"],
+            }
         status = "ok" if response.status == "success" else "failed"
         return (
             status,
@@ -733,8 +855,61 @@ class _ScriptSession:
                 "model": response.model,
                 "tools": [tool.name for tool in response.tools],
                 "tool_statuses": [tool.status for tool in response.tools],
+                "tool_traces": [tool.model_dump(mode="json") for tool in response.tools],
+                "proposals": [proposal.model_dump(mode="json") for proposal in response.proposals],
+                **artifacts,
             },
             None if status == "ok" else response.error_message,
+        )
+
+    def _op_confirm_feedback(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
+        """Confirm only the model's exact proposal; script events are a comparison, not writes."""
+        payload = step.get("payload") or {}
+        proposals = self._chat_proposals.get(int(payload.get("proposal_step", -1)), [])
+        if not proposals or any(proposal.kind != "facts" for proposal in proposals):
+            return "rejected", {}, "模型未提供可确认的事实提案；未补写脚本答案"
+        expected = []
+        for raw in payload.get("events") or []:
+            item = copy.deepcopy(raw)
+            feedback = item.get("feedback") or {}
+            if feedback.get("task_id") is not None:
+                feedback["task_id"] = self._map_task_id(feedback["task_id"])
+            expected.append(FactEventInputV3.model_validate(item))
+
+        def signature(event: FactEventInputV3) -> str:
+            feedback = event.feedback
+            if feedback:
+                feedback = feedback.model_copy(update={"at": feedback.at.astimezone(UTC)})
+            return json.dumps(
+                {
+                    "feedback": feedback.model_dump(mode="json") if feedback else None,
+                    "correction_of": event.correction_of,
+                    "retracts": event.retracts,
+                },
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+
+        actual = [event for proposal in proposals for event in proposal.events]
+        if not actual or sorted(map(signature, actual)) != sorted(map(signature, expected)):
+            return "rejected", {}, "模型提案与用户确认内容不一致；未改写提案或补写事实"
+        versions = {proposal.expected_fact_version for proposal in proposals}
+        if len(versions) != 1 or None in versions:
+            return "rejected", {}, "模型提案的依据版本不一致"
+        result = self.service.commit_events(
+            self.field_id,
+            actual,
+            expected_fact_version=versions.pop(),
+            operation_id=self._operation_id(step),
+        )
+        return (
+            "ok",
+            {
+                "fact_version": result.fact_version,
+                "event_ids": [e.event_id for e in result.events],
+                "replayed": result.replayed,
+            },
+            None,
         )
 
     def execute_step(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
@@ -753,6 +928,7 @@ class _ScriptSession:
             "latest_plan_id": state.latest_plan_id,
             "plan_stale": state.plan_stale,
             "current_plan_items": _plan_rows(list(current.items)) if current else [],
+            "displayed_result": copy.deepcopy(self._displayed_result),
             "plan_history_ids": [
                 version.id for version in self.service.plan_history(self.field_id)
             ],
@@ -769,6 +945,7 @@ class _ScriptSession:
                 for version in self.service.plan_history(self.field_id)
             ],
             "task_id_map": dict(self.actual_task_ids),
+            "saved_field_ids": [field.id for field in self.service.list_fields()],
             "bindings": dict(self.bindings),
             "weather_status": self.weather_status,
             "weather_injected": self.weather_injected,
@@ -785,15 +962,16 @@ def run_scripted_case(
     enable_model: bool = False,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
-    """按 interaction_script 执行一例；失败即停并保留已完成步骤，不重试、不覆盖。"""
+    """Execute declared steps; prepared cases may inspect state after a recorded failure."""
     errors: list[str] = []
     step_rows: list[dict[str, Any]] = []
     started = time.perf_counter()
     session = _ScriptSession(case, database=database, enable_model=enable_model, settings=settings)
     steps = list(case.get("interaction_script") or [])
     failed_at: int | None = None
+    continue_after_failure = bool(case.get("continue_after_failure"))
     for index, step in enumerate(steps):
-        if failed_at is not None:
+        if failed_at is not None and not continue_after_failure:
             step_rows.append(
                 {
                     "step": step.get("step"),
@@ -807,8 +985,18 @@ def run_scripted_case(
         step_started = time.perf_counter()
         note = None
         try:
-            status, output, note = session.execute_step(step)
-            if status == "failed":
+            injected = injected_failure_for_step(case, step)
+            if injected is not None:
+                status = "failed"
+                output = {
+                    "injected_failure": True,
+                    "failure_status": injected.get("status"),
+                    "attempt": injected.get("attempt"),
+                }
+                note = str(injected.get("message") or injected.get("status") or "模拟接口失败")
+            else:
+                status, output, note = session.execute_step(step)
+            if status in {"failed", "rejected"}:
                 errors.append(f"步骤 {step.get('step')} {step.get('operation')}: {note or '失败'}")
                 failed_at = index
         except Exception as error:  # noqa: BLE001 - 记录失败而非中断整批
@@ -841,7 +1029,7 @@ def run_scripted_case(
             session._agent.close()
 
     statuses = {row["status"] for row in step_rows}
-    if errors or "failed" in statuses:
+    if errors or statuses & {"failed", "rejected"}:
         status = "failed"
     elif statuses & {"unsupported_capability", "pending_model_authorization"}:
         status = "partial"

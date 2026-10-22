@@ -106,6 +106,71 @@ def test_model_input_only_contains_reached_steps_and_no_future_feedback() -> Non
     assert "feedback_events" not in first
 
 
+def test_model_input_hides_future_weather_retry() -> None:
+    case = _case()
+    case["weather_fixture"] = {
+        "status": "http_error",
+        "attempts": [
+            {"at": "2026-10-21T18:00:00+08:00", "status": "http_error"},
+            {
+                "at": "2026-10-21T18:05:00+08:00",
+                "status": "success",
+                "daily": [{"date": "2026-10-22", "secret": "future-weather"}],
+            },
+        ],
+    }
+    case["interaction_script"] = [
+        {"step": 1, "at": "2026-10-21T18:00:00+08:00", "operation": "save_draft"},
+        {"step": 2, "at": "2026-10-21T18:01:00+08:00", "operation": "chat"},
+        {"step": 3, "at": "2026-10-21T18:06:00+08:00", "operation": "chat"},
+    ]
+    first = _case_input(case, through_step=2)
+    later = _case_input(case, through_step=3)
+    assert first["weather_fixture"]["status"] == "http_error"
+    assert "future-weather" not in json.dumps(first)
+    assert later["weather_fixture"]["status"] == "success"
+    assert later["weather_fixture"]["daily"][0]["secret"] == "future-weather"
+
+
+def test_model_input_applies_only_confirmed_resource_change() -> None:
+    case = _case()
+    case["draft"]["days"] = [
+        {
+            "day": "2026-10-22",
+            "resource_minutes": 60,
+            "intervals": [{"start": "09:00", "end": "10:00"}],
+        }
+    ]
+    case["interaction_script"] = [
+        {"step": 1, "at": "2026-10-21T18:00:00+08:00", "operation": "save_draft"},
+        {
+            "step": 2,
+            "at": "2026-10-21T18:01:00+08:00",
+            "operation": "chat",
+            "user_message": "下午不在",
+        },
+        {
+            "step": 3,
+            "at": "2026-10-21T18:02:00+08:00",
+            "operation": "confirm_feedback",
+            "payload": {
+                "events": [
+                    {
+                        "feedback": {
+                            "kind": "resource",
+                            "day": "2026-10-22",
+                            "resource_minutes": 30,
+                            "intervals": [{"start": "09:00", "end": "09:30"}],
+                        }
+                    }
+                ]
+            },
+        },
+    ]
+    assert _case_input(case, through_step=2)["draft"]["days"][0]["resource_minutes"] == 60
+    assert _case_input(case, through_step=3)["draft"]["days"][0]["resource_minutes"] == 30
+
+
 def test_b_retrieval_contains_same_full_evidence_fields_as_agent_tool() -> None:
     payload, _ = _retrieval(_case())
     evidence = [row for hit in payload["hits"] for row in hit["evidence"]]

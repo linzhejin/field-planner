@@ -11,10 +11,13 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from nongshi.config import Settings
-from nongshi.d02_scoring import _tasks
+from nongshi.d02_scoring import _effective_inputs, _tasks
+from nongshi.rules import load_rule_catalog
 
 JUDGE_PROMPT = (
     "你只核对农业建议是否被所引原文、地区、作物、生育期、田型和用途限制支持。"
+    "sources 是资料库原文，claims.evidence 是被测系统的主张，不能把后者当作原始证据。"
+    "没有匹配的原始出处时不得判 supported；必要事实缺失时判 uncertain。"
     "不能根据模型输出补造现场事实；历史参考不能当直接处置依据。"
     "逐条返回 supported、unsupported 或 uncertain；严重无依据处置标 serious。"
     '只输出 JSON：{"judgments":[{"claim_id":"task-0",'
@@ -37,7 +40,7 @@ class JudgeResult(BaseModel):
 
 def blind_packet(case: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
     """Exclude group name, runtime, token/cost and tool logs from the judge's view."""
-    profile = (case.get("draft") or {}).get("profile") or {}
+    profile, days = _effective_inputs(case)
     fields = (
         "province",
         "crop",
@@ -50,6 +53,36 @@ def blind_packet(case: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]
         "ditch_connectivity",
     )
     tasks = _tasks(record)
+    catalog = load_rule_catalog()
+    source_index = {
+        (row["rule_id"], row["source_id"]): row
+        for rule_id in catalog.cards
+        for row in catalog.evidence_for([rule_id])
+    }
+    cited_keys = {
+        (str(item.get("rule_id")), str(item.get("source_id")))
+        for task in tasks
+        for item in task.get("evidence_summaries") or []
+    }
+    sources = []
+    for key in sorted(cited_keys):
+        original = source_index.get(key)
+        if original is None:
+            continue
+        adoption = catalog.rule_adoptions.get(key[0])
+        sources.append(
+            {
+                "rule_id": key[0],
+                "source_id": key[1],
+                "quote": original["quote"],
+                "pdf_pages": original["pdf_pages"],
+                "applicability": original["applicability_text"],
+                "condition": original["condition_text"],
+                "limits": original["limits"],
+                "adoption_decision": adoption.decision if adoption else None,
+                "adoption_scope": adoption.scope if adoption else None,
+            }
+        )
     claims = [
         {
             "claim_id": f"task-{index}",
@@ -64,6 +97,8 @@ def blind_packet(case: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]
     return {
         "result_id": record["result_id"],
         "facts": {field: profile.get(field) for field in fields},
+        "daily_facts": list(days.values()),
+        "sources": sources,
         "claims": claims,
     }
 
@@ -103,7 +138,13 @@ def judge_packet(
                         {
                             "role": "user",
                             "content": json.dumps(
-                                {"facts": packet["facts"], "claims": claims}, ensure_ascii=False
+                                {
+                                    "facts": packet["facts"],
+                                    "daily_facts": packet.get("daily_facts") or [],
+                                    "sources": packet.get("sources") or [],
+                                    "claims": claims,
+                                },
+                                ensure_ascii=False,
                             ),
                         },
                     ],
@@ -124,9 +165,29 @@ def judge_packet(
         actual = [item.claim_id for item in parsed.judgments]
         if set(actual) != expected or len(actual) != len(expected):
             raise ValueError("语义复核未逐条返回全部建议")
+        available = {
+            (str(source.get("rule_id")), str(source.get("source_id")))
+            for source in packet.get("sources") or []
+        }
+        claims_by_id = {claim["claim_id"]: claim for claim in claims}
+        judgments = []
+        for item in parsed.judgments:
+            judged = item.model_dump()
+            claim = claims_by_id[item.claim_id]
+            has_original = any(
+                (str(citation.get("rule_id")), str(citation.get("source_id"))) in available
+                for citation in claim.get("evidence") or []
+            )
+            if not has_original and judged["verdict"] == "supported":
+                judged.update(
+                    verdict="uncertain",
+                    severity="none",
+                    reason="未找到与本条建议引用匹配的资料库原文，不能判有依据",
+                )
+            judgments.append(judged)
         return {
             "status": "reviewed",
-            "judgments": [item.model_dump() for item in parsed.judgments],
+            "judgments": judgments,
             "first_result": raw_content,
             "model": body.get("model") or settings.llm_model,
             "token_usage": body.get("usage"),

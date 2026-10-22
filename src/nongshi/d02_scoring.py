@@ -50,7 +50,7 @@ def _tasks(record: dict[str, Any]) -> list[dict[str, Any]]:
 def _expected_feedback(case: dict[str, Any]) -> list[dict[str, Any]]:
     feedback: list[dict[str, Any]] = []
     for step in case.get("interaction_script") or []:
-        if step.get("operation") == "commit_feedback":
+        if step.get("operation") in {"commit_feedback", "confirm_feedback"}:
             feedback.extend(
                 item.get("feedback") or {}
                 for item in (step.get("payload") or {}).get("events") or []
@@ -78,7 +78,7 @@ def _effective_inputs(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, d
     days = {str(day["day"]): deepcopy(day) for day in draft.get("days") or []}
     for event in _expected_feedback(case):
         kind = event.get("kind")
-        if kind == "observation" and event.get("field") in profile:
+        if kind == "observation" and event.get("field"):
             profile[event["field"]] = event.get("value")
         elif kind in {"workability", "resource"}:
             day = days.get(str(event.get("day")))
@@ -97,10 +97,17 @@ def _effective_inputs(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, d
 
 def _feedback_consistency(case: dict[str, Any], record: dict[str, Any]) -> list[dict[str, Any]]:
     expected = _expected_feedback(case)
-    if not expected:
-        return [_check("feedback_consistency", NA, "案例无反馈")]
     result = record.get("result") or {}
     actual = [event.get("feedback") or {} for event in result.get("events") or []]
+    if not expected:
+        return [
+            _check(
+                "feedback_consistency",
+                FAIL if actual else NA,
+                "出现未经脚本确认的事实" if actual else "案例无反馈",
+                actual if actual else None,
+            )
+        ]
     if not actual:
         return [_check("feedback_consistency", FAIL, "已确认反馈未保存")]
     aliases = result.get("task_id_map") or {}
@@ -142,9 +149,24 @@ def _feedback_consistency(case: dict[str, Any], record: dict[str, Any]) -> list[
             detail = str(event.get("value"))
         return kind, str(target), detail
 
-    missing = Counter(map(signature, expected)) - Counter(map(signature, actual))
-    evidence = [{"signature": list(key), "count": count} for key, count in missing.items()]
-    return [_check("feedback_consistency", FAIL if missing else PASS, "反馈事实核对", evidence)]
+    expected_counts = Counter(map(signature, expected))
+    actual_counts = Counter(map(signature, actual))
+    missing = expected_counts - actual_counts
+    unexpected = actual_counts - expected_counts
+    evidence = {
+        "missing": [{"signature": list(key), "count": count} for key, count in missing.items()],
+        "unexpected": [
+            {"signature": list(key), "count": count} for key, count in unexpected.items()
+        ],
+    }
+    return [
+        _check(
+            "feedback_consistency",
+            FAIL if missing or unexpected else PASS,
+            "反馈事实核对",
+            evidence,
+        )
+    ]
 
 
 def _hard_constraints(
@@ -186,11 +208,14 @@ def _hard_constraints(
             violations.append({"type": "invalid_duration", "task_id": task_id})
             continue
         task_type = row.get("task_type")
-        duration = row.get("duration_minutes")
-        if duration is None:
-            duration = profile.get(f"{task_type}_duration_minutes")
+        duration = profile.get(f"{task_type}_duration_minutes")
         actual_minutes = (end - start).total_seconds() / 60
-        if duration is None or actual_minutes != duration or actual_minutes != int(actual_minutes):
+        if (
+            duration is None
+            or actual_minutes != duration
+            or actual_minutes != int(actual_minutes)
+            or (row.get("duration_minutes") is not None and row["duration_minutes"] != duration)
+        ):
             violations.append({"type": "duration_mismatch", "task_id": task_id})
         local_day = local_start.date().isoformat()
         day = days.get(local_day)
@@ -254,7 +279,11 @@ def _hard_constraints(
                 continue
             completed_id = feedback.get("task_id")
             current = by_id.get(completed_id)
-            if current and current.get("schedule_status") != "completed":
+            if (
+                current
+                and current.get("schedule_status") != "completed"
+                and result.get("plan_stale") is not True
+            ):
                 violations.append({"type": "completion_rewritten", "task_id": completed_id})
         history = result.get("plan_history") or []
         if len(history) >= 2:
@@ -363,7 +392,7 @@ def score_case(
     catalog = catalog or load_rule_catalog()
     checks: list[dict[str, Any]] = []
     status = record.get("status")
-    if status == "input_invalid":
+    if status == "input_invalid" or record.get("input_valid") is False:
         checks.append(_check("input_validity", FAIL, "输入无效，不能算执行成功"))
     elif status != "executed":
         allowed = status in set(contract.get("allowed_execution_statuses") or [])
@@ -401,6 +430,32 @@ def score_case(
             if row.get("task_type") == task_type and row.get("schedule_status") in ACTIVE
         ]
         checks.append(_check("forbidden_task", FAIL if matching else PASS, task_type))
+    for task_type in contract.get("forbidden_scheduled_task_types") or []:
+        scheduled = [
+            row
+            for row in tasks
+            if row.get("task_type") == task_type and row.get("schedule_status") == "scheduled"
+        ]
+        checks.append(
+            _check(
+                "forbidden_scheduled_task",
+                FAIL if scheduled else PASS,
+                task_type,
+                [row.get("task_id") for row in scheduled],
+            )
+        )
+    if "min_scheduled_tasks" in contract or "max_scheduled_tasks" in contract:
+        count = sum(row.get("schedule_status") == "scheduled" for row in tasks)
+        minimum = contract.get("min_scheduled_tasks", 0)
+        maximum = contract.get("max_scheduled_tasks", float("inf"))
+        checks.append(
+            _check(
+                "scheduled_task_count",
+                PASS if minimum <= count <= maximum else FAIL,
+                f"已安排 {count} 项，允许 {minimum} 至 {maximum} 项",
+                count,
+            )
+        )
     missing = set((record.get("common_result") or {}).get("missing_fields") or [])
     missing.update((record.get("result") or {}).get("missing_fields") or [])
     missing.update(field for row in tasks for field in row.get("missing_fields") or [])
@@ -435,8 +490,17 @@ def score_case(
             matched = False
             for step in steps:
                 if (
-                    step.get("operation") != requirement["operation"]
+                    (
+                        requirement.get("step") is not None
+                        and step.get("step") != requirement["step"]
+                    )
+                    or step.get("operation") != requirement["operation"]
                     or step.get("status") != requirement["status"]
+                ):
+                    continue
+                if requirement.get("failure_status") is not None and (
+                    (step.get("output") or {}).get("failure_status")
+                    != requirement["failure_status"]
                 ):
                     continue
                 tool = requirement.get("required_tool")
@@ -445,7 +509,7 @@ def score_case(
                     break
                 output = step.get("output") or {}
                 if any(
-                    name == tool and status == "success"
+                    (tool == "*" or name == tool) and status == "success"
                     for name, status in zip(
                         output.get("tools") or [],
                         output.get("tool_statuses") or [],

@@ -76,6 +76,22 @@ def test_formal_constraints_require_all_citations_and_real_tool_assertion() -> N
     assert not _purpose_confirmed_in_case({"draft": {"profile": {"maintenance_purpose": None}}})
 
 
+def test_declared_adapter_failure_may_require_a_failed_chat_instead_of_a_tool() -> None:
+    contract = {
+        "case_id": "PUBLIC-FAIL",
+        "basis": ["fixed fault fixture"],
+        "required_tasks": [],
+        "forbidden_task_types": ["inspection", "maintenance"],
+        "required_missing_fields": [],
+        "citation_required_task_types": ["inspection", "maintenance"],
+        "semantic_required": False,
+        "c_only_assertions": [{"step": 2, "operation": "chat", "status": "failed"}],
+        "allowed_execution_statuses": ["failed"],
+        "expected_fault_injection": True,
+    }
+    _validate_formal_constraints([contract])
+
+
 def test_formal_seal_rejects_missing_cases_before_creating_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from copy import deepcopy
+from datetime import datetime
 from typing import Any, Literal
 
 import httpx
@@ -42,10 +43,10 @@ class ModelPlan(BaseModel):
 def _visible_profile(case: dict[str, Any], steps: list[dict[str, Any]]) -> dict[str, Any]:
     profile = deepcopy((case.get("draft") or {}).get("profile") or {})
     for step in steps:
-        if step.get("operation") == "commit_feedback":
+        if step.get("operation") in {"commit_feedback", "confirm_feedback"}:
             for event in (step.get("payload") or {}).get("events") or []:
                 feedback = event.get("feedback") or {}
-                if feedback.get("kind") == "observation" and feedback.get("field") in profile:
+                if feedback.get("kind") == "observation" and feedback.get("field"):
                     profile[feedback["field"]] = feedback.get("value")
         elif step.get("operation") == "request":
             demand = (step.get("payload") or {}).get("new_task_request") or {}
@@ -57,6 +58,46 @@ def _visible_profile(case: dict[str, Any], steps: list[dict[str, Any]]) -> dict[
                 if field in demand:
                     profile[field] = demand[field]
     return profile
+
+
+def _visible_days(case: dict[str, Any], steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    days = deepcopy((case.get("draft") or {}).get("days") or [])
+    index = {str(day.get("day")): day for day in days}
+    for step in steps:
+        if step.get("operation") not in {"commit_feedback", "confirm_feedback"}:
+            continue
+        for event in (step.get("payload") or {}).get("events") or []:
+            feedback = event.get("feedback") or {}
+            day = index.get(str(feedback.get("day")))
+            if day is None:
+                continue
+            fields = {
+                "resource": ("resource_minutes", "intervals"),
+                "workability": ("site_workable", "weather_workable"),
+            }.get(feedback.get("kind"), ())
+            for field in fields:
+                if field in feedback:
+                    day[field] = feedback[field]
+    return days
+
+
+def _visible_weather(case: dict[str, Any], visible_at: str) -> dict[str, Any] | None:
+    fixture = deepcopy(case.get("weather_fixture"))
+    if not isinstance(fixture, dict):
+        return None
+    attempts = fixture.pop("attempts", None)
+    if not attempts:
+        return fixture
+    now = datetime.fromisoformat(visible_at)
+    available = [
+        attempt
+        for attempt in attempts
+        if attempt.get("at") and datetime.fromisoformat(attempt["at"]) <= now
+    ]
+    if not available:
+        return {"status": "not_yet_queried"}
+    latest = available[-1]
+    return {**fixture, **{key: value for key, value in latest.items() if key != "attempt"}}
 
 
 def _case_input(case: dict[str, Any], *, through_step: int | None = None) -> dict[str, Any]:
@@ -72,10 +113,11 @@ def _case_input(case: dict[str, Any], *, through_step: int | None = None) -> dic
     draft = deepcopy(case.get("draft"))
     if isinstance(draft, dict) and isinstance(draft.get("profile"), dict):
         draft["profile"] = _visible_profile(case, visible_steps)
+        draft["days"] = _visible_days(case, visible_steps)
     return {
         "received_at": case.get("received_at"),
         "draft": draft,
-        "weather_fixture": case.get("weather_fixture")
+        "weather_fixture": _visible_weather(case, visible_at)
         if not raw_steps or any(step.get("operation") == "save_draft" for step in visible_steps)
         else None,
         "messages": [
@@ -100,7 +142,7 @@ def _case_input(case: dict[str, Any], *, through_step: int | None = None) -> dic
                 "at": step.get("at"),
                 "operation": step.get("operation"),
                 "user_message": step.get("user_message"),
-                "payload": step.get("payload"),
+                "payload": step.get("payload") if step.get("operation") != "chat" else None,
             }
             for step in visible_steps
         ],
@@ -148,6 +190,7 @@ def run_model_group(
     settings: Settings | None = None,
     transport: httpx.BaseTransport | None = None,
     through_step: int | None = None,
+    previous_turns: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Execute one first attempt; preserve raw output, metrics and failures for later scoring."""
     if group not in {"A", "B"}:
@@ -175,6 +218,7 @@ def run_model_group(
             row["errors"].append("未配置模型密钥；A/B 组未执行")
             return row
         input_data = _case_input(case, through_step=through_step)
+        input_data["previous_model_turns"] = previous_turns or []
         if group == "B":
             evidence, record = _retrieval(case, through_step=through_step)
             input_data["rule_retrieval"] = evidence

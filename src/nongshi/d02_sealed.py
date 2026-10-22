@@ -24,6 +24,7 @@ from nongshi.d02_runner import (
     PROJECT_ROOT,
     _load_cases,
     _parse_moment,
+    injected_failure_for_step,
     run_group_c,
     run_scripted_case,
     validate_case,
@@ -132,10 +133,15 @@ def _validate_formal_constraints(constraints: list[dict[str, Any]]) -> None:
             )
         ):
             raise ValueError(f"{contract['case_id']} 没有可执行的参考断言")
-        if not any(
+        has_tool_assertion = any(
             row.get("operation") == "chat" and row.get("required_tool")
             for row in contract["c_only_assertions"]
-        ):
+        )
+        expected_fault = contract.get("expected_fault_injection") is True and any(
+            row.get("operation") == "chat" and row.get("status") == "failed"
+            for row in contract["c_only_assertions"]
+        )
+        if not has_tool_assertion and not expected_fault:
             raise ValueError(f"{contract['case_id']} 缺少C组真实对话工具断言")
 
 
@@ -190,6 +196,10 @@ def seal(
             for row in loaded["main_constraints"] + loaded["boundary_constraints"]
         }
         for case in all_cases:
+            if by_id[case["case_id"]].get("expected_fault_injection") and not case.get(
+                "adapter_failure_fixture"
+            ):
+                raise ValueError(f"{case['case_id']} 评分预期接口故障，但输入未封存故障夹具")
             expects_maintenance = any(
                 row.get("task_type") == "maintenance"
                 and "scheduled" in (row.get("allowed_statuses") or [])
@@ -221,6 +231,20 @@ def seal(
         ):
             raise ValueError("正式C组案例必须含实际 Agent 对话步骤")
         for case in loaded["main_cases"] + loaded["boundary_cases"]:
+            allowed_operations = {
+                "save_draft",
+                "save_additional_field",
+                "chat",
+                "confirm_feedback",
+                "adopt",
+                "cancel_preview",
+                "read_history",
+            }
+            unexpected = {
+                step.get("operation") for step in case["interaction_script"]
+            } - allowed_operations
+            if unexpected:
+                raise ValueError(f"{case['case_id']} 含绕过 Agent 的脚本操作：{sorted(unexpected)}")
             moments = [_parse_moment(case["received_at"])] + [
                 _parse_moment(step["at"]) for step in case["interaction_script"]
             ]
@@ -313,17 +337,55 @@ def _model_turns(case: dict[str, Any], group: str, settings: Settings) -> dict[s
     if not turns:
         turns = [next((step for step in steps if step.get("user_message")), {"step": 0})]
     outputs = []
+    previous_turns: list[dict[str, Any]] = []
     for step in turns:
-        output = run_model_group(case, group, settings=settings, through_step=int(step["step"]))
+        injected = injected_failure_for_step(case, step)
+        if injected is not None:
+            output = {
+                "status": "failed",
+                "scorable": True,
+                "failure_status": injected.get("status"),
+                "errors": [str(injected.get("message") or injected.get("status"))],
+                "result": None,
+                "first_result": None,
+                "model_calls": 0,
+                "elapsed_ms": 0,
+                "token_usage": {"prompt": None, "completion": None},
+                "tool_records": [],
+                "cost": None,
+                "cost_status": "unknown",
+            }
+        else:
+            output = run_model_group(
+                case,
+                group,
+                settings=settings,
+                through_step=int(step["step"]),
+                previous_turns=list(previous_turns),
+            )
         outputs.append({"step": step["step"], "output": output})
-        if output["status"] != "executed":
-            break
+        previous_turns.append(
+            {
+                "step": step["step"],
+                "model_result": output.get("result"),
+                "status": output["status"],
+                "errors": output.get("errors") or [],
+            }
+        )
     last = outputs[-1]["output"]
     return {
         **last,
+        "status": "executed"
+        if all(row["output"]["status"] == "executed" for row in outputs)
+        else "failed",
+        "scorable": all(row["output"].get("scorable") is True for row in outputs),
         "steps": outputs,
         "model_calls": sum(row["output"]["model_calls"] for row in outputs),
         "elapsed_ms": sum(row["output"]["elapsed_ms"] for row in outputs),
+        "tool_records": [
+            record for row in outputs for record in row["output"].get("tool_records", [])
+        ],
+        "errors": [error for row in outputs for error in row["output"].get("errors", [])],
         "token_usage": {
             key: sum(row["output"]["token_usage"][key] or 0 for row in outputs)
             if all(row["output"]["token_usage"][key] is not None for row in outputs)
@@ -335,6 +397,8 @@ def _model_turns(case: dict[str, Any], group: str, settings: Settings) -> dict[s
 
 def _common_result(outcome: dict[str, Any]) -> dict[str, Any]:
     raw = outcome.get("result") or {}
+    if raw.get("displayed_result") is not None:
+        raw = raw["displayed_result"]
     tasks = (
         raw.get("tasks")
         if isinstance(raw.get("tasks"), list)
@@ -368,6 +432,11 @@ def run_seal(directory: Path, *, settings: Settings, seed: int | None = None) ->
         raise ValueError("没有本地模型密钥；未启动首次正式运行")
     main = _read_jsonl(directory / FILES["main_cases"])
     boundary = _read_jsonl(directory / FILES["boundary_cases"])
+    contracts = {
+        row["case_id"]: row
+        for name in ("main_constraints", "boundary_constraints")
+        for row in _read_jsonl(directory / FILES[name])
+    }
     jobs = [(case, group, 1, "main") for case in main for group in ("A", "B", "C")]
     jobs.extend((case, "C", repeat, "boundary") for case in boundary for repeat in range(1, 4))
     order_seed = seed if seed is not None else secrets.randbits(64)
@@ -383,9 +452,13 @@ def run_seal(directory: Path, *, settings: Settings, seed: int | None = None) ->
                     outcome = run_scripted_case(
                         case, database=db, enable_model=True, settings=settings
                     )
-                    if manifest["classification"] != "public_development_only" and not any(
-                        run.get("tool_count", 0) > 0
-                        for run in (outcome.get("result") or {}).get("agent_runs") or []
+                    if (
+                        manifest["classification"] != "public_development_only"
+                        and not contracts[case["case_id"]].get("expected_fault_injection")
+                        and not any(
+                            run.get("tool_count", 0) > 0
+                            for run in (outcome.get("result") or {}).get("agent_runs") or []
+                        )
                     ):
                         outcome["status"] = "failed"
                         outcome.setdefault("errors", []).append("C组没有可核查的 Agent 工具调用")
@@ -407,7 +480,7 @@ def run_seal(directory: Path, *, settings: Settings, seed: int | None = None) ->
                 "repeat": repeat,
                 "input_valid": validate_case(case)["status"] != "invalid",
                 "execution_status": outcome.get("status"),
-                "scorable": outcome.get("status") == "executed",
+                "scorable": bool(outcome.get("steps")) or outcome.get("status") == "executed",
                 "common_result": _common_result(outcome),
                 **outcome,
             }

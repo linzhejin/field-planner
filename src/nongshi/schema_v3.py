@@ -377,6 +377,8 @@ class AgentToolTraceV3(BaseModel):
     status: Literal["success", "invalid_arguments", "failed", "limit_reached"]
     elapsed_ms: int = Field(ge=0)
     result_summary: str
+    arguments: dict[str, object] | None = None
+    result: dict[str, object] | None = None
 
 
 class AgentResponseV3(BaseModel):

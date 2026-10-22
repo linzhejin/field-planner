@@ -396,6 +396,8 @@ class AgentServiceV3:
                             status=trace_status,
                             elapsed_ms=elapsed_ms,
                             result_summary=summary,
+                            arguments=self._trace_arguments(call.function.arguments),
+                            result=tool_result,
                         )
                     )
                 messages.append(
@@ -416,6 +418,14 @@ class AgentServiceV3:
             text=last_tool_summary,
             error_message="本轮最多请求模型三次；工具结果已保留，请检查后重试。",
         )
+
+    @staticmethod
+    def _trace_arguments(raw: str) -> dict[str, object] | None:
+        try:
+            value = json.loads(raw)
+            return value if isinstance(value, dict) else None
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def _system_message(field_id: str, *, received_at: datetime) -> str:
