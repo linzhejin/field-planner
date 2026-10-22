@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -161,6 +162,7 @@ class AgentServiceV3:
         weather: OpenMeteoService | None = None,
         transport: httpx.BaseTransport | None = None,
         monotonic=time.perf_counter,
+        evaluation_rule_query: Callable[[], RuleSearchQueryV3] | None = None,
     ) -> None:
         self.settings = settings
         self.workbench = workbench
@@ -176,6 +178,7 @@ class AgentServiceV3:
         )
         self._monotonic = monotonic
         self._retriever = RuleRetrieverV3(workbench.catalog)
+        self._evaluation_rule_query = evaluation_rule_query
         self._geocoding_candidates: dict[str, tuple[str, GeocodingResultV3]] = {}
 
     def close(self) -> None:
@@ -292,6 +295,8 @@ class AgentServiceV3:
                     headers={"Authorization": f"Bearer {api_key}"},
                     json={
                         "model": model,
+                        "temperature": 0,
+                        "max_tokens": 4096,
                         "messages": messages,
                         "tools": TOOL_DEFINITIONS,
                         "tool_choice": "auto",
@@ -475,7 +480,11 @@ class AgentServiceV3:
                 result = self.workbench.get_field(field_id).model_dump(mode="json")
             elif name == "search_rules":
                 args = SearchRulesArgs.model_validate(raw_arguments)
-                result = self._retriever.search(args.query).model_dump(mode="json")
+                query = self._evaluation_rule_query() if self._evaluation_rule_query else args.query
+                result = {
+                    "query": query.model_dump(mode="json"),
+                    **self._retriever.search(query).model_dump(mode="json"),
+                }
             elif name == "evaluate_field":
                 args = EvaluateFieldArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)

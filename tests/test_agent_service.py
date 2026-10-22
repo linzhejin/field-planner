@@ -11,6 +11,7 @@ import pytest
 
 from nongshi.agent import AgentServiceV3
 from nongshi.config import Settings
+from nongshi.d02_model_groups import _retrieval, shared_rule_query
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
 from nongshi.schema_v2 import DayWindow, FieldProfile, TimeWindow
@@ -111,6 +112,27 @@ def final_response(text: str = "已读取地块信息。") -> dict[str, object]:
         ],
         "usage": {"prompt_tokens": 7, "completion_tokens": 4},
     }
+
+
+def test_sealed_b_and_c_receive_identical_rule_snapshot(tmp_path: Path) -> None:
+    agent, service, _ = make_agent(
+        tmp_path, lambda _request: httpx.Response(200, json=final_response())
+    )
+    case = {
+        "received_at": "2026-10-18T16:00:00+08:00",
+        "draft": service.get_field("field-1").draft.model_dump(mode="json"),
+    }
+    expected, _ = _retrieval(case)
+    agent._evaluation_rule_query = lambda: shared_rule_query(case)
+    actual, _, _, status = agent._execute_tool(
+        "search_rules",
+        json.dumps({"query": {"task_type": "inspection"}}),
+        field_id="field-1",
+        run_id="eval-1",
+    )
+    agent.close()
+    assert status == "success"
+    assert actual == expected
 
 
 def test_chat_calls_local_read_tool_with_deepseek_flash_and_records_redacted_metrics(

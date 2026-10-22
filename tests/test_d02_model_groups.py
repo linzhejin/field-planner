@@ -7,7 +7,7 @@ import json
 import httpx
 
 from nongshi.config import Settings
-from nongshi.d02_model_groups import run_model_group
+from nongshi.d02_model_groups import _case_input, _retrieval, run_model_group
 
 
 def _case() -> dict:
@@ -82,3 +82,35 @@ def test_bad_model_output_is_unscorable() -> None:
     assert row["scorable"] is False
     assert row["model_calls"] == 1
     assert row["first_result"] == "not json"
+
+
+def test_model_input_only_contains_reached_steps_and_no_future_feedback() -> None:
+    case = _case()
+    case["feedback_events"] = [{"user_message": "future secret"}]
+    case["messages"] = [
+        {"sequence": 1, "user_message": "now"},
+        {"sequence": 1, "at": "2026-10-22T18:00:00+08:00", "user_message": "future secret"},
+    ]
+    case["interaction_script"] = [
+        {"step": 1, "at": "2026-10-21T18:00:00+08:00", "operation": "chat", "user_message": "now"},
+        {
+            "step": 2,
+            "at": "2026-10-22T18:00:00+08:00",
+            "operation": "commit_feedback",
+            "user_message": "future secret",
+        },
+    ]
+    first = _case_input(case, through_step=1)
+    assert "future secret" not in json.dumps(first, ensure_ascii=False)
+    assert len(first["interaction_script"]) == 1
+    assert "feedback_events" not in first
+
+
+def test_b_retrieval_contains_same_full_evidence_fields_as_agent_tool() -> None:
+    payload, _ = _retrieval(_case())
+    evidence = [row for hit in payload["hits"] for row in hit["evidence"]]
+    assert evidence
+    assert all(
+        {"source_id", "pdf_pages", "quote", "usage_role", "project_use_limit"} <= row.keys()
+        for row in evidence
+    )

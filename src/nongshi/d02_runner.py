@@ -24,6 +24,7 @@ import platform
 import subprocess
 import tempfile
 import time
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from datetime import time as clock_time
 from pathlib import Path
@@ -33,17 +34,19 @@ from uuid import uuid4
 import httpx
 
 from nongshi.config import Settings
-from nongshi.d02_model_groups import run_model_group
+from nongshi.d02_model_groups import run_model_group, shared_rule_query
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.schema_v2 import LOCAL_ZONE, FeedbackV2, TimeWindow
 from nongshi.schema_v3 import (
     FactEventInputV3,
     FieldDraftV3,
+    GeocodingResultV3,
     WeatherDayV3,
     WeatherLocationV3,
     WeatherSnapshotV3,
 )
 from nongshi.service_v3 import WorkbenchServiceV3
+from nongshi.weather import OpenMeteoService, WeatherServiceError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES = (
@@ -82,8 +85,8 @@ EXPECTED_WEATHER_STATUSES = {
     "timeout",
     "missing_dates",
 }
-# 夹具是固定预报快照；为避免第二天再取时被判过期，按长期有效注入（仅用于对照）。
-WEATHER_FIXTURE_TTL = timedelta(days=30)
+# 固定预报夹具仍按模拟时钟判断有效期，不因实际运行日期变化而延长缓存。
+WEATHER_FIXTURE_TTL = timedelta(hours=6)
 
 
 def _load_cases(path: Path) -> list[dict[str, Any]]:
@@ -143,6 +146,8 @@ def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
             "applicability": item.applicability,
             "necessity": item.necessity,
             "schedule_status": item.schedule_status,
+            "duration_minutes": item.duration_minutes,
+            "completed": item.completed,
             "start_at": item.start_at.isoformat() if item.start_at else None,
             "end_at": item.end_at.isoformat() if item.end_at else None,
             "missing_fields": list(item.missing_fields),
@@ -152,16 +157,7 @@ def _plan_rows(items: list[Any]) -> list[dict[str, Any]]:
             "deferred_reference_rule_ids": sorted(
                 {e.rule_id for e in item.evidence if e.usage_role == "historical_reference"}
             ),
-            "evidence_summaries": [
-                {
-                    "rule_id": e.rule_id,
-                    "status_label": e.status_label,
-                    "usage_role": e.usage_role,
-                    "source_context_summary": e.source_context_summary,
-                    "project_use_limit": e.project_use_limit,
-                }
-                for e in item.evidence
-            ],
+            "evidence_summaries": [e.model_dump(mode="json") for e in item.evidence],
             "reason_code": item.reason_code,
             "reason": item.reason,
         }
@@ -183,6 +179,79 @@ class _Clock:
 
     def today(self) -> date:
         return self._moment.astimezone(LOCAL_ZONE).date()
+
+
+class _FixedWeatherService:
+    """Evaluation-only weather tool: fixed fixture, no HTTP or wall-clock fallback."""
+
+    def __init__(
+        self, case: dict[str, Any], store: WorkbenchStoreV3, *, now: Callable[[], datetime]
+    ) -> None:
+        self.case = case
+        self.store = store
+        self.now = now
+
+    def search_locations(self, query: str) -> list[GeocodingResultV3]:
+        raw = (self.case.get("weather_fixture") or {}).get("location") or {}
+        location = _weather_location(raw)
+        if location is None or not query.strip():
+            return []
+        target = f"{location.query} {location.display_name}".casefold()
+        if query.strip().casefold() not in target:
+            return []
+        return [
+            GeocodingResultV3(
+                id="fixed-weather-location",
+                name=location.display_name,
+                latitude=location.latitude,
+                longitude=location.longitude,
+                timezone="Asia/Shanghai",
+                query=location.query,
+                match_source="local_gazetteer",
+                resolution=location.resolution,
+            )
+        ]
+
+    @staticmethod
+    def select_location(results: list[GeocodingResultV3], result_id: str) -> WeatherLocationV3:
+        return OpenMeteoService.select_location(results, result_id)
+
+    def fetch_forecast(
+        self,
+        field_id: str,
+        location: WeatherLocationV3,
+        start_date: date,
+        end_date: date,
+    ) -> WeatherSnapshotV3:
+        fixture = self.case.get("weather_fixture") or {}
+        status = fixture.get("status")
+        if status != "success":
+            code = {
+                "timeout": "timeout",
+                "http_error": "http",
+                "missing_dates": "missing_dates",
+            }.get(status, "invalid")
+            raise WeatherServiceError(code, f"固定天气夹具状态：{status}")
+        snapshot = _weather_snapshot(self.case)
+        if (
+            snapshot is None
+            or snapshot.coverage_start != start_date
+            or snapshot.coverage_end != end_date
+        ):
+            raise WeatherServiceError("missing_dates", "固定天气夹具没有完整覆盖七天")
+        if self.now().astimezone(UTC) >= snapshot.cache_expires_at:
+            raise WeatherServiceError("invalid", "固定天气快照按案例时钟已过期")
+        if (
+            snapshot.field_id != field_id
+            or snapshot.location.latitude != location.latitude
+            or snapshot.location.longitude != location.longitude
+        ):
+            raise WeatherServiceError("invalid", "固定天气夹具位置与当前地块不符")
+        self.store.save_weather_snapshot(snapshot)
+        return snapshot
+
+    def close(self) -> None:
+        return None
 
 
 def _weather_location(raw: object) -> WeatherLocationV3 | None:
@@ -246,7 +315,9 @@ def _weather_snapshot(case: dict[str, Any]) -> WeatherSnapshotV3 | None:
         coverage_end=days[-1].day,
         units={str(key): str(value) for key, value in (fixture.get("units") or {}).items()},
         days=days,
-        cache_expires_at=fetched_at + WEATHER_FIXTURE_TTL,
+        cache_expires_at=_parse_moment(fixture["cache_expires_at"])
+        if fixture.get("cache_expires_at")
+        else fetched_at + WEATHER_FIXTURE_TTL,
     )
 
 
@@ -396,6 +467,7 @@ class _ScriptSession:
         self._enable_model = enable_model
         self._settings = settings or Settings()
         self._agent = None
+        self._active_step = 0
 
     def _operation_id(self, step: dict[str, Any], suffix: str = "") -> str:
         return f"{self.case_id}-s{step.get('step')}{suffix}"
@@ -638,7 +710,15 @@ class _ScriptSession:
         if self._agent is None:
             from nongshi.agent import AgentServiceV3
 
-            self._agent = AgentServiceV3(self._settings, self.service)
+            self._agent = AgentServiceV3(
+                self._settings,
+                self.service,
+                weather=_FixedWeatherService(self.case, self.store, now=self.clock.now),
+                evaluation_rule_query=lambda: shared_rule_query(
+                    self.case, through_step=self._active_step
+                ),
+            )
+        self._active_step = int(step["step"])
         response = self._agent.run(
             self.field_id,
             str(step.get("user_message") or ""),
@@ -652,6 +732,7 @@ class _ScriptSession:
                 "text": response.text,
                 "model": response.model,
                 "tools": [tool.name for tool in response.tools],
+                "tool_statuses": [tool.status for tool in response.tools],
             },
             None if status == "ok" else response.error_message,
         )
@@ -676,6 +757,17 @@ class _ScriptSession:
                 version.id for version in self.service.plan_history(self.field_id)
             ],
             "event_count": len(self.service.list_events(self.field_id)),
+            "events": [
+                event.model_dump(mode="json") for event in self.service.list_events(self.field_id)
+            ],
+            "plan_history": [
+                {
+                    "id": version.id,
+                    "created_at": version.created_at.isoformat(),
+                    "items": _plan_rows(list(version.items)),
+                }
+                for version in self.service.plan_history(self.field_id)
+            ],
             "task_id_map": dict(self.actual_task_ids),
             "bindings": dict(self.bindings),
             "weather_status": self.weather_status,
@@ -744,6 +836,9 @@ def run_scripted_case(
         result = session.summary()
     except Exception as error:  # noqa: BLE001
         errors.append(f"汇总失败: {type(error).__name__}: {error}")
+    finally:
+        if session._agent is not None:
+            session._agent.close()
 
     statuses = {row["status"] for row in step_rows}
     if errors or "failed" in statuses:

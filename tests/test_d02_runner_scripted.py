@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import tempfile
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from nongshi.d02_runner import run_scripted_case, validate_case
+import pytest
+
+from nongshi.d02_runner import (
+    _FixedWeatherService,
+    _ScriptSession,
+    run_scripted_case,
+    validate_case,
+)
+from nongshi.weather import WeatherServiceError
 
 START = date(2026, 10, 20)
 
@@ -173,6 +181,35 @@ def test_weather_failure_fixture_is_not_injected() -> None:
     assert outcome["status"] == "executed"
     assert outcome["result"]["weather_injected"] is False
     assert any("http_error" in note for note in outcome["notes"])
+
+
+def test_agent_weather_tool_uses_only_fixed_fixture(tmp_path: Path) -> None:
+    case = _case()
+    session = _ScriptSession(case, database=tmp_path / "fixed.sqlite3")
+    session._op_save_draft(case["interaction_script"][0])
+    weather = _FixedWeatherService(case, session.store, now=session.clock.now)
+    assert len(weather.search_locations("模拟测试县")) == 1
+    location = session.service.get_field(case["draft"]["field_id"]).draft.location
+    assert location is not None
+    snapshot = weather.fetch_forecast(
+        case["draft"]["field_id"], location, START, START + timedelta(days=6)
+    )
+    assert snapshot.source == case["weather_fixture"]["source"]
+    session.clock.set(datetime.fromisoformat("2026-10-21T10:00:00+08:00"))
+    with pytest.raises(WeatherServiceError) as stale:
+        weather.fetch_forecast(
+            case["draft"]["field_id"], location, START, START + timedelta(days=6)
+        )
+    assert stale.value.code == "invalid"
+    session.clock.set(datetime.fromisoformat(case["received_at"]))
+    timeout_weather = _FixedWeatherService(
+        _case(weather_status="timeout"), session.store, now=session.clock.now
+    )
+    with pytest.raises(WeatherServiceError) as failure:
+        timeout_weather.fetch_forecast(
+            case["draft"]["field_id"], location, START, START + timedelta(days=6)
+        )
+    assert failure.value.code == "timeout"
 
 
 def test_invalid_draft_stops_script_and_keeps_remaining_steps() -> None:

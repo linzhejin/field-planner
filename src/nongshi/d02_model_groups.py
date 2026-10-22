@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from copy import deepcopy
 from typing import Any, Literal
 
 import httpx
@@ -23,8 +24,11 @@ class ModelTask(BaseModel):
     schedule_status: Literal["scheduled", "pending", "unscheduled", "not_generated", "completed"]
     start_at: str | None = None
     end_at: str | None = None
+    duration_minutes: int | None = None
+    completed: bool = False
     reason: str = ""
     evidence_rule_ids: list[str] = Field(default_factory=list)
+    evidence_summaries: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ModelPlan(BaseModel):
@@ -35,15 +39,62 @@ class ModelPlan(BaseModel):
     explanation: str = ""
 
 
-def _case_input(case: dict[str, Any]) -> dict[str, Any]:
+def _visible_profile(case: dict[str, Any], steps: list[dict[str, Any]]) -> dict[str, Any]:
+    profile = deepcopy((case.get("draft") or {}).get("profile") or {})
+    for step in steps:
+        if step.get("operation") == "commit_feedback":
+            for event in (step.get("payload") or {}).get("events") or []:
+                feedback = event.get("feedback") or {}
+                if feedback.get("kind") == "observation" and feedback.get("field") in profile:
+                    profile[feedback["field"]] = feedback.get("value")
+        elif step.get("operation") == "request":
+            demand = (step.get("payload") or {}).get("new_task_request") or {}
+            for field in (
+                "maintenance_need_confirmed",
+                "maintenance_problem_confirmed",
+                "maintenance_purpose",
+            ):
+                if field in demand:
+                    profile[field] = demand[field]
+    return profile
+
+
+def _case_input(case: dict[str, Any], *, through_step: int | None = None) -> dict[str, Any]:
     """Allowlist user-facing inputs; never include reference answers or scoring metadata."""
     raw_steps = case.get("interaction_script") or []
+    if raw_steps:
+        cutoff = through_step if through_step is not None else int(raw_steps[0]["step"])
+        visible_steps = [step for step in raw_steps if int(step["step"]) <= cutoff]
+        visible_at = str(visible_steps[-1].get("at") or case.get("received_at"))
+    else:
+        visible_steps = []
+        visible_at = str(case.get("received_at") or "")
+    draft = deepcopy(case.get("draft"))
+    if isinstance(draft, dict) and isinstance(draft.get("profile"), dict):
+        draft["profile"] = _visible_profile(case, visible_steps)
     return {
         "received_at": case.get("received_at"),
-        "draft": case.get("draft"),
-        "weather_fixture": case.get("weather_fixture"),
-        "feedback_events": case.get("feedback_events", []),
-        "messages": case.get("messages", []),
+        "draft": draft,
+        "weather_fixture": case.get("weather_fixture")
+        if not raw_steps or any(step.get("operation") == "save_draft" for step in visible_steps)
+        else None,
+        "messages": [
+            message
+            for message in case.get("messages", [])
+            if (
+                (
+                    not raw_steps
+                    and str(message.get("at") or case.get("received_at") or "") <= visible_at
+                )
+                or (raw_steps and message.get("at") and str(message["at"]) <= visible_at)
+                or (
+                    raw_steps
+                    and not message.get("at")
+                    and message.get("sequence") is not None
+                    and int(message["sequence"]) <= cutoff
+                )
+            )
+        ],
         "interaction_script": [
             {
                 "at": step.get("at"),
@@ -51,14 +102,17 @@ def _case_input(case: dict[str, Any]) -> dict[str, Any]:
                 "user_message": step.get("user_message"),
                 "payload": step.get("payload"),
             }
-            for step in raw_steps
+            for step in visible_steps
         ],
     }
 
 
-def _retrieval(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    profile = FieldProfile.model_validate((case.get("draft") or {}).get("profile") or {})
-    query = RuleSearchQueryV3(
+def shared_rule_query(
+    case: dict[str, Any], *, through_step: int | None = None
+) -> RuleSearchQueryV3:
+    visible = _case_input(case, through_step=through_step)
+    profile = FieldProfile.model_validate((visible.get("draft") or {}).get("profile") or {})
+    return RuleSearchQueryV3(
         province=profile.province,
         province_confirmed=profile.province_confirmed,
         crop=profile.crop,
@@ -73,29 +127,16 @@ def _retrieval(case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         winter_before_context_confirmed=profile.winter_before_context_confirmed,
         actual_rain_observed=profile.actual_rain_observed,
     )
+
+
+def _retrieval(
+    case: dict[str, Any], *, through_step: int | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    query = shared_rule_query(case, through_step=through_step)
     result = RuleRetrieverV3().search(query)
     payload = {
         "query": query.model_dump(mode="json"),
-        "status": result.status,
-        "reason": result.reason,
-        "hits": [
-            {
-                "rule_id": hit.rule_id,
-                "applicability": hit.applicability,
-                "reason": hit.reason,
-                "evidence": [
-                    {
-                        "rule_id": row.rule_id,
-                        "source_id": row.source_id,
-                        "usage_role": row.usage_role,
-                        "source_context_summary": row.source_context_summary,
-                        "project_use_limit": row.project_use_limit,
-                    }
-                    for row in hit.evidence
-                ],
-            }
-            for hit in result.hits
-        ],
+        **result.model_dump(mode="json"),
     }
     return payload, {"name": "search_rules", "status": result.status, "query": payload["query"]}
 
@@ -106,6 +147,7 @@ def run_model_group(
     *,
     settings: Settings | None = None,
     transport: httpx.BaseTransport | None = None,
+    through_step: int | None = None,
 ) -> dict[str, Any]:
     """Execute one first attempt; preserve raw output, metrics and failures for later scoring."""
     if group not in {"A", "B"}:
@@ -132,9 +174,9 @@ def run_model_group(
             row["status"] = "missing_credential"
             row["errors"].append("未配置模型密钥；A/B 组未执行")
             return row
-        input_data = _case_input(case)
+        input_data = _case_input(case, through_step=through_step)
         if group == "B":
-            evidence, record = _retrieval(case)
+            evidence, record = _retrieval(case, through_step=through_step)
             input_data["rule_retrieval"] = evidence
             row["tool_records"].append(record)
         prompt = (
@@ -144,11 +186,13 @@ def run_model_group(
             '输出结构：{"tasks":[{"task_type":"inspection",'
             '"task_id":null,"schedule_status":"pending",'
             '"start_at":null,"end_at":null,"reason":"",'
-            '"evidence_rule_ids":[]}],"missing_fields":[],"explanation":""}。'
+            '"duration_minutes":null,"completed":false,"evidence_rule_ids":[],"evidence_summaries":[]}]'
+            ',"missing_fields":[],"explanation":""}。引用须含规则、来源、页码、原文和用途。'
         )
         request = {
             "model": config.llm_model,
             "temperature": 0,
+            "max_tokens": 4096,
             "thinking": {"type": "disabled"},
             "response_format": {"type": "json_object"},
             "messages": [
