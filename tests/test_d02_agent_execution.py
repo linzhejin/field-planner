@@ -1,7 +1,7 @@
 """Public synthetic agent trials must use actual returned artifacts, never oracle rescue."""
 
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -126,6 +126,118 @@ def test_matching_confirmation_saves_model_event_and_replay_is_idempotent(tmp_pa
     saved = session.service.list_events(session.field_id)
     assert len(saved) == 1 and saved[0].event_id == actual.event_id
     session._agent.close()
+
+
+def test_confirmation_accepts_consistent_redundant_completion_day(tmp_path, monkeypatch):
+    session = _session(tmp_path)
+    preview = session.service.preview_plan(session.field_id)
+    session.service.adopt_plan(
+        preview.id,
+        expected_fact_version=preview.expected_fact_version,
+        expected_plan_id=preview.expected_plan_id,
+        operation_id="adopt-before-completion",
+    )
+    task = next(
+        item for item in session.service.get_current_plan(session.field_id).items if item.start_at
+    )
+    actual = FactEventInputV3(
+        feedback=FeedbackV2(
+            kind="completed",
+            task_id=task.task_id,
+            plot_id=session.field_id,
+            at=task.end_at,
+        )
+    )
+    proposal = AgentProposalV3(
+        kind="facts",
+        field_id=session.field_id,
+        expected_fact_version=0,
+        events=[actual],
+        summary="已完成",
+    )
+    monkeypatch.setattr(
+        "nongshi.agent.AgentServiceV3.run", lambda *a, **kw: _response(proposals=[proposal])
+    )
+    session._op_chat({"step": 2, "user_message": "已完成"})
+    expected = actual.model_dump(mode="json")
+    expected["feedback"]["day"] = task.end_at.date().isoformat()
+    expected["feedback"]["at"] = task.end_at.astimezone().isoformat()
+    assert (
+        session._op_confirm_feedback(
+            {"step": 3, "payload": {"proposal_step": 2, "events": [expected]}}
+        )[0]
+        == "ok"
+    )
+    assert len(session.service.list_events(session.field_id)) == 1
+    session._agent.close()
+
+
+def test_confirmation_rejects_conflicting_completion_day(tmp_path, monkeypatch):
+    session = _session(tmp_path)
+    preview = session.service.preview_plan(session.field_id)
+    session.service.adopt_plan(
+        preview.id,
+        expected_fact_version=preview.expected_fact_version,
+        expected_plan_id=preview.expected_plan_id,
+        operation_id="adopt-for-conflict",
+    )
+    task = next(
+        item for item in session.service.get_current_plan(session.field_id).items if item.start_at
+    )
+    actual = FactEventInputV3(
+        feedback=FeedbackV2(
+            kind="completed",
+            task_id=task.task_id,
+            plot_id=session.field_id,
+            at=task.end_at,
+        )
+    )
+    session._chat_proposals[2] = [
+        AgentProposalV3(
+            kind="facts",
+            field_id=session.field_id,
+            expected_fact_version=0,
+            events=[actual],
+            summary="完成",
+        )
+    ]
+    expected = actual.model_dump(mode="json")
+    expected["feedback"]["day"] = (task.end_at.date() + timedelta(days=1)).isoformat()
+    assert (
+        session._op_confirm_feedback(
+            {"step": 3, "payload": {"proposal_step": 2, "events": [expected]}}
+        )[0]
+        == "rejected"
+    )
+    assert session.service.list_events(session.field_id) == []
+
+
+def test_adopt_explicit_preview_binding_uses_new_preview(tmp_path, monkeypatch):
+    session = _session(tmp_path)
+    first = session.service.preview_plan(session.field_id)
+    session.bindings["initial_preview"] = first.id
+    assert session._op_adopt({"step": 2, "payload": {}})[0] == "ok"
+    second = session.service.preview_plan(session.field_id)
+    session.bindings["preview_new"] = second.id
+    status, output, _ = session._op_adopt(
+        {"step": 3, "payload": {"preview_binding": "preview_new"}}
+    )
+    assert status == "ok"
+    assert output["adopted_version_id"] == session.service.get_current_plan(session.field_id).id
+    assert session.store.load_preview(second.id).status == "adopted"
+    assert (
+        session._op_adopt({"step": 4, "payload": {"preview_binding": "does-not-exist"}})[0]
+        == "failed"
+    )
+    assert (
+        session._op_adopt(
+            {
+                "step": 5,
+                "payload": {"preview_binding": "preview_new", "plan_binding": "initial_preview"},
+            }
+        )[0]
+        == "failed"
+    )
 
 
 def test_confirmed_script_payload_is_hidden_from_model_until_confirmation():

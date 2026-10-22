@@ -38,6 +38,31 @@ def test_blind_packet_excludes_group_cost_and_trace() -> None:
     assert packet["claims"][0]["claim_id"] == "task-0"
 
 
+def test_blind_packet_separates_agricultural_claim_from_schedule_reason() -> None:
+    case = {"draft": {"profile": {"province": "湖北", "inspection_requested": True}}}
+    record = {
+        "result_id": "anon-pending",
+        "result": {
+            "tasks": [
+                {
+                    "task_type": "inspection",
+                    "schedule_status": "unscheduled",
+                    "reason": "没有足够连续可用时间",
+                    "duration_minutes": 60,
+                    "start_at": None,
+                    "end_at": None,
+                    "evidence_summaries": [],
+                }
+            ]
+        },
+    }
+    packet = blind_packet(case, record)
+    assert packet["facts"]["inspection_requested"] is True
+    assert packet["claims"][0]["schedule_reason"] == "没有足够连续可用时间"
+    assert packet["claims"][0]["agricultural_claim"] != "没有足够连续可用时间"
+    assert packet["claims"][0]["duration_minutes"] == 60
+
+
 def test_blind_packet_uses_authoritative_source_and_confirmed_facts() -> None:
     case = {
         "draft": {"profile": {"province": "湖北", "maintenance_purpose": None}, "days": []},

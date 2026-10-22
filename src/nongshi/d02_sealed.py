@@ -32,7 +32,7 @@ from nongshi.d02_runner import (
 from nongshi.d02_scoring import score_case, summarize_scores
 from nongshi.d02_semantic import judge_packet, write_blind_review_packets
 
-SEAL_VERSION = "internal-auto-v1"
+SEAL_VERSION = "internal-auto-v2"
 FILES = {
     "main_cases": "main_cases.jsonl",
     "main_constraints": "main_constraints.jsonl",
@@ -276,13 +276,14 @@ def seal(
     materials = {
         "rules_tree": _tree_sha256(PROJECT_ROOT / "rules"),
         "package_data_tree": _tree_sha256(PROJECT_ROOT / "src" / "nongshi" / "data"),
+        "source_tree": _tree_sha256(PROJECT_ROOT / "src" / "nongshi"),
     }
     manifest = {
         "version": SEAL_VERSION,
         "sealed_at": datetime.now(UTC).isoformat(),
         "classification": "public_development_only"
         if development
-        else "internal_sealed_auto_acceptance",
+        else "internal_regression_after_v1",
         "code_commit": _git("rev-parse", "HEAD"),
         "inputs": tracked,
         "dependencies": dependencies,
@@ -322,6 +323,7 @@ def verify_seal(directory: Path) -> dict[str, Any]:
     material_roots = {
         "rules_tree": PROJECT_ROOT / "rules",
         "package_data_tree": PROJECT_ROOT / "src" / "nongshi" / "data",
+        "source_tree": PROJECT_ROOT / "src" / "nongshi",
     }
     for name, root in material_roots.items():
         if _tree_sha256(root) != manifest["materials"][name]:

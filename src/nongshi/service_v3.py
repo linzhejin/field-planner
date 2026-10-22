@@ -80,6 +80,20 @@ class WorkbenchServiceV3:
         operation_id: str,
         expected_fact_version: int,
     ) -> EventCommitResultV3:
+        for event in events:
+            feedback = event.feedback
+            if (
+                feedback
+                and feedback.kind == "workability"
+                and (feedback.intervals is not None or feedback.resource_minutes is not None)
+            ):
+                raise ValueError("作业条件反馈不能包含可用时段或人员工时")
+            if (
+                feedback
+                and feedback.kind == "resource"
+                and (feedback.site_workable is not None or feedback.weather_workable is not None)
+            ):
+                raise ValueError("人员时间反馈不能包含田间作业条件")
         existing_ids = {event.event_id for event in self.store.list_events(field_id)}
         replayed_event_ids = all(event.event_id in existing_ids for event in events)
         state = self.get_field(field_id)

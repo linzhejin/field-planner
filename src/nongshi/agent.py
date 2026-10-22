@@ -7,15 +7,15 @@ import re
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from nongshi.config import Settings
 from nongshi.rule_retrieval import RuleRetrieverV3
-from nongshi.schema_v2 import LOCAL_ZONE
+from nongshi.schema_v2 import LOCAL_ZONE, TimeWindow
 from nongshi.schema_v3 import (
     AgentProposalV3,
     AgentResponseV3,
@@ -56,6 +56,10 @@ class QueryWeatherArgs(ToolArgs):
     end_date: str
 
 
+class QueryCurrentWeatherArgs(ToolArgs):
+    field_id: str
+
+
 class SearchLocationsArgs(ToolArgs):
     field_id: str
     query: str = Field(min_length=2, max_length=160)
@@ -75,9 +79,99 @@ class ProposeFieldUpdateArgs(ToolArgs):
     changes: dict[str, Any] = Field(min_length=1)
 
 
+class ProposedCompleted(ToolArgs):
+    kind: Literal["completed"]
+    at: AwareDatetime
+    task_id: str = Field(min_length=1)
+    plot_id: str | None = None
+    day: date | None = None
+
+
+class ProposedObservation(ToolArgs):
+    kind: Literal["observation"]
+    at: AwareDatetime
+    plot_id: str
+    field: str
+    value: str | bool | float | None = None
+    day: date | None = None
+
+
+class ProposedWorkability(ToolArgs):
+    kind: Literal["workability"]
+    at: AwareDatetime
+    plot_id: str
+    day: date
+    site_workable: bool | None = None
+    weather_workable: bool | None = None
+
+    @model_validator(mode="after")
+    def confirm_explicit_change(self) -> ProposedWorkability:
+        if not {"site_workable", "weather_workable"} & self.model_fields_set:
+            raise ValueError("作业条件反馈须明确填写可作业、不可作业或未知")
+        return self
+
+
+class ProposedResource(ToolArgs):
+    kind: Literal["resource"]
+    at: AwareDatetime
+    day: date
+    intervals: list[TimeWindow]
+    resource_minutes: int | None = Field(default=None, ge=0)
+    plot_id: str | None = None
+
+
+ProposedFeedback = Annotated[
+    ProposedCompleted | ProposedObservation | ProposedWorkability | ProposedResource,
+    Field(discriminator="kind"),
+]
+
+
+class ProposedEvent(ToolArgs):
+    event_id: str | None = None
+    source: Literal["user", "assistant", "import"] = "user"
+    feedback: ProposedFeedback | None = None
+    correction_of: str | None = None
+    retracts: bool = False
+
+
 class ProposeFeedbackArgs(ToolArgs):
     field_id: str
-    events: list[FactEventInputV3] = Field(min_length=1, max_length=10)
+    events: list[ProposedEvent] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_mixed_feedback(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            normalized: list[Any] = []
+            for event in value.get("events") or []:
+                if isinstance(event, dict) and "feedback" not in event and "kind" in event:
+                    envelope = {"event_id", "source", "correction_of", "retracts"}
+                    event = {
+                        **{key: item for key, item in event.items() if key in envelope},
+                        "feedback": {
+                            key: item for key, item in event.items() if key not in envelope
+                        },
+                    }
+                normalized.append(event)
+                feedback = event.get("feedback") if isinstance(event, dict) else None
+                if not isinstance(feedback, dict):
+                    continue
+                if feedback.get("kind") == "workability" and (
+                    "intervals" in feedback or "resource_minutes" in feedback
+                ):
+                    raise ValueError("作业条件反馈不能包含可用时段或人员工时")
+                if feedback.get("kind") == "resource" and (
+                    "site_workable" in feedback or "weather_workable" in feedback
+                ):
+                    raise ValueError("人员时间反馈不能包含田间作业条件")
+            return {**value, "events": normalized}
+        return value
+
+    def validated_events(self) -> list[FactEventInputV3]:
+        return [
+            FactEventInputV3.model_validate(event.model_dump(mode="python", exclude_none=True))
+            for event in self.events
+        ]
 
 
 class ModelFunction(BaseModel):
@@ -134,8 +228,13 @@ TOOL_DEFINITIONS: list[dict[str, object]] = [
     _tool("evaluate_field", "计算当前地块候选事项、四层状态、缺项与规则证据。", EvaluateFieldArgs),
     _tool(
         "query_weather",
-        "查询已选择地点的逐日天气；只提供风险信息，不判断现场能否作业。",
+        "兼容旧接口：查询指定完整七天日期的天气；新请求优先使用 query_current_weather。",
         QueryWeatherArgs,
+    ),
+    _tool(
+        "query_current_weather",
+        "查询当前地块已保存起始日起完整七天的天气；无需填写日期，不能判断现场能否作业。",
+        QueryCurrentWeatherArgs,
     ),
     _tool(
         "search_locations",
@@ -149,7 +248,13 @@ TOOL_DEFINITIONS: list[dict[str, object]] = [
     ),
     _tool("preview_plan", "根据已保存的输入生成计划预览；不会采用或覆盖计划。", PreviewPlanArgs),
     _tool("propose_field_update", "提出档案修改，须由用户确认后才会保存。", ProposeFieldUpdateArgs),
-    _tool("propose_feedback", "提出现场事实修改，须由用户确认后才会记录。", ProposeFeedbackArgs),
+    _tool(
+        "propose_feedback",
+        "提出待确认事实：completed=任务完成，observation=现场观察，"
+        "workability=田间/天气作业条件，resource=人员可用时段和分钟数。"
+        "修改时段只能用 resource；每项须有北京时间 at，不能直接保存。",
+        ProposeFeedbackArgs,
+    ),
 ]
 
 
@@ -263,6 +368,11 @@ class AgentServiceV3:
             )
         if not user_message.strip():
             return finish("invalid_response", error_message="请输入要处理的内容。")
+        change_requested = bool(
+            re.search(
+                r"保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理", user_message
+            )
+        ) and not bool(re.search(r"刚保存.*预览", user_message))
 
         messages: list[dict[str, object]] = [
             {
@@ -278,6 +388,7 @@ class AgentServiceV3:
         messages.append({"role": "user", "content": user_message})
         deadline = started + self.settings.llm_timeout_seconds
         last_tool_summary = ""
+        read_cache: dict[str, dict[str, object]] = {}
         url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
 
         for _ in range(MAX_MODEL_REQUESTS):
@@ -336,10 +447,30 @@ class AgentServiceV3:
                         text=last_tool_summary,
                         error_message="模型没有返回说明或工具结果。",
                     )
-                return finish(
-                    "success",
-                    text=self._safe_explanation(message.content.strip()),
-                )
+                if (
+                    change_requested
+                    and not proposals
+                    and not re.search(
+                        r"请提供|需要.*确认|请先确认|无法确定|信息不足|缺少|不清楚",
+                        message.content,
+                    )
+                ):
+                    if request_count < MAX_MODEL_REQUESTS:
+                        messages.append({"role": "assistant", "content": message.content})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": "我要求修改已保存状态。请调用 propose_feedback 或 "
+                                "propose_field_update 生成待确认提案；事实不足时明确列出缺项。",
+                            }
+                        )
+                        continue
+                    return finish(
+                        "invalid_response",
+                        text=last_tool_summary,
+                        error_message="未生成待确认修改；请补充事实或使用结构化表单。",
+                    )
+                return finish("success", text=self._safe_explanation(message.content.strip()))
 
             messages.append(
                 {
@@ -377,12 +508,28 @@ class AgentServiceV3:
                     tool_count += 1
                     tool_names.append(call.function.name)
                     tool_started = self._monotonic()
-                    tool_result, proposal, preview, trace_status = self._execute_tool(
-                        call.function.name,
-                        call.function.arguments,
-                        field_id=field_id,
-                        run_id=run_id,
-                    )
+                    cache_key = f"{call.function.name}:{call.function.arguments}"
+                    if call.function.name in {"read_field", "evaluate_field", "search_rules"} and (
+                        cache_key in read_cache
+                    ):
+                        tool_result, proposal, preview, trace_status = (
+                            read_cache[cache_key],
+                            None,
+                            None,
+                            "success",
+                        )
+                    else:
+                        tool_result, proposal, preview, trace_status = self._execute_tool(
+                            call.function.name,
+                            call.function.arguments,
+                            field_id=field_id,
+                            run_id=run_id,
+                        )
+                        if (
+                            call.function.name in {"read_field", "evaluate_field", "search_rules"}
+                            and trace_status == "success"
+                        ):
+                            read_cache[cache_key] = tool_result
                     elapsed_ms = max(0, int((self._monotonic() - tool_started) * 1000))
                     if proposal:
                         proposals.append(proposal)
@@ -406,6 +553,12 @@ class AgentServiceV3:
                         "tool_call_id": call.id,
                         "content": json.dumps(tool_result, ensure_ascii=False, default=str),
                     }
+                )
+
+            if proposals or (previews and not change_requested):
+                return finish(
+                    "success",
+                    text="已生成待确认内容，请逐项核对后再保存或采用。",
                 )
 
         if (proposals or previews) and traces and traces[-1].status == "success":
@@ -434,6 +587,10 @@ class AgentServiceV3:
             f"{field_id}。本轮接收时间为北京时间 {received_at:%Y-%m-%d %H:%M}。"
             "只能根据本地工具结果解释任务、依据、天气和排程。"
             "先读取或核对状态，再按需调用地点搜索、天气、规则、评估或计划预览工具。"
+            "查询天气优先用 query_current_weather，不要猜测起止日期。"
+            "用户要求记录完成、现场观察或修改可用时间时，必须调用 propose_feedback；"
+            "可用时段属于 resource，不属于 workability。多事项应逐项提出同一批事实。"
+            "事实提案未获用户确认前，不应根据提案预览调整结果。"
             "最多提出三条影响当前判断的问题。"
             "相对日期只按本轮接收时的北京时间换算，并在待确认修改里写出完整日期；"
             "不能猜测缺失的日期。"
@@ -488,6 +645,27 @@ class AgentServiceV3:
                 args = ReadFieldArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
                 result = self.workbench.get_field(field_id).model_dump(mode="json")
+                current = self.workbench.get_current_plan(field_id)
+                result["current_tasks"] = [
+                    {
+                        "task_id": item.task_id,
+                        "task_type": item.task_type,
+                        "schedule_status": item.schedule_status,
+                        "completed": item.completed,
+                        "start_at": item.start_at.isoformat() if item.start_at else None,
+                        "end_at": item.end_at.isoformat() if item.end_at else None,
+                    }
+                    for item in (current.items if current else [])
+                ]
+                result["recent_facts"] = [
+                    {
+                        "event_id": event.event_id,
+                        "feedback": event.feedback.model_dump(mode="json")
+                        if event.feedback
+                        else None,
+                    }
+                    for event in self.workbench.list_events(field_id)[-8:]
+                ]
             elif name == "search_rules":
                 args = SearchRulesArgs.model_validate(raw_arguments)
                 query = self._evaluation_rule_query() if self._evaluation_rule_query else args.query
@@ -516,6 +694,22 @@ class AgentServiceV3:
                     state.draft.location,
                     start,
                     end,
+                )
+                result = snapshot.model_dump(mode="json")
+            elif name == "query_current_weather":
+                args = QueryCurrentWeatherArgs.model_validate(raw_arguments)
+                self._check_field(field_id, args.field_id)
+                state = self.workbench.get_field(field_id)
+                if state.draft.location is None:
+                    raise ValueError("请先搜索并确认天气查询地点")
+                if state.draft.start_date is None:
+                    raise ValueError("请先保存计划起始日期")
+                start = state.draft.start_date
+                snapshot = self.weather.fetch_forecast(
+                    field_id,
+                    state.draft.location,
+                    start,
+                    start + timedelta(days=6),
                 )
                 result = snapshot.model_dump(mode="json")
             elif name == "search_locations":
@@ -589,7 +783,7 @@ class AgentServiceV3:
             elif name == "propose_feedback":
                 args = ProposeFeedbackArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
-                proposal = self._feedback_proposal(field_id, args.events)
+                proposal = self._feedback_proposal(field_id, args.validated_events())
                 result = {
                     "requires_user_confirmation": True,
                     "proposal": proposal.model_dump(mode="json"),

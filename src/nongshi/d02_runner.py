@@ -640,7 +640,15 @@ class _ScriptSession:
 
     def _op_adopt(self, step: dict[str, Any]) -> tuple[str, dict[str, Any], str | None]:
         payload = step.get("payload") or {}
-        binding = str(payload.get("plan_binding") or "initial_preview")
+        if (
+            payload.get("plan_binding")
+            and payload.get("preview_binding")
+            and payload["plan_binding"] != payload["preview_binding"]
+        ):
+            return "failed", {}, "计划引用与预览引用不一致"
+        binding = str(
+            payload.get("preview_binding") or payload.get("plan_binding") or "initial_preview"
+        )
         preview_id = self.bindings.get(binding)
         if preview_id is None:
             return "failed", {}, f"脚本引用 {binding} 没有对应预览，未暗中补建"
@@ -878,11 +886,47 @@ class _ScriptSession:
 
         def signature(event: FactEventInputV3) -> str:
             feedback = event.feedback
+            details: dict[str, Any] | None = None
             if feedback:
-                feedback = feedback.model_copy(update={"at": feedback.at.astimezone(UTC)})
+                if feedback.plot_id not in {None, self.field_id}:
+                    raise ValueError("反馈地块与当前地块不一致")
+                details = {
+                    "kind": feedback.kind,
+                    "at": feedback.at.astimezone(UTC).isoformat(),
+                    "plot_id": self.field_id,
+                }
+                if feedback.kind == "completed":
+                    if (
+                        feedback.day is not None
+                        and feedback.day != feedback.at.astimezone(LOCAL_ZONE).date()
+                    ):
+                        raise ValueError("完成日期与完成时间矛盾")
+                    details["task_id"] = feedback.task_id
+                elif feedback.kind == "observation":
+                    details.update(field=feedback.field, value=feedback.value)
+                elif feedback.kind == "workability":
+                    details.update(
+                        day=feedback.day.isoformat() if feedback.day else None,
+                        site_workable=feedback.site_workable,
+                        weather_workable=feedback.weather_workable,
+                    )
+                elif feedback.kind == "resource":
+                    details.update(
+                        day=feedback.day.isoformat() if feedback.day else None,
+                        intervals=[
+                            (
+                                span.start.isoformat(timespec="minutes"),
+                                span.end.isoformat(timespec="minutes"),
+                            )
+                            for span in feedback.intervals or []
+                        ],
+                        resource_minutes=feedback.resource_minutes
+                        if feedback.resource_minutes is not None
+                        else sum(span.minutes for span in feedback.intervals or []),
+                    )
             return json.dumps(
                 {
-                    "feedback": feedback.model_dump(mode="json") if feedback else None,
+                    "feedback": details,
                     "correction_of": event.correction_of,
                     "retracts": event.retracts,
                 },
@@ -891,7 +935,11 @@ class _ScriptSession:
             )
 
         actual = [event for proposal in proposals for event in proposal.events]
-        if not actual or sorted(map(signature, actual)) != sorted(map(signature, expected)):
+        try:
+            matching = sorted(map(signature, actual)) == sorted(map(signature, expected))
+        except ValueError:
+            matching = False
+        if not actual or not matching:
             return "rejected", {}, "模型提案与用户确认内容不一致；未改写提案或补写事实"
         versions = {proposal.expected_fact_version for proposal in proposals}
         if len(versions) != 1 or None in versions:

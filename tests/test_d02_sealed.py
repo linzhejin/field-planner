@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from nongshi.config import Settings
+from nongshi.d02_correction import prepare_correction
 from nongshi.d02_runner import DEFAULT_CASES
 from nongshi.d02_sealed import (
     FILES,
@@ -49,10 +50,51 @@ def test_development_seal_detects_changed_input(monkeypatch: pytest.MonkeyPatch)
         directory = root / "sealed"
         manifest = seal(_sources(root), directory, development=True)
         assert manifest["classification"] == "public_development_only"
+        assert manifest["version"] == "internal-auto-v2"
+        assert "source_tree" in manifest["materials"]
         assert verify_seal(directory)["code_commit"] == "abc123"
         (directory / FILES["main_cases"]).write_text("tampered\n", encoding="utf-8")
         with pytest.raises(ValueError, match="封存文件已改变"):
             verify_seal(directory)
+
+
+def test_correction_preparation_keeps_original_score_immutable(monkeypatch):
+    import hashlib
+
+    monkeypatch.setattr(
+        "nongshi.d02_sealed._git", lambda *args: "" if args[0] == "status" else "new-code"
+    )
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        original = root / "original"
+        seal(_sources(root), original, development=True)
+        score = original / "first_scores.json"
+        score.write_text('{"original":true}\n', encoding="utf-8")
+        attempts = original / "first_attempts.json"
+        case_id = json.loads((original / FILES["main_cases"]).read_text(encoding="utf-8"))[
+            "case_id"
+        ]
+        attempts.write_text(
+            json.dumps({"records": [{"result_id": "anon", "case_id": case_id}]}),
+            encoding="utf-8",
+        )
+        mapping = original / "private_group_map.json"
+        mapping.write_text(json.dumps({"anon": {"group": "A"}}), encoding="utf-8")
+        (original / "run_integrity.json").write_text(
+            json.dumps(
+                {
+                    "first_attempts_sha256": hashlib.sha256(attempts.read_bytes()).hexdigest(),
+                    "private_group_map_sha256": hashlib.sha256(mapping.read_bytes()).hexdigest(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        before = score.read_bytes()
+        corrected = root / "correction"
+        prepare_correction(original, corrected)
+        assert score.read_bytes() == before
+        assert (corrected / "semantic_blind.jsonl").exists()
+        assert (corrected / "correction_manifest.json").exists()
 
 
 def test_formal_constraints_require_all_citations_and_real_tool_assertion() -> None:

@@ -5,17 +5,23 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
-from nongshi.agent import AgentServiceV3
+from nongshi.agent import AgentServiceV3, ProposeFeedbackArgs
 from nongshi.config import Settings
 from nongshi.d02_model_groups import _retrieval, shared_rule_query
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
 from nongshi.schema_v2 import DayWindow, FieldProfile, TimeWindow
-from nongshi.schema_v3 import FieldDraftV3, GeocodingResultV3
+from nongshi.schema_v3 import (
+    FactEventInputV3,
+    FieldDraftV3,
+    GeocodingResultV3,
+    WeatherLocationV3,
+)
 from nongshi.service_v3 import WorkbenchServiceV3
 from nongshi.weather import OpenMeteoService
 
@@ -399,6 +405,159 @@ def test_nonexistent_task_id_is_rejected_before_a_feedback_proposal_is_shown(
     assert proposal is None and preview is None
     assert status == "invalid_arguments"
     assert tool_result["error"] == "tool_validation_failed"
+    agent.close()
+
+
+def test_resource_interval_cannot_be_disguised_as_workability() -> None:
+    with pytest.raises(ValueError, match="作业条件反馈不能包含可用时段"):
+        ProposeFeedbackArgs.model_validate(
+            {
+                "field_id": "field-1",
+                "events": [
+                    {
+                        "feedback": {
+                            "kind": "workability",
+                            "at": "2026-10-20T10:00:00+08:00",
+                            "plot_id": "field-1",
+                            "day": "2026-10-21",
+                            "intervals": [{"start": "14:00", "end": "15:00"}],
+                        }
+                    }
+                ],
+            }
+        )
+
+
+def test_explicit_unknown_workability_remains_allowed() -> None:
+    event = FactEventInputV3.model_validate(
+        {
+            "feedback": {
+                "kind": "workability",
+                "at": "2026-10-20T10:00:00+08:00",
+                "plot_id": "field-1",
+                "day": "2026-10-21",
+                "site_workable": None,
+                "weather_workable": None,
+            }
+        }
+    )
+    assert event.feedback.site_workable is None
+
+
+def test_feedback_tool_accepts_flat_event_without_changing_its_kind() -> None:
+    args = ProposeFeedbackArgs.model_validate(
+        {
+            "field_id": "field-1",
+            "events": [
+                {
+                    "kind": "resource",
+                    "at": "2026-10-20T10:00:00+08:00",
+                    "day": "2026-10-21",
+                    "plot_id": "field-1",
+                    "intervals": [{"start": "14:00", "end": "15:00"}],
+                    "resource_minutes": 60,
+                }
+            ],
+        }
+    )
+    assert args.validated_events()[0].feedback.kind == "resource"
+
+
+def test_feedback_tool_keeps_four_distinct_confirmable_facts() -> None:
+    at = "2026-10-20T10:00:00+08:00"
+    args = ProposeFeedbackArgs.model_validate(
+        {
+            "field_id": "field-1",
+            "events": [
+                {"kind": "completed", "at": at, "task_id": "known-I", "plot_id": "field-1"},
+                {
+                    "kind": "observation",
+                    "at": at,
+                    "plot_id": "field-1",
+                    "field": "standing_water",
+                    "value": True,
+                },
+                {
+                    "kind": "observation",
+                    "at": at,
+                    "plot_id": "field-1",
+                    "field": "pest_signs",
+                    "value": None,
+                },
+                {
+                    "kind": "resource",
+                    "at": at,
+                    "day": "2026-10-21",
+                    "intervals": [{"start": "14:30", "end": "15:30"}],
+                    "resource_minutes": 60,
+                },
+            ],
+        }
+    )
+    events = args.validated_events()
+    assert [event.feedback.kind for event in events] == [
+        "completed",
+        "observation",
+        "observation",
+        "resource",
+    ]
+    assert events[2].feedback.value is None
+
+
+def test_agent_cannot_claim_feedback_saved_without_proposal(tmp_path: Path) -> None:
+    agent, _, _ = make_agent(
+        tmp_path, lambda _: httpx.Response(200, json=final_response("已记录今天的巡田完成"))
+    )
+    result = agent.run("field-1", "今天巡田完成了，请记录完成事实")
+    assert result.status == "invalid_response"
+    assert not result.proposals
+    agent.close()
+
+
+def test_current_weather_uses_saved_start_and_complete_seven_days(tmp_path: Path) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
+    state = service.get_field("field-1")
+    draft = state.draft.model_copy(
+        update={
+            "location": WeatherLocationV3(
+                query="洪山区",
+                display_name="湖北省 · 武汉市 · 洪山区",
+                latitude=30.53,
+                longitude=114.36,
+            )
+        }
+    )
+    service.save_field_draft(draft, expected_version=state.draft_version, operation_id="loc")
+    requested = []
+
+    class FakeWeather:
+        def fetch_forecast(self, field_id, location, start, end):
+            requested.append((field_id, start, end))
+            return SimpleNamespace(
+                model_dump=lambda **_: {"coverage_start": str(start), "coverage_end": str(end)}
+            )
+
+        def close(self):
+            pass
+
+    agent.weather.close()
+    agent.weather = FakeWeather()
+    result, _, _, status = agent._execute_tool(
+        "query_current_weather",
+        '{"field_id":"field-1"}',
+        field_id="field-1",
+        run_id="weather-test",
+    )
+    assert status == "success"
+    assert requested == [("field-1", START, START + timedelta(days=6))]
+    assert result["coverage_end"] == str(START + timedelta(days=6))
+    bad, _, _, status = agent._execute_tool(
+        "query_weather",
+        '{"field_id":"field-1","start_date":"2026-10-19","end_date":"2026-10-20"}',
+        field_id="field-1",
+        run_id="weather-test",
+    )
+    assert status == "invalid_arguments" and bad["error"]
     agent.close()
 
 
