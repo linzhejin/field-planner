@@ -17,6 +17,7 @@ from nongshi.schema_v2 import (
     FieldProfile,
     PlanRequestV2,
     PlanVersionV2,
+    RuleEvidenceV2,
 )
 from nongshi.schema_v3 import (
     EventCommitResultV3,
@@ -414,30 +415,37 @@ class WorkbenchServiceV3:
                 when = f"{item.start_at:%Y-%m-%d %H:%M}–{item.end_at:%H:%M}"
             else:
                 when = "未排入"
+
+            def describe_evidence(evidence: RuleEvidenceV2) -> str:
+                pages = "、".join(f"PDF第{page}页" for page in evidence.pdf_pages)
+                details = "；".join(
+                    part
+                    for part in (
+                        pages,
+                        evidence.source_context_summary,
+                        f"用途限制：{evidence.project_use_limit}"
+                        if evidence.project_use_limit
+                        else "",
+                    )
+                    if part
+                )
+                return f"{evidence.rule_id}/{evidence.source_id}（{details}）"
+
             current = [
-                (e.rule_id, e.source_context_summary)
-                for e in item.evidence
-                if e.usage_role == "limited_support"
+                describe_evidence(e) for e in item.evidence if e.usage_role == "limited_support"
             ]
             deferred = [
-                (e.rule_id, e.source_context_summary)
+                describe_evidence(e)
                 for e in item.evidence
                 if e.usage_role == "historical_reference"
             ]
             evidence_parts = []
             if current:
-                evidence_parts.append(
-                    "依据：" + "、".join(f"{rid}（{ctx}）" if ctx else rid for rid, ctx in current)
-                )
+                evidence_parts.append("依据：" + "、".join(current))
             if deferred:
-                evidence_parts.append(
-                    "暂缓参考："
-                    + "、".join(f"{rid}（{ctx}）" if ctx else rid for rid, ctx in deferred)
-                )
-            evidence = "；".join(evidence_parts) or "无直接依据"
-            lines.append(
-                f"- {when}｜{item.title}｜{item.reason}｜依据：{evidence}｜任务：{item.task_id}"
-            )
+                evidence_parts.append("暂缓参考：" + "、".join(deferred))
+            evidence = "；".join(evidence_parts) or "依据：无直接依据"
+            lines.append(f"- {when}｜{item.title}｜{item.reason}｜{evidence}｜任务：{item.task_id}")
         lines.extend(["", "## 缺项和未排入原因", ""])
         for item in version.items:
             if item.missing_fields or item.schedule_status in {"pending", "unscheduled"}:

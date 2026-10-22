@@ -241,6 +241,7 @@ def test_a04_supplementary_registry_is_visible_with_prefix(tmp_path: Path, monke
     assert not app.exception
     texts = [element.value for element in app.markdown]
     texts += [element.value for element in app.caption]
+    assert any("C11/Z15" in text for text in texts)
     assert any("A04-S01" in text for text in texts)
     assert any("不改写规则卡原文" in text or "补充来源" in text for text in texts)
 

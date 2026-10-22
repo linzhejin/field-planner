@@ -529,8 +529,17 @@ def test_exports_carry_mode_version_tasks_basis_and_reasons(tmp_path: Path) -> N
     assert "不代表合并后可执行" in markdown
     assert "## 七天安排" in markdown
     assert "依据：" in markdown
+    assert "依据：依据：" not in markdown
     assert "任务：" in markdown
     assert "## 缺项和未排入原因" in markdown
+    for item in payload["adopted_plan"]["plan"]["items"]:
+        for evidence in item["evidence"]:
+            assert f"{evidence['rule_id']}/{evidence['source_id']}" in markdown
+            assert evidence["project_use_limit"] in markdown
+            for page in evidence["pdf_pages"]:
+                assert f"PDF第{page}页" in markdown
+            if evidence["usage_role"] == "historical_reference":
+                assert f"暂缓参考：{evidence['rule_id']}/{evidence['source_id']}" in markdown
 
 
 def test_feedback_values_are_field_validated_before_any_fact_is_saved(

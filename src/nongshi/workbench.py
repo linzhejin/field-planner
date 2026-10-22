@@ -1081,7 +1081,7 @@ def _render_evidence(item) -> None:  # type: ignore[no-untyped-def]
     with st.expander("规则依据与来源"):
         rendered_rules: set[str] = set()
         for evidence in item.evidence:
-            st.markdown(f"**{evidence.rule_id} · {evidence.title}**")
+            st.markdown(f"**{evidence.rule_id}/{evidence.source_id} · {evidence.title}**")
             st.caption(
                 f"{evidence.publisher} · {evidence.source_date or '日期未提供'} · "
                 f"页码 {', '.join(map(str, evidence.pdf_pages)) or '未提供'} · "
