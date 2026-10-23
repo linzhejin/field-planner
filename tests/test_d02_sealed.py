@@ -95,6 +95,14 @@ def test_correction_preparation_keeps_original_score_immutable(monkeypatch):
         assert score.read_bytes() == before
         assert (corrected / "semantic_blind.jsonl").exists()
         assert (corrected / "correction_manifest.json").exists()
+        reviews = original / "semantic_reviews.json"
+        reviews.write_text('{"anon":{"status":"not_applicable"}}\n', encoding="utf-8")
+        reused = root / "correction_reused_review"
+        prepare_correction(original, reused, reuse_source_reviews=True)
+        assert (reused / "semantic_reviews.json").read_bytes() == reviews.read_bytes()
+        manifest = json.loads((reused / "correction_manifest.json").read_text(encoding="utf-8"))
+        assert manifest["review_origin"] == "source_reused_unchanged"
+        assert "semantic_reviews.json" in manifest["source_hashes"]
 
 
 def test_formal_constraints_require_all_citations_and_real_tool_assertion() -> None:

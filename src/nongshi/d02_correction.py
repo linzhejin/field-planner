@@ -44,7 +44,9 @@ def _read_correction(output: Path) -> tuple[Path, dict[str, Any]]:
     return source, manifest
 
 
-def prepare_correction(source: Path, output: Path) -> dict[str, Any]:
+def prepare_correction(
+    source: Path, output: Path, *, reuse_source_reviews: bool = False
+) -> dict[str, Any]:
     """Build a new blinded view without altering the archived trial."""
     source = source.resolve()
     output = output.resolve()
@@ -61,8 +63,13 @@ def prepare_correction(source: Path, output: Path) -> dict[str, Any]:
         for row in sealed._read_jsonl(source / sealed.FILES[name])
     }
     records = json.loads((source / "first_attempts.json").read_text(encoding="utf-8"))["records"]
+    source_reviews = source / "semantic_reviews.json"
+    if reuse_source_reviews and not source_reviews.exists():
+        raise FileNotFoundError("原封存缺少语义复核，不能复用")
     output.mkdir(parents=True, exist_ok=True)
     write_blind_review_packets(records, cases, output / "semantic_blind.jsonl")
+    if reuse_source_reviews:
+        (output / "semantic_reviews.json").write_bytes(source_reviews.read_bytes())
     tracked = [
         "seal.json",
         "first_attempts.json",
@@ -71,6 +78,8 @@ def prepare_correction(source: Path, output: Path) -> dict[str, Any]:
         "first_scores.json",
         *sealed.FILES.values(),
     ]
+    if reuse_source_reviews:
+        tracked.append("semantic_reviews.json")
     manifest = {
         "classification": "retrospective_scoring_correction_not_new_trial",
         "source_seal": str(source),
@@ -79,6 +88,9 @@ def prepare_correction(source: Path, output: Path) -> dict[str, Any]:
         "judge_prompt": JUDGE_PROMPT,
         "prepared_at": datetime.now(UTC).isoformat(),
         "blind_sha256": sealed._sha256(output / "semantic_blind.jsonl"),
+        "review_origin": "source_reused_unchanged"
+        if reuse_source_reviews
+        else "new_ai_assisted_review",
     }
     (output / "correction_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -137,6 +149,10 @@ def score_correction(output: Path) -> dict[str, Any]:
     if target.exists():
         raise FileExistsError("勘误评分已存在")
     reviews_path = output / "semantic_reviews.json"
+    if manifest.get("review_origin") == "source_reused_unchanged" and (
+        sealed._sha256(reviews_path) != manifest["source_hashes"]["semantic_reviews.json"]
+    ):
+        raise ValueError("复用的语义复核与原封存指纹不符")
     reviews = json.loads(reviews_path.read_text(encoding="utf-8"))
     raw = json.loads((source / "first_attempts.json").read_text(encoding="utf-8"))
     mapping = json.loads((source / "private_group_map.json").read_text(encoding="utf-8"))
@@ -174,6 +190,7 @@ def score_correction(output: Path) -> dict[str, Any]:
         "original_first_scores_sha256": manifest["source_hashes"]["first_scores.json"],
         "original_first_attempts_sha256": manifest["source_hashes"]["first_attempts.json"],
         "new_review_sha256": sealed._sha256(reviews_path),
+        "review_origin": manifest.get("review_origin", "new_ai_assisted_review"),
         "records": len(rows),
         "main": summarize_scores([row for row in rows if row["set"] == "main"]),
         "boundary": dict(Counter(row["verdict"] for row in rows if row["set"] == "boundary")),
@@ -194,6 +211,7 @@ def main() -> None:
     preparing = commands.add_parser("prepare")
     preparing.add_argument("--source-seal", required=True, type=Path)
     preparing.add_argument("--output-dir", required=True, type=Path)
+    preparing.add_argument("--reuse-source-reviews", action="store_true")
     judging = commands.add_parser("judge")
     judging.add_argument("--correction-dir", required=True, type=Path)
     judging.add_argument("--env-file", type=Path)
@@ -201,7 +219,11 @@ def main() -> None:
     scoring.add_argument("--correction-dir", required=True, type=Path)
     args = parser.parse_args()
     if args.command == "prepare":
-        result = prepare_correction(args.source_seal, args.output_dir)
+        result = prepare_correction(
+            args.source_seal,
+            args.output_dir,
+            reuse_source_reviews=args.reuse_source_reviews,
+        )
     elif args.command == "judge":
         result = judge_correction(
             args.correction_dir,
