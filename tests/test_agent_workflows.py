@@ -1501,6 +1501,93 @@ def test_resource_capacity_must_match_grounded_intervals(
 
 
 @pytest.mark.parametrize("route", ["declare", "direct"])
+def test_repeated_same_resource_interval_is_not_treated_as_missing_time(
+    tmp_path, route: str
+) -> None:
+    message = "明天14:00到16:00有空，请把明天的可用时段改成14:00到16:00，容量120分钟"
+    event = resource_event("2026-10-19", message)
+    if route == "declare":
+        answer = model_calls(
+            ("declare_request", {"field_id": "field-1", "actions": ["resource"], "events": [event]})
+        )
+    else:
+        answer = tool_call_response(
+            "propose_feedback", json.dumps({"field_id": "field-1", "events": [event]})
+        )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", message, received_at=datetime(2026, 10, 18, 10, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation"
+    assert result.proposals[0].events[0].feedback.kind == "resource"
+
+
+@pytest.mark.parametrize("route", ["declare", "direct"])
+def test_user_stated_field_type_label_can_be_proposed_with_valid_enum(tmp_path, route: str) -> None:
+    message = "这块田是低洼稻茬田，请修改地块档案"
+    changes = {"field_type": "低洼稻茬田"}
+    if route == "declare":
+        answer = model_calls(
+            (
+                "declare_request",
+                {
+                    "field_id": "field-1",
+                    "actions": ["field_update"],
+                    "field_changes": changes,
+                    "field_change_quotes": {"field_type": "低洼稻茬田"},
+                    "missing": [],
+                },
+            )
+        )
+    else:
+        answer = tool_call_response(
+            "propose_field_update", json.dumps({"field_id": "field-1", "changes": changes})
+        )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", message, received_at=datetime(2026, 10, 18, 10, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation"
+    assert result.proposals[0].draft.profile.field_type == "lowland_rice_stubble"
+
+
+def test_grouped_profile_confirmation_is_grounded_without_ignoring_negation() -> None:
+    from nongshi.agent import AgentServiceV3
+
+    quote = "省份、作物和生育期我已现场确认"
+    for field in ("province_confirmed", "crop_confirmed", "stage_confirmed"):
+        assert AgentServiceV3._ground_field_change(field, True, quote)
+    assert not AgentServiceV3._ground_field_change(
+        "province_confirmed", True, "省份未确认，作物已确认"
+    )
+
+
+def test_empty_declaration_event_does_not_downgrade_valid_profile_proposal(tmp_path) -> None:
+    message = "这块田是低洼稻茬田，请修改地块档案"
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["field_update"],
+                "field_changes": {"field_type": "低洼稻茬田"},
+                "field_change_quotes": {"field_type": "低洼稻茬田"},
+                "events": [{"source_quote": message, "feedback": None}],
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", message, received_at=datetime(2026, 10, 18, 10, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation"
+    assert len(result.proposals) == 1
+
+
+@pytest.mark.parametrize("route", ["declare", "direct"])
 def test_unstated_observation_time_uses_receipt_not_model_future_date(tmp_path, route: str) -> None:
     event = {
         "source_quote": "发现积水",

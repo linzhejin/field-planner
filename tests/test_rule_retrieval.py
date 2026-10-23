@@ -34,6 +34,11 @@ def test_matching_rule_hits_retain_original_quotes_pages_hash_and_review_label()
     assert load_rule_catalog().cards["C11"].runtime_enabled is False
 
 
+def test_hubei_province_with_administrative_suffix_is_in_scope() -> None:
+    result = RuleRetrieverV3().search(query(province="湖北省"))
+    assert result.status == "matched"
+
+
 def test_missing_crop_or_stage_returns_pending_instead_of_applying_by_guess() -> None:
     result = RuleRetrieverV3().search(query(crop=None, crop_confirmed=False, stage=None))
 

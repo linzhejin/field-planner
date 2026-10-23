@@ -896,11 +896,11 @@ class AgentServiceV3:
                         try:
                             raw_update = json.loads(effective_arguments)
                             changes = raw_update.get("changes", {})
-                            accepted_changes = {
-                                key: value
-                                for key, value in changes.items()
-                                if self._ground_field_change(key, value, user_message)
-                            }
+                            accepted_changes = {}
+                            for key, value in changes.items():
+                                normalized = self._normalize_field_change(key, value)
+                                if self._ground_field_change(key, normalized, user_message):
+                                    accepted_changes[key] = normalized
                             for key in changes.keys() - accepted_changes.keys():
                                 runtime_missing[f"field:{key}"] = (
                                     f"请确认地块档案字段 {key} 的具体改动"
@@ -991,10 +991,10 @@ class AgentServiceV3:
                         accepted_events: list[dict[str, object]] = []
                         accepted_signatures: set[str] = set()
                         for raw_event in [] if read_only_preview else declaration.events:
-                            if (
-                                completion_only_requested
-                                and raw_event.feedback
-                                and (raw_event.feedback.kind == "observation")
+                            if raw_event.feedback is None:
+                                continue
+                            if completion_only_requested and (
+                                raw_event.feedback.kind == "observation"
                             ):
                                 continue
                             accepted, problem = self._ground_declared_event(
@@ -1063,6 +1063,7 @@ class AgentServiceV3:
                         for key, value in (
                             {} if read_only_preview else declaration.field_changes
                         ).items():
+                            normalized = self._normalize_field_change(key, value)
                             if "observation" in workflow_actions and (
                                 key in required_observations
                                 or (
@@ -1075,9 +1076,9 @@ class AgentServiceV3:
                             if (
                                 quote
                                 and quote in user_message
-                                and self._ground_field_change(key, value, quote)
+                                and self._ground_field_change(key, normalized, quote)
                             ):
-                                grounded_changes[key] = value
+                                grounded_changes[key] = normalized
                                 runtime_missing.pop(f"field:{key}", None)
                             else:
                                 runtime_missing[f"field:{key}"] = (
@@ -1496,6 +1497,20 @@ class AgentServiceV3:
         return values
 
     @staticmethod
+    def _normalize_field_change(field: str, value: object) -> object:
+        if field == "field_type":
+            return (
+                {
+                    "低洼稻茬田": "lowland_rice_stubble",
+                    "低洼/稻茬田": "lowland_rice_stubble",
+                    "丘陵旱地": "dry_hilly",
+                }.get(value, value)
+                if isinstance(value, str)
+                else value
+            )
+        return value
+
+    @staticmethod
     def _ground_field_change(field: str, value: object, quote: str) -> bool:
         """Accept only field values supported by a matching fragment of the user's message."""
         if value is None:
@@ -1530,6 +1545,18 @@ class AgentServiceV3:
                 else quote
             )
             positive_found = bool(re.search(positive, positive_quote))
+            confirmation_labels = {
+                "province_confirmed": r"省份|地区|湖北(?:省)?",
+                "crop_confirmed": r"作物|油菜",
+                "stage_confirmed": r"生育期|苗期",
+            }
+            if field in confirmation_labels:
+                positive_found |= bool(
+                    re.search(
+                        rf"(?:{confirmation_labels[field]}).*?已(?:现场)?确认",
+                        quote,
+                    )
+                )
             if positive_found and negative_found:
                 return False
             return positive_found if value else negative_found
@@ -1539,6 +1566,12 @@ class AgentServiceV3:
             )
         if field == "crop" and value == "rapeseed":
             return "油菜" in quote
+        if field == "field_type":
+            labels = {
+                "lowland_rice_stubble": ("低洼稻茬田", "低洼/稻茬田"),
+                "dry_hilly": ("丘陵旱地",),
+            }.get(value, ())
+            return str(value) in quote or any(label in quote for label in labels)
         if isinstance(value, (str, int, float)):
             return str(value).casefold() in quote.casefold()
         return False
@@ -1747,7 +1780,18 @@ class AgentServiceV3:
                 ]
                 explicit_zero = bool(re.search(r"(?<!\d)(?:0|零)\s*分钟", quote))
                 zero_day = not expected and feedback.resource_minutes == 0 and explicit_zero
-                if not zero_day and (not clocks or clocks != expected):
+                # Users often repeat the same interval when describing the change.
+                # Every mentioned clock must still belong to the proposed sequence.
+                repeated_sequence = (
+                    bool(clocks)
+                    and bool(expected)
+                    and len(clocks) % len(expected) == 0
+                    and all(
+                        clocks[index : index + len(expected)] == expected
+                        for index in range(0, len(clocks), len(expected))
+                    )
+                )
+                if not zero_day and not repeated_sequence:
                     return None, "请给出人员可用时段的具体开始和结束时间"
                 start_day = self.workbench.get_field(field_id).draft.start_date
                 mentioned_days = self._mentioned_days(quote, received_at, start_day)
