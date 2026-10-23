@@ -10,10 +10,33 @@ from zoneinfo import ZoneInfo
 from streamlit.testing.v1 import AppTest
 
 from nongshi.schema_v2 import FeedbackV2, TimeWindow
-from nongshi.schema_v3 import FactEventInputV3
-from nongshi.workbench import _proposal_event_description
+from nongshi.schema_v3 import FactEventInputV3, FieldDraftV3, FieldStateV3, PlanPreviewV3
+from nongshi.workbench import _preview_matches_state, _proposal_event_description
 
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
+
+
+def test_old_preview_is_not_shown_after_a_new_plan_is_adopted() -> None:
+    # A previously saved preview may still say "preview" after unrelated edits.
+    # It must not reappear beside a later adopted version after page refresh.
+    state = FieldStateV3(
+        id="field-1",
+        mode="real",
+        draft_version=2,
+        fact_version=1,
+        draft=FieldDraftV3(field_id="field-1"),
+        latest_plan_id="plan-v2",
+        updated_at=datetime(2026, 10, 24, 10, tzinfo=ZoneInfo("Asia/Shanghai")),
+    )
+    assert not _preview_matches_state(
+        PlanPreviewV3.model_construct(
+            status="preview",
+            expected_draft_version=1,
+            expected_fact_version=1,
+            expected_plan_id=None,
+        ),
+        state,
+    )
 
 
 def test_feedback_proposal_shows_exact_resource_change_before_confirmation() -> None:

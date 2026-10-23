@@ -1323,6 +1323,15 @@ def _show_preview(
         st.info(f"预览状态：{preview.status}")
 
 
+def _preview_matches_state(preview: PlanPreviewV3, state: FieldStateV3) -> bool:
+    return (
+        preview.status == "preview"
+        and preview.expected_draft_version == state.draft_version
+        and preview.expected_fact_version == state.fact_version
+        and preview.expected_plan_id == state.latest_plan_id
+    )
+
+
 def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None) -> None:
     """中栏「今日与后续安排」：待决预览与已采用版的排程卡片。"""
     if state is None or state.draft.profile is None:
@@ -1330,6 +1339,14 @@ def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV
     if state.plan_stale:
         st.warning("现场事实或档案已变化，当前采用版需要重新预览。旧版仍保留。")
     preview_id = st.session_state.get(f"current_preview:{field_id}")
+    if preview_id:
+        try:
+            if not _preview_matches_state(service.store.load_preview(preview_id), state):
+                preview_id = None
+                st.session_state[f"current_preview:{field_id}"] = None
+        except KeyError:
+            preview_id = None
+            st.session_state[f"current_preview:{field_id}"] = None
     if not preview_id:
         for record in service.agent_proposal_records(field_id):
             if record.status != "confirmed" or not record.preview_id:
@@ -1338,7 +1355,7 @@ def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV
                 restored = service.store.load_preview(record.preview_id)
             except KeyError:
                 continue
-            if restored.status == "preview":
+            if _preview_matches_state(restored, state):
                 preview_id = restored.id
                 st.session_state[f"current_preview:{field_id}"] = preview_id
                 break

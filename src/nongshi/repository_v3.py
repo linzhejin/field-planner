@@ -589,6 +589,18 @@ class WorkbenchStoreV3:
                 change.kind != "unchanged" for change in preview.version.changes
             )
             if current and not has_changes:
+                if state.plan_stale:
+                    updated_state = state.model_copy(
+                        update={"plan_stale": False, "updated_at": self._now()}
+                    )
+                    connection.execute(
+                        "UPDATE fields_v3 SET plan_stale=0, updated_at=?, payload=? WHERE id=?",
+                        (
+                            updated_state.updated_at.isoformat(),
+                            self._json(updated_state),
+                            state.id,
+                        ),
+                    )
                 result = PlanAdoptionResultV3(version=current, created_new_version=False)
             else:
                 version = preview.version.model_copy(
