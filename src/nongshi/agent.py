@@ -408,6 +408,9 @@ class AgentServiceV3:
                 user_message,
             )
         )
+        completion_only_requested = bool(
+            re.search(r"先(?:只)?记录(?:这条)?完成(?:事实|情况|记录)?", user_message)
+        )
         preview_requested = bool(re.search(r"预览|生成.*计划|安排.*七天", user_message))
 
         messages: list[dict[str, object]] = [
@@ -434,9 +437,12 @@ class AgentServiceV3:
             field: label
             for field, label in self._requested_observations(user_message).items()
             if not (
-                field == "maintenance_purpose"
-                and saved_profile.maintenance_purpose == "clear_existing_ditch"
-                and not re.search(r"目的|为了|用于|改为|改成", user_message)
+                completion_only_requested
+                or (
+                    field == "maintenance_purpose"
+                    and saved_profile.maintenance_purpose == "clear_existing_ditch"
+                    and not re.search(r"目的|为了|用于|改为|改成", user_message)
+                )
             )
         }
         deferred_feedback_events: list[dict[str, object]] = []
@@ -823,6 +829,12 @@ class AgentServiceV3:
                             for raw_event in raw_feedback.get("events", []):
                                 if not isinstance(raw_event, dict):
                                     continue
+                                if (
+                                    completion_only_requested
+                                    and (raw_event.get("feedback") or {}).get("kind")
+                                    == "observation"
+                                ):
+                                    continue
                                 with_quote = {
                                     "source_quote": user_message,
                                     **raw_event,
@@ -841,6 +853,17 @@ class AgentServiceV3:
                             accepted_events = self._merge_feedback_events(
                                 deferred_feedback_events, accepted_events
                             )
+                            if workflow_actions and "observation" in workflow_actions:
+                                accepted_events = self._merge_feedback_events(
+                                    accepted_events,
+                                    self._explicit_maintenance_events(
+                                        field_id=field_id,
+                                        user_message=user_message,
+                                        received_at=started_at,
+                                        required_fields=set(required_observations),
+                                        accepted_events=accepted_events,
+                                    ),
+                                )
                             missing_observations = set(required_observations) - {
                                 str((event.get("feedback") or {}).get("field"))
                                 for event in accepted_events
@@ -958,6 +981,8 @@ class AgentServiceV3:
                             read_cache[cache_key] = tool_result
                     if call.function.name == "declare_request" and trace_status == "success":
                         workflow_actions = set(tool_result["actions"])
+                        if completion_only_requested:
+                            workflow_actions.discard("observation")
                         declared_missing = list(tool_result["missing"])
                         declaration = AgentDeclareRequestArgs.model_validate(tool_result)
                         if read_only_preview:
@@ -966,6 +991,12 @@ class AgentServiceV3:
                         accepted_events: list[dict[str, object]] = []
                         accepted_signatures: set[str] = set()
                         for raw_event in [] if read_only_preview else declaration.events:
+                            if (
+                                completion_only_requested
+                                and raw_event.feedback
+                                and (raw_event.feedback.kind == "observation")
+                            ):
+                                continue
                             accepted, problem = self._ground_declared_event(
                                 raw_event.model_dump(mode="json", exclude_unset=True),
                                 field_id=field_id,
@@ -992,6 +1023,17 @@ class AgentServiceV3:
                         accepted_events = self._merge_feedback_events(
                             deferred_feedback_events, accepted_events
                         )
+                        if "observation" in workflow_actions:
+                            accepted_events = self._merge_feedback_events(
+                                accepted_events,
+                                self._explicit_maintenance_events(
+                                    field_id=field_id,
+                                    user_message=user_message,
+                                    received_at=started_at,
+                                    required_fields=set(required_observations),
+                                    accepted_events=accepted_events,
+                                ),
+                            )
                         missing_observations = (
                             set(required_observations)
                             - {
@@ -1021,6 +1063,14 @@ class AgentServiceV3:
                         for key, value in (
                             {} if read_only_preview else declaration.field_changes
                         ).items():
+                            if "observation" in workflow_actions and (
+                                key in required_observations
+                                or (
+                                    key == "maintenance_purpose"
+                                    and saved_profile.maintenance_purpose == value
+                                )
+                            ):
+                                continue
                             quote = declaration.field_change_quotes.get(key)
                             if (
                                 quote
@@ -1235,7 +1285,24 @@ class AgentServiceV3:
         merged: list[dict[str, object]] = []
         seen: set[str] = set()
         for event in [*previous, *current]:
-            signature = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str)
+            fact = FactEventInputV3.model_validate(
+                {key: value for key, value in event.items() if key != "source_quote"}
+            )
+            feedback = fact.feedback
+            details = feedback.model_dump(mode="json", exclude_none=True) if feedback else None
+            if feedback and details is not None:
+                details["at"] = feedback.at.astimezone(UTC).isoformat()
+                if feedback.kind in {"completed", "observation"}:
+                    details.pop("day", None)
+            signature = json.dumps(
+                {
+                    "feedback": details,
+                    "correction_of": fact.correction_of,
+                    "retracts": fact.retracts,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
             if signature not in seen:
                 merged.append(event)
                 seen.add(signature)
@@ -1306,6 +1373,60 @@ class AgentServiceV3:
         return {
             field: label for field, (pattern, label) in names.items() if re.search(pattern, message)
         }
+
+    def _explicit_maintenance_events(
+        self,
+        *,
+        field_id: str,
+        user_message: str,
+        received_at: datetime,
+        required_fields: set[str],
+        accepted_events: list[dict[str, object]],
+    ) -> list[dict[str, object]]:
+        """Offer quoted confirmations after the model identified an observation."""
+        if not any(
+            (event.get("feedback") or {}).get("kind") == "observation" for event in accepted_events
+        ):
+            return []
+        covered = {
+            str((event.get("feedback") or {}).get("field"))
+            for event in accepted_events
+            if (event.get("feedback") or {}).get("kind") == "observation"
+        }
+        generated: list[dict[str, object]] = []
+        for field in ("maintenance_problem_confirmed", "maintenance_need_confirmed"):
+            if field not in required_fields or field in covered:
+                continue
+            for clause in re.split(r"[，,。；;\n]", user_message):
+                clause = clause.strip()
+                if (
+                    field not in self._requested_observations(clause)
+                    or re.search(r"疑似|可能|大概|或许|如果|假如|未确认", clause)
+                    or not self._ground_observation_value(field, True, clause)
+                ):
+                    continue
+                observed_at = self._ground_observation_at(clause, received_at)
+                if observed_at is None:
+                    continue
+                event, _problem = self._ground_declared_event(
+                    {
+                        "source_quote": clause,
+                        "feedback": {
+                            "kind": "observation",
+                            "at": observed_at.isoformat(),
+                            "plot_id": field_id,
+                            "field": field,
+                            "value": True,
+                        },
+                    },
+                    field_id=field_id,
+                    user_message=user_message,
+                    received_at=received_at,
+                )
+                if event is not None:
+                    generated.append(event)
+                    break
+        return generated
 
     @staticmethod
     def _resource_days_in_message(
@@ -1459,6 +1580,8 @@ class AgentServiceV3:
 
     @staticmethod
     def _ground_observation_value(field: str, value: object, quote: str) -> bool:
+        if value is not None and re.search(r"疑似|可能|大概|或许|如果|假如|未确认", quote):
+            return False
         if value is None:
             names = {
                 "standing_water": r"积水",
@@ -1643,9 +1766,17 @@ class AgentServiceV3:
                     return None, "请核对人员可用工时与时段是否一致"
             elif feedback.kind == "observation":
                 names = self._requested_observations(quote)
-                if feedback.field not in names:
+                unknown_ditch_effect = bool(
+                    feedback.field == "ditch_connectivity"
+                    and feedback.value is None
+                    and re.search(r"效果.*?(?:没|未)复查", quote)
+                    and re.search(r"沟渠|清沟|沟口", user_message)
+                )
+                if feedback.field not in names and not unknown_ditch_effect:
                     return None, "请核对现场观察项目与用户原话"
-                if not self._ground_observation_value(feedback.field, feedback.value, quote):
+                if not unknown_ditch_effect and not self._ground_observation_value(
+                    feedback.field, feedback.value, quote
+                ):
                     return None, "请核对现场观察结果与用户原话"
                 observed_at = self._ground_observation_at(quote, received_at)
                 if observed_at is None or (

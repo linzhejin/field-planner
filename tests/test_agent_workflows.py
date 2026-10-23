@@ -156,12 +156,96 @@ def test_read_only_observation_question_does_not_request_fact_proposal(tmp_path)
     )
 
 
+def test_equivalent_feedback_from_retry_is_merged_by_fact_not_json_spelling() -> None:
+    completed = {
+        "feedback": {
+            "kind": "completed",
+            "at": "2026-10-20T10:00:00+08:00",
+            "task_id": "task-1",
+            "plot_id": "field-1",
+        }
+    }
+    same_completed = {
+        "source": "user",
+        "feedback": {
+            **completed["feedback"],
+            "at": "2026-10-20T02:00:00Z",
+            "day": "2026-10-20",
+        },
+    }
+    merged = AgentServiceV3._merge_feedback_events([completed], [same_completed])
+    assert len(merged) == 1
+
+
 @pytest.mark.parametrize(
-    "second_route", ["declare_full", "declare_rephrased", "declare_missing", "direct_missing"]
+    ("user_instruction", "expected_fields"),
+    [
+        ("请把完成和未复查两件事分别记录", ["completed", "ditch_connectivity"]),
+        ("请先记录完成事实", ["completed"]),
+    ],
 )
-def test_explicit_new_ditch_problem_retries_incomplete_atomic_proposal(
-    tmp_path, second_route: str
+def test_ditch_effect_unknown_uses_current_message_context(
+    tmp_path, user_instruction: str, expected_fields: list[str]
 ) -> None:
+    answer: dict[str, object] | None = None
+
+    def respond(_: httpx.Request) -> httpx.Response:
+        assert answer is not None
+        return httpx.Response(200, json=answer)
+
+    agent, service, _ = make_agent(tmp_path, respond)
+    preview = service.preview_plan("field-1")
+    service.adopt_plan(
+        preview.id, expected_fact_version=0, expected_plan_id=None, operation_id="adopt-v1"
+    )
+    current = service.get_current_plan("field-1")
+    inspection = next(item for item in current.items if item.task_type == "inspection")
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["completed", "observation"],
+                "events": [
+                    {
+                        "source_quote": "今天10:00巡田任务已完成",
+                        "feedback": {
+                            "kind": "completed",
+                            "at": "2026-10-19T10:00:00+08:00",
+                            "task_id": inspection.task_id,
+                            "plot_id": "field-1",
+                        },
+                    },
+                    {
+                        "source_quote": "效果还没复查",
+                        "feedback": {
+                            "kind": "observation",
+                            "at": "2026-10-19T10:00:00+08:00",
+                            "plot_id": "field-1",
+                            "field": "ditch_connectivity",
+                            "value": None,
+                        },
+                    },
+                ],
+            },
+        )
+    )
+    try:
+        result = agent.run(
+            "field-1",
+            f"今天10:00巡田任务已完成，沟渠清理效果还没复查；{user_instruction}。",
+            received_at=datetime(2026, 10, 19, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert len(result.proposals) == 1
+    assert [
+        event.feedback.field if event.feedback.kind == "observation" else event.feedback.kind
+        for event in result.proposals[0].events
+    ] == expected_fields
+
+
+def test_explicit_new_ditch_problem_completes_grounded_atomic_proposal(tmp_path) -> None:
     message = "刚才又发现新的沟口堵塞，我确认仍需清理既有沟渠；这是新问题，请关联已完成事项。"
 
     def observation(field: str, value: object, quote: str) -> dict[str, object]:
@@ -186,26 +270,12 @@ def test_explicit_new_ditch_problem_retries_incomplete_atomic_proposal(
     def respond(_: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        if calls == 1:
-            selected = events[:2]
-        elif second_route == "declare_rephrased":
-            selected = [{**event, "source_quote": message} for event in events]
-        elif second_route == "declare_full":
-            selected = events
-        else:
-            selected = events[2:]
-        if calls == 2 and second_route == "direct_missing":
-            answer = tool_call_response(
-                "propose_feedback",
-                json.dumps({"field_id": "field-1", "events": selected}, ensure_ascii=False),
+        answer = model_calls(
+            (
+                "declare_request",
+                {"field_id": "field-1", "actions": ["observation"], "events": events[:1]},
             )
-        else:
-            answer = model_calls(
-                (
-                    "declare_request",
-                    {"field_id": "field-1", "actions": ["observation"], "events": selected},
-                )
-            )
+        )
         return httpx.Response(200, json=answer)
 
     agent, service, _ = make_agent(tmp_path, respond)
@@ -225,7 +295,7 @@ def test_explicit_new_ditch_problem_retries_incomplete_atomic_proposal(
         result = agent.run(
             "field-1", message, received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE)
         )
-        assert calls == result.request_count == 2
+        assert calls == result.request_count == 1
         assert result.business_outcome == "awaiting_confirmation"
         assert len(result.proposals) == 1
         assert {event.feedback.field for event in result.proposals[0].events} == {
@@ -236,6 +306,40 @@ def test_explicit_new_ditch_problem_retries_incomplete_atomic_proposal(
         assert service.list_events("field-1") == []
     finally:
         agent.close()
+
+
+def test_uncertain_ditch_report_does_not_become_confirmed_problem(tmp_path) -> None:
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["observation"],
+                "events": [
+                    {
+                        "source_quote": "疑似沟口堵塞",
+                        "feedback": {
+                            "kind": "observation",
+                            "at": "2026-10-18T10:00:00+08:00",
+                            "plot_id": "field-1",
+                            "field": "maintenance_problem_confirmed",
+                            "value": True,
+                        },
+                    }
+                ],
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "疑似沟口堵塞，可能需要清理既有沟渠，请记录待核实情况。",
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.proposals == []
 
 
 def test_missing_completion_clock_does_not_discard_independent_resource(tmp_path) -> None:
