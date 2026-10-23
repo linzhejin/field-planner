@@ -429,6 +429,18 @@ class AgentServiceV3:
             received_at=started_at,
             plan_start=self.workbench.get_field(field_id).draft.start_date,
         )
+        saved_profile = self.workbench.get_field(field_id).draft.profile
+        required_observations = {
+            field: label
+            for field, label in self._requested_observations(user_message).items()
+            if not (
+                field == "maintenance_purpose"
+                and saved_profile.maintenance_purpose == "clear_existing_ditch"
+                and not re.search(r"目的|为了|用于|改为|改成", user_message)
+            )
+        }
+        deferred_feedback_events: list[dict[str, object]] = []
+        observation_retry_needed = False
         read_only_preview = bool(
             preview_requested
             and not change_requested
@@ -466,7 +478,7 @@ class AgentServiceV3:
                 if event.feedback and event.feedback.kind == "observation"
             }
             if change_requested or (workflow_actions and "observation" in workflow_actions):
-                for field, label in self._requested_observations(user_message).items():
+                for field, label in required_observations.items():
                     if field not in observed:
                         missing.append(f"请确认{label}的现场情况")
             if workflow_actions:
@@ -826,12 +838,27 @@ class AgentServiceV3:
                                     runtime_missing.pop(event_key(raw_event), None)
                                 elif problem:
                                     runtime_missing[event_key(raw_event)] = problem
+                            accepted_events = self._merge_feedback_events(
+                                deferred_feedback_events, accepted_events
+                            )
+                            missing_observations = set(required_observations) - {
+                                str((event.get("feedback") or {}).get("field"))
+                                for event in accepted_events
+                                if (event.get("feedback") or {}).get("kind") == "observation"
+                            }
+                            if missing_observations and request_count == 1:
+                                deferred_feedback_events = accepted_events
+                                observation_retry_needed = True
+                                grounding_error = "仍有明确的现场事项未形成待确认事实"
+                                accepted_events = []
                             if accepted_events:
+                                deferred_feedback_events = []
+                                observation_retry_needed = False
                                 effective_arguments = json.dumps(
                                     {**raw_feedback, "events": accepted_events},
                                     ensure_ascii=False,
                                 )
-                            else:
+                            elif grounding_error is None:
                                 grounding_error = (
                                     list(runtime_missing.values())[-1]
                                     if runtime_missing
@@ -962,6 +989,26 @@ class AgentServiceV3:
                                 runtime_missing.pop(event_key(raw_event.model_dump()), None)
                             elif problem:
                                 runtime_missing[event_key(raw_event.model_dump())] = problem
+                        accepted_events = self._merge_feedback_events(
+                            deferred_feedback_events, accepted_events
+                        )
+                        missing_observations = (
+                            set(required_observations)
+                            - {
+                                str((event.get("feedback") or {}).get("field"))
+                                for event in accepted_events
+                                if (event.get("feedback") or {}).get("kind") == "observation"
+                            }
+                            if change_requested or "observation" in workflow_actions
+                            else set()
+                        )
+                        if missing_observations and request_count == 1:
+                            deferred_feedback_events = accepted_events
+                            observation_retry_needed = True
+                            accepted_events = []
+                        elif accepted_events:
+                            deferred_feedback_events = []
+                            observation_retry_needed = False
                         generated: list[tuple[str, dict[str, object]]] = []
                         if accepted_events:
                             generated.append(
@@ -1074,6 +1121,30 @@ class AgentServiceV3:
                     ):
                         break
 
+            if observation_retry_needed and request_count < MAX_MODEL_REQUESTS:
+                observation_retry_needed = False
+                missing_labels = [
+                    label
+                    for field, label in required_observations.items()
+                    if field
+                    not in {
+                        str((event.get("feedback") or {}).get("field"))
+                        for event in deferred_feedback_events
+                        if (event.get("feedback") or {}).get("kind") == "observation"
+                    }
+                ]
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "本轮用户还明确提出："
+                            + "、".join(missing_labels)
+                            + "。请逐项核对原话，并把有依据的事实合并为一份完整提案；"
+                            "无法确认的项请明确说明缺项，不得猜测。"
+                        ),
+                    }
+                )
+                continue
             if workflow_actions and not proposals and not previews and not recovery_attempted:
                 extractable = (
                     bool({"field_update", "location"} & workflow_actions)
@@ -1155,6 +1226,20 @@ class AgentServiceV3:
             text=last_tool_summary,
             error_message="本轮最多请求模型三次；工具结果已保留，请检查后重试。",
         )
+
+    @staticmethod
+    def _merge_feedback_events(
+        previous: list[dict[str, object]], current: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
+        """Keep one grounded fact per identical event across a correction request."""
+        merged: list[dict[str, object]] = []
+        seen: set[str] = set()
+        for event in [*previous, *current]:
+            signature = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str)
+            if signature not in seen:
+                merged.append(event)
+                seen.add(signature)
+        return merged
 
     @staticmethod
     def _actions_satisfied(

@@ -472,7 +472,12 @@ def score_case(
         checks.extend(_feedback_consistency(case, record))
     semantic_supported = semantic_total = serious_unsupported = 0
     if contract.get("semantic_required"):
-        if semantic is None:
+        active_claims = any(
+            row.get("schedule_status") in {"scheduled", "pending", "unscheduled"} for row in tasks
+        )
+        if not active_claims:
+            checks.append(_check("semantic_support", NA, "没有当前农业建议需要语义复核"))
+        elif semantic is None:
             checks.append(_check("semantic_support", PENDING, "关键语义尚未辅助复核"))
         else:
             judgments = semantic.get("judgments") or []

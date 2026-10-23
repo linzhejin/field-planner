@@ -125,6 +125,119 @@ def test_two_observations_need_two_facts_not_one_kind(tmp_path) -> None:
     agent.close()
 
 
+def test_read_only_observation_question_does_not_request_fact_proposal(tmp_path) -> None:
+    last_messages: list[dict[str, object]] = []
+    calls = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(
+                200,
+                json=model_calls(
+                    ("declare_request", {"field_id": "field-1", "actions": ["query"]}),
+                    ("read_field", {"field_id": "field-1"}),
+                ),
+            )
+        last_messages.extend(json.loads(request.content)["messages"])
+        return httpx.Response(200, json=final_response("当前没有已确认的积水事实。"))
+
+    agent, _, _ = make_agent(tmp_path, respond)
+    try:
+        result = agent.run("field-1", "现在有积水吗？")
+    finally:
+        agent.close()
+    assert result.status == "success"
+    assert calls == 2
+    assert not any(
+        message["role"] == "user" and "本轮用户还明确提出" in str(message["content"])
+        for message in last_messages
+    )
+
+
+@pytest.mark.parametrize(
+    "second_route", ["declare_full", "declare_rephrased", "declare_missing", "direct_missing"]
+)
+def test_explicit_new_ditch_problem_retries_incomplete_atomic_proposal(
+    tmp_path, second_route: str
+) -> None:
+    message = "刚才又发现新的沟口堵塞，我确认仍需清理既有沟渠；这是新问题，请关联已完成事项。"
+
+    def observation(field: str, value: object, quote: str) -> dict[str, object]:
+        return {
+            "source_quote": quote,
+            "feedback": {
+                "kind": "observation",
+                "at": "2026-10-18T10:00:00+08:00",
+                "plot_id": "field-1",
+                "field": field,
+                "value": value,
+            },
+        }
+
+    events = [
+        observation("ditch_connectivity", "impaired", "刚才又发现新的沟口堵塞"),
+        observation("maintenance_need_confirmed", True, "我确认仍需清理既有沟渠"),
+        observation("maintenance_problem_confirmed", True, "刚才又发现新的沟口堵塞"),
+    ]
+    calls = 0
+
+    def respond(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            selected = events[:2]
+        elif second_route == "declare_rephrased":
+            selected = [{**event, "source_quote": message} for event in events]
+        elif second_route == "declare_full":
+            selected = events
+        else:
+            selected = events[2:]
+        if calls == 2 and second_route == "direct_missing":
+            answer = tool_call_response(
+                "propose_feedback",
+                json.dumps({"field_id": "field-1", "events": selected}, ensure_ascii=False),
+            )
+        else:
+            answer = model_calls(
+                (
+                    "declare_request",
+                    {"field_id": "field-1", "actions": ["observation"], "events": selected},
+                )
+            )
+        return httpx.Response(200, json=answer)
+
+    agent, service, _ = make_agent(tmp_path, respond)
+    state = service.get_field("field-1")
+    service.save_field_draft(
+        state.draft.model_copy(
+            update={
+                "profile": state.draft.profile.model_copy(
+                    update={"maintenance_purpose": "clear_existing_ditch"}
+                )
+            }
+        ),
+        expected_version=state.draft_version,
+        operation_id="confirm-existing-purpose",
+    )
+    try:
+        result = agent.run(
+            "field-1", message, received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE)
+        )
+        assert calls == result.request_count == 2
+        assert result.business_outcome == "awaiting_confirmation"
+        assert len(result.proposals) == 1
+        assert {event.feedback.field for event in result.proposals[0].events} == {
+            "ditch_connectivity",
+            "maintenance_need_confirmed",
+            "maintenance_problem_confirmed",
+        }
+        assert service.list_events("field-1") == []
+    finally:
+        agent.close()
+
+
 def test_missing_completion_clock_does_not_discard_independent_resource(tmp_path) -> None:
     agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
     initial = service.preview_plan("field-1")

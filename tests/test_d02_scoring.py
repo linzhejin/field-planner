@@ -239,6 +239,36 @@ def test_expected_interface_failure_can_be_scored_without_semantic_claims() -> N
     assert scored["verdict"] == "passed"
 
 
+def test_no_active_agricultural_claim_has_no_semantic_review_denominator() -> None:
+    record = _record()
+    record["result"]["tasks"] = [
+        {"task_id": "inspect-1", "task_type": "inspection", "schedule_status": "completed"},
+        {"task_id": "maint-1", "task_type": "maintenance", "schedule_status": "not_generated"},
+    ]
+    contract = {
+        **_contract(),
+        "required_tasks": [{"task_type": "inspection", "allowed_statuses": ["completed"]}],
+        "forbidden_task_types": [],
+        "semantic_required": True,
+    }
+    scored = score_case(
+        _case(), contract, record, semantic={"status": "not_applicable", "judgments": []}
+    )
+    assert scored["verdict"] == "passed"
+    assert any(
+        check["check"] == "semantic_support" and check["status"] == "not_applicable"
+        for check in scored["checks"]
+    )
+
+
+def test_active_agricultural_claim_without_judgment_remains_pending() -> None:
+    contract = {**_contract(), "semantic_required": True}
+    scored = score_case(
+        _case(), contract, _record(), semantic={"status": "not_applicable", "judgments": []}
+    )
+    assert scored["verdict"] == "insufficient_evidence"
+
+
 def test_forbidden_scheduled_type_and_capacity_are_independent_checks() -> None:
     record = _record()
     contract = {
