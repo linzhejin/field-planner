@@ -33,7 +33,7 @@ from nongshi.d02_scoring import score_case, summarize_scores
 from nongshi.d02_semantic import judge_packet, write_blind_review_packets
 from nongshi.feedback_time import audit_completed_time_visibility
 
-SEAL_VERSION = "internal-auto-v4"
+SEAL_VERSION = "internal-auto-v5"
 FILES = {
     "main_cases": "main_cases.jsonl",
     "main_constraints": "main_constraints.jsonl",

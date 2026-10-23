@@ -393,6 +393,205 @@ def test_chinese_calendar_date_must_match_resource_day(tmp_path, day: str, accep
     assert bool(result.proposals) is accepted
 
 
+@pytest.mark.parametrize(
+    "time_clause,accepted",
+    [
+        ("巡田的实际完成时间是 2026-10-19T09:30:00+08:00", True),
+        ("沟渠维护的实际完成时间是 2026-10-19T09:30:00+08:00", False),
+        (
+            "巡田的实际完成时间是 2026-10-19T09:30:00+08:00；"
+            "巡田的实际完成时间是 2026-10-19T10:00:00+08:00",
+            False,
+        ),
+    ],
+)
+def test_completed_quote_uses_only_matching_explicit_task_time(
+    tmp_path, time_clause: str, accepted: bool
+) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
+    preview = service.preview_plan("field-1")
+    service.adopt_plan(
+        preview.id, expected_fact_version=0, expected_plan_id=None, operation_id="adopt-v1"
+    )
+    inspection_id = next(
+        item.task_id for item in preview.version.plan.items if item.task_type == "inspection"
+    )
+    event = {
+        "source_quote": "巡田已经完成",
+        "feedback": {
+            "kind": "completed",
+            "at": "2026-10-19T09:30:00+08:00",
+            "task_id": inspection_id,
+            "plot_id": "field-1",
+        },
+    }
+    answer = model_calls(
+        ("declare_request", {"field_id": "field-1", "actions": ["completed"], "events": [event]})
+    )
+    agent._transport = httpx.MockTransport(lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            f"巡田已经完成；补充确认：{time_clause}",
+            received_at=datetime(2026, 10, 20, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert bool(result.proposals) is accepted
+
+
+def test_first_three_and_third_to_seventh_days_are_grounded_from_plan_start() -> None:
+    received = datetime(2026, 10, 20, 10, 0, tzinfo=ZONE)
+    start = datetime(2026, 10, 19, 0, 0, tzinfo=ZONE).date()
+    assert AgentServiceV3._mentioned_days("前三天无法进田", received, start) == {
+        start + timedelta(days=offset) for offset in range(3)
+    }
+    expected = {start + timedelta(days=offset) for offset in range(2, 7)}
+    assert AgentServiceV3._mentioned_days("第三天到第七天改为0分钟", received, start) == expected
+    assert (
+        AgentServiceV3._resource_days_in_message(
+            "第三天到第七天都改为0分钟", received_at=received, plan_start=start
+        )
+        == expected
+    )
+
+
+def test_zero_resource_minutes_for_five_days_propose_five_distinct_facts(tmp_path) -> None:
+    quote = "第三天到第七天都改为0分钟"
+    events = [
+        {
+            "source_quote": quote,
+            "feedback": {
+                "kind": "resource",
+                "at": "2026-10-20T10:00:00+08:00",
+                "day": (datetime(2026, 10, 19, tzinfo=ZONE) + timedelta(days=offset))
+                .date()
+                .isoformat(),
+                "plot_id": "field-1",
+                "intervals": [],
+                "resource_minutes": 0,
+            },
+        }
+        for offset in range(2, 7)
+    ]
+    answer = model_calls(
+        ("declare_request", {"field_id": "field-1", "actions": ["resource"], "events": events})
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            f"{quote}，第二天原有空档保留。",
+            received_at=datetime(2026, 10, 20, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation", result.text
+    assert len(result.proposals) == 1
+    assert len(result.proposals[0].events) == 5
+
+
+def test_three_day_no_field_access_keeps_weather_independently_workable(tmp_path) -> None:
+    quote = "我确认前三天无法进田，天气条件仍可；请把三天现场可作业改为否"
+    events = [
+        {
+            "source_quote": quote,
+            "feedback": {
+                "kind": "workability",
+                "at": "2026-10-18T18:00:00+08:00",
+                "plot_id": "field-1",
+                "day": (datetime(2026, 10, 19, tzinfo=ZONE) + timedelta(days=offset))
+                .date()
+                .isoformat(),
+                "site_workable": False,
+                "weather_workable": True,
+            },
+        }
+        for offset in range(3)
+    ]
+    answer = model_calls(
+        (
+            "declare_request",
+            {"field_id": "field-1", "actions": ["workability"], "events": events},
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", quote, received_at=datetime(2026, 10, 18, 18, 0, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation"
+    assert len(result.proposals) == 1
+    assert len(result.proposals[0].events) == 3
+
+
+def test_unobserved_pests_and_unchecked_ditch_stay_unknown(tmp_path) -> None:
+    quotes = ["积水有", "虫情未观察", "既有沟渠清理完成，效果还没复查"]
+    fields = ["standing_water", "pest_signs", "ditch_connectivity"]
+    values = [True, None, None]
+    events = [
+        {
+            "source_quote": quote,
+            "feedback": {
+                "kind": "observation",
+                "at": "2026-10-18T10:00:00+08:00",
+                "plot_id": "field-1",
+                "field": field,
+                "value": value,
+            },
+        }
+        for quote, field, value in zip(quotes, fields, values, strict=True)
+    ]
+    answer = model_calls(
+        (
+            "declare_request",
+            {"field_id": "field-1", "actions": ["observation"], "events": events},
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "；".join(quotes),
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.business_outcome == "awaiting_confirmation", result.text
+    assert len(result.proposals) == 1
+    assert [event.feedback.value for event in result.proposals[0].events] == values
+
+
+def test_preview_is_not_reported_ready_when_declared_field_change_is_unverified(tmp_path) -> None:
+    event = {
+        "source_quote": "明天田里无法进田",
+        "feedback": {
+            "kind": "workability",
+            "at": "2026-10-18T10:00:00+08:00",
+            "plot_id": "field-1",
+            "day": "2026-10-21",
+            "site_workable": False,
+        },
+    }
+    answer = model_calls(
+        (
+            "declare_request",
+            {"field_id": "field-1", "actions": ["workability", "preview"], "events": [event]},
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "明天田里无法进田，请修改后预览",
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.business_outcome == "needs_information"
+    assert not result.previews
+
+
 def test_resource_clock_in_unrelated_completion_clause_cannot_ground_interval(tmp_path) -> None:
     answer = model_calls(
         (

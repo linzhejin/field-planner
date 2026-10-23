@@ -968,7 +968,15 @@ class AgentServiceV3:
                                     {"field_id": field_id, "changes": grounded_changes},
                                 )
                             )
-                        if "preview" in workflow_actions and not generated:
+                        pending_changes = workflow_actions & {
+                            "field_update",
+                            "location",
+                            "completed",
+                            "observation",
+                            "workability",
+                            "resource",
+                        }
+                        if "preview" in workflow_actions and not generated and not pending_changes:
                             generated.append(("preview_plan", {"field_id": field_id}))
                         generated_calls: list[ModelToolCall] = []
                         for index, (tool_name, tool_args) in enumerate(generated):
@@ -1174,8 +1182,14 @@ class AgentServiceV3:
         names = {
             "standing_water": (r"积水", "积水"),
             "pest_signs": (r"虫情|害虫|虫害", "虫情"),
-            "ditch_connectivity": (r"沟渠.*?(?:堵|不通|连通|通畅)|堵塞", "沟渠连通情况"),
-            "maintenance_purpose": (r"清理既有沟渠|既有沟渠清理", "沟渠维护目的"),
+            "ditch_connectivity": (
+                r"沟渠.*?(?:堵|不通|连通|通畅|没复查|未复查)|堵塞",
+                "沟渠连通情况",
+            ),
+            "maintenance_purpose": (
+                r"(?:仍需|需要|目的|为了).*?清理既有沟渠|清理既有沟渠.*?(?:目的|用于)",
+                "沟渠维护目的",
+            ),
             "maintenance_need_confirmed": (r"(?:仍需|需要).*?(?:清理|维护)", "维护需求"),
             "maintenance_problem_confirmed": (r"堵塞|沟渠受阻|沟渠不通", "沟渠现场问题"),
         }
@@ -1188,19 +1202,18 @@ class AgentServiceV3:
         message: str, *, received_at: datetime, plan_start: date | None
     ) -> set[date]:
         days: set[date] = set()
-        received_day = received_at.astimezone(LOCAL_ZONE).date()
         for clause in re.split(r"[,，。；;\n]", message):
-            if not re.search(r"有空|可用|人员.*时间|工作时段|空闲", clause):
+            if re.search(r"保留|不变|照旧", clause) and not re.search(
+                r"改为|改成|变为|只有|只剩|仅|调整", clause
+            ):
                 continue
-            if "明天" in clause:
-                days.add(received_day + timedelta(days=1))
-            if "后天" in clause:
-                days.add(received_day + timedelta(days=2))
-            if "今天" in clause:
-                days.add(received_day)
-            if "第二天" in clause and plan_start:
-                days.add(plan_start + timedelta(days=1))
-            days.update(AgentServiceV3._explicit_dates(clause))
+            explicit_resource = re.search(r"(?<!原)有空|可用|人员.*时间|工作时段|空闲", clause)
+            changed_resource = re.search(r"改为|改成|变为|只有|只剩|仅|调整", clause) and re.search(
+                r"资源|空档|分钟|\d{1,2}:\d{2}", clause
+            )
+            if not (explicit_resource or changed_resource):
+                continue
+            days.update(AgentServiceV3._mentioned_days(clause, received_at, plan_start))
         return days
 
     @staticmethod
@@ -1309,8 +1322,28 @@ class AgentServiceV3:
             days.add(local_day + timedelta(days=1))
         if "后天" in quote:
             days.add(local_day + timedelta(days=2))
-        if "第二天" in quote and plan_start:
-            days.add(plan_start + timedelta(days=1))
+        if plan_start:
+            ordinals = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7}
+
+            def ordinal(raw: str) -> int:
+                return int(raw) if raw.isdigit() else ordinals[raw]
+
+            if "首日" in quote:
+                days.add(plan_start)
+            for first, last in re.findall(
+                r"第([一二三四五六七1-7])天\s*(?:到|至|—|–|-)\s*第?([一二三四五六七1-7])天",
+                quote,
+            ):
+                start_index, end_index = ordinal(first), ordinal(last)
+                if start_index <= end_index:
+                    days.update(
+                        plan_start + timedelta(days=index - 1)
+                        for index in range(start_index, end_index + 1)
+                    )
+            for raw in re.findall(r"第([一二三四五六七1-7])天", quote):
+                days.add(plan_start + timedelta(days=ordinal(raw) - 1))
+            for raw in re.findall(r"(?:前面|前)([一二三四五六七1-7])天", quote):
+                days.update(plan_start + timedelta(days=index) for index in range(ordinal(raw)))
         days.update(AgentServiceV3._explicit_dates(quote))
         return days
 
@@ -1326,10 +1359,18 @@ class AgentServiceV3:
                 "maintenance_problem_confirmed": r"沟渠|堵塞|维护问题",
             }
             target = names.get(field)
+            if field == "ditch_connectivity" and re.search(
+                r"沟渠.*?清理.*?完成[，,；;。]?\s*效果.*?(?:没|未)复查", quote
+            ):
+                return True
             return bool(
                 target
                 and any(
-                    re.search(target, clause) and re.search(r"未知|不清楚|未确认|待确认", clause)
+                    re.search(target, clause)
+                    and re.search(
+                        r"未知|不清楚|未确认|待确认|未观察|没看|未看|没复查|未复查",
+                        clause,
+                    )
                     for clause in re.split(r"[,，。；;\n]", quote)
                 )
             )
@@ -1351,7 +1392,10 @@ class AgentServiceV3:
                     re.search(r"无积水|没有积水|未见积水|未发现积水|没发现积水|不积水", quote)
                 )
                 positive = bool(
-                    re.search(r"(?:(?<![未没])发现|(?<!没)有|出现|存在|仍有|看到).*?积水", quote)
+                    re.search(
+                        r"(?:(?<![未没])发现|(?<!没)有|出现|存在|仍有|看到).*?积水|积水有",
+                        quote,
+                    )
                 )
             else:
                 negative = bool(
@@ -1434,9 +1478,24 @@ class AgentServiceV3:
                     return None, "请说明实际完成的是哪项任务"
                 grounded = ground_completed_time(feedback.at, received_at, quote)
                 if not grounded.accepted:
+                    other_aliases = (
+                        r"清沟|沟渠|维护|疏通"
+                        if task.task_type == "inspection"
+                        else r"巡田|巡查|检查|巡视"
+                    )
+                    related_clauses = [
+                        clause
+                        for clause in re.split(r"[，,。；;！？!?\n]", user_message)
+                        if (feedback.task_id in clause or re.search(aliases, clause))
+                        and (feedback.task_id in clause or not re.search(other_aliases, clause))
+                    ]
+                    grounded = ground_completed_time(
+                        feedback.at, received_at, "；".join(related_clauses)
+                    )
+                if not grounded.accepted:
                     return None, "请提供该任务实际完成的准确日期和时间"
             elif feedback.kind == "resource":
-                if not re.search(r"有空|可用|时段|人员|工时|时间", quote):
+                if not re.search(r"有空|可用|时段|人员|工时|时间|资源|空档|分钟", quote):
                     return None, "请说明人员可用时间"
                 clocks = self._clock_minutes(quote)
                 expected = [
@@ -1447,7 +1506,9 @@ class AgentServiceV3:
                         window.end.hour * 60 + window.end.minute,
                     )
                 ]
-                if not clocks or clocks != expected:
+                explicit_zero = bool(re.search(r"(?<!\d)(?:0|零)\s*分钟", quote))
+                zero_day = not expected and feedback.resource_minutes == 0 and explicit_zero
+                if not zero_day and (not clocks or clocks != expected):
                     return None, "请给出人员可用时段的具体开始和结束时间"
                 start_day = self.workbench.get_field(field_id).draft.start_date
                 mentioned_days = self._mentioned_days(quote, received_at, start_day)
@@ -1455,12 +1516,16 @@ class AgentServiceV3:
                     return None, "请确认人员时间对应的具体日期"
                 interval_minutes = sum(window.minutes for window in feedback.intervals or [])
                 capacity = feedback.resource_minutes
-                if capacity is not None and (
-                    capacity <= 0
-                    or capacity > interval_minutes
-                    or (
-                        capacity != interval_minutes
-                        and not re.search(rf"(?<!\d){capacity}\s*分钟", quote)
+                if (
+                    capacity is not None
+                    and not zero_day
+                    and (
+                        capacity <= 0
+                        or capacity > interval_minutes
+                        or (
+                            capacity != interval_minutes
+                            and not re.search(rf"(?<!\d){capacity}\s*分钟", quote)
+                        )
                     )
                 ):
                     return None, "请核对人员可用工时与时段是否一致"
@@ -1486,9 +1551,15 @@ class AgentServiceV3:
                     quote, received_at, self.workbench.get_field(field_id).draft.start_date
                 ):
                     return None, "请确认现场作业条件对应的日期"
-                negative = bool(re.search(r"不能|不可|无法|下不了|进不了|不适合", quote))
+                negative = bool(
+                    re.search(r"不能|不可|无法|下不了|进不了|不适合|可作业改为否", quote)
+                )
+                positive_quote = re.sub(r"(?:现场|田里|地里)?可作业改为否", "", quote)
                 positive = bool(
-                    re.search(r"(?<!不)(?:可以|可|能够|能|适合).*?(?:作业|进田|下地)", quote)
+                    re.search(
+                        r"(?<!不)(?:可以|可|能够|能|适合).*?(?:作业|进田|下地)",
+                        positive_quote,
+                    )
                 )
                 raw_feedback = event.get("feedback", event)
                 if (
@@ -1507,9 +1578,7 @@ class AgentServiceV3:
                     if not weather_quote:
                         return None, "请单独确认当天的天气作业条件"
                     weather_negative = bool(re.search(r"不能|不可|无法|不适合", weather_quote[0]))
-                    weather_positive = bool(
-                        re.search(r"(?<!不)(?:可以|可|能够|能|适合).*?作业", weather_quote[0])
-                    )
+                    weather_positive = bool(re.search(r"仍可|可以|可作业|适合", weather_quote[0]))
                     if (
                         weather_positive == weather_negative
                         or feedback.weather_workable != weather_positive
@@ -1529,7 +1598,7 @@ class AgentServiceV3:
 
     @staticmethod
     def _vague_resource_time(user_message: str, arguments_json: str) -> bool:
-        if not re.search(r"上午|下午|晚上|有空|可用时间", user_message):
+        if not re.search(r"上午|下午|晚上|(?<!原)有空|可用时间", user_message):
             return False
         if re.search(r"\d{1,2}:\d{2}|[\d一二三四五六七八九十两]{1,3}\s*点", user_message):
             return False
