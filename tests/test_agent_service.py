@@ -408,6 +408,36 @@ def test_nonexistent_task_id_is_rejected_before_a_feedback_proposal_is_shown(
     agent.close()
 
 
+def test_future_completion_clarification_explains_time_has_not_arrived(tmp_path: Path) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=final_response()))
+    preview = service.preview_plan("field-1")
+    adopted = service.adopt_plan(
+        preview.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-first",
+    ).version
+    inspection = next(item for item in adopted.items if item.task_type == "inspection")
+    message = "明天（2026年10月20日）09:30巡田检查已完成"
+
+    event, clarification = agent._ground_declared_event(
+        {
+            "kind": "completed",
+            "task_id": inspection.task_id,
+            "at": "2026-10-20T09:30:00+08:00",
+            "source_quote": message,
+        },
+        field_id="field-1",
+        user_message=message,
+        received_at=datetime(2026, 10, 19, 4, tzinfo=UTC),
+    )
+
+    assert event is None
+    assert clarification is not None and "尚未到来" in clarification
+    assert service.list_events("field-1") == []
+    agent.close()
+
+
 def test_resource_interval_cannot_be_disguised_as_workability() -> None:
     with pytest.raises(ValueError, match="作业条件反馈不能包含可用时段"):
         ProposeFeedbackArgs.model_validate(

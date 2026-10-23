@@ -1712,6 +1712,8 @@ class AgentServiceV3:
                 if feedback.task_id not in quote and not re.search(aliases, quote):
                     return None, "请说明实际完成的是哪项任务"
                 grounded = ground_completed_time(feedback.at, received_at, quote)
+                if grounded.reason == "future_actual_completion_time":
+                    return None, "所报的完成时间尚未到来；请在任务实际完成后再记录"
                 if not grounded.accepted:
                     other_aliases = (
                         r"清沟|沟渠|维护|疏通"
@@ -1728,6 +1730,8 @@ class AgentServiceV3:
                         feedback.at, received_at, "；".join(related_clauses)
                     )
                 if not grounded.accepted:
+                    if grounded.reason == "future_actual_completion_time":
+                        return None, "所报的完成时间尚未到来；请在任务实际完成后再记录"
                     return None, "请提供该任务实际完成的准确日期和时间"
             elif feedback.kind == "resource":
                 if not re.search(r"有空|可用|时段|人员|工时|时间|资源|空档|分钟", quote):

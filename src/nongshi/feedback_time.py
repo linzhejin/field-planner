@@ -34,8 +34,6 @@ def ground_completed_time(
         value.tzinfo is None or value.utcoffset() is None for value in (proposed_at, received_at)
     ):
         return reject("timezone_required")
-    if proposed_at > received_at:
-        return reject("future_actual_completion_time")
     received = received_at.astimezone(LOCAL_ZONE)
     candidates: list[datetime] = []
     # Clause boundaries prevent an independent resource clock grounding completion.
@@ -107,6 +105,8 @@ def ground_completed_time(
         return reject("ambiguous_actual_completion_time")
     if candidates[0] != proposed_at:
         return reject("actual_completion_time_mismatch")
+    if proposed_at > received_at:
+        return reject("future_actual_completion_time")
     return CompletionTimeGrounding(True, proposed_at, "explicit_user_completion_time")
 
 

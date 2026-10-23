@@ -73,6 +73,17 @@ def test_missing_completion_does_not_turn_resource_into_completion():
     assert result.reason == "missing_actual_completion_time"
 
 
+def test_future_completion_reason_requires_the_user_to_have_given_that_future_time():
+    received = dt("2026-10-23T10:00:00+08:00")
+    proposed = dt("2026-10-24T09:40:00+08:00")
+
+    explicit_future = ground_completed_time(proposed, received, "2026年10月24日09:40完成巡查")
+    model_mismatch = ground_completed_time(proposed, received, "今天09:40完成巡查")
+
+    assert explicit_future.reason == "future_actual_completion_time"
+    assert model_mismatch.reason == "actual_completion_time_mismatch"
+
+
 def test_later_chat_cannot_supply_hidden_time():
     value = case("今天已完成巡查")
     value["interaction_script"].append(
