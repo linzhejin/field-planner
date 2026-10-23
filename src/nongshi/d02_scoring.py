@@ -121,8 +121,13 @@ def _feedback_consistency(case: dict[str, Any], record: dict[str, Any]) -> list[
         ):
             if task_id == declared:
                 task_id = aliases.get(task_type, declared)
-        target = event.get("field") or event.get("day") or task_id or ""
         kind = str(event.get("kind"))
+        if kind == "completed":
+            target = task_id or ""
+        elif kind in {"resource", "workability"}:
+            target = event.get("day") or ""
+        else:
+            target = event.get("field") or ""
         if kind == "resource":
             intervals = [
                 (

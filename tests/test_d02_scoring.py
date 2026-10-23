@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from nongshi.d02_scoring import _effective_inputs, _expected_feedback, score_case, summarize_scores
+from nongshi.d02_scoring import (
+    _effective_inputs,
+    _expected_feedback,
+    _feedback_consistency,
+    score_case,
+    summarize_scores,
+)
 
 
 def test_confirmed_script_feedback_changes_scoring_facts() -> None:
@@ -26,6 +32,24 @@ def test_confirmed_script_feedback_changes_scoring_facts() -> None:
     _profile, days = _effective_inputs(case)
     assert days["2026-10-20"]["resource_minutes"] == 20
     assert days["2026-10-20"]["intervals"][0]["end"] == "09:20"
+
+
+def test_matching_completed_task_is_not_replaced_by_redundant_day() -> None:
+    expected = {
+        "kind": "completed",
+        "task_id": "inspect-1",
+        "at": "2026-10-20T09:30:00+08:00",
+    }
+    case = _case()
+    case["interaction_script"] = [
+        {"operation": "confirm_feedback", "payload": {"events": [{"feedback": expected}]}}
+    ]
+    actual = {**expected, "day": "2026-10-20"}
+    record = _record()
+    record["result"]["events"] = [{"feedback": actual}]
+    assert _feedback_consistency(case, record)[0]["status"] == "pass"
+    record["result"]["events"][0]["feedback"]["task_id"] = "another-task"
+    assert _feedback_consistency(case, record)[0]["status"] == "fail"
 
 
 def test_any_successful_agent_tool_is_a_valid_process_evidence() -> None:
