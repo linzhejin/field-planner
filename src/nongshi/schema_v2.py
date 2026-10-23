@@ -277,7 +277,11 @@ class PlanItemV2(BaseModel):
 
 class FeedbackV2(BaseModel):
     kind: Literal["completed", "observation", "workability", "resource"]
-    at: AwareDatetime
+    at: AwareDatetime = Field(
+        description=(
+            "completed 时为用户明确提供的实际完成时间；不得用消息接收、入库或计划结束时间代替"
+        )
+    )
     task_id: str | None = None
     plot_id: str | None = None
     field: (

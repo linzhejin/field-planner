@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+import nongshi.workbench as workbench
+from nongshi.agent import AgentServiceV3
 from nongshi.repository_v3 import WorkbenchStoreV3
+from nongshi.schema_v3 import AgentResponseV3
 
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
 
@@ -22,6 +26,30 @@ def _create_field(app: AppTest, field_id: str) -> None:
     app.selectbox(key=f"field_type:{field_id}:0").set_value("低洼/稻茬田")
     app.selectbox(key=f"inspection_requested:{field_id}:0").set_value("是")
     app.number_input(key=f"inspection_minutes:{field_id}:0").set_value(30)
+
+
+def test_chat_receipt_uses_the_workbench_clock(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    received = datetime(2026, 10, 24, 10, 0, tzinfo=timezone(timedelta(hours=8)))
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.setattr(workbench, "_now", lambda: received)
+    captured: list[datetime | None] = []
+
+    def fake_run(self, field_id, user_message, *, conversation=None, received_at=None):  # type: ignore[no-untyped-def]
+        captured.append(received_at)
+        return AgentResponseV3(
+            run_id="clock-test", status="success", model="test", request_count=0, text="已读取"
+        )
+
+    monkeypatch.setattr(AgentServiceV3, "run", fake_run)
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    app.chat_input(key=f"assistant_input:{field_id}").set_value("巡田已完成").run()
+
+    assert not app.exception
+    assert captured == [received]
 
 
 def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,6 +24,9 @@ class DeclareRequestArgs(BaseModel):
     field_id: str
     actions: list[Action] = Field(min_length=1, max_length=8)
     missing: list[str] = Field(default_factory=list, max_length=3)
+    field_changes: dict[str, Any] = Field(default_factory=dict)
+    field_change_quotes: dict[str, str] = Field(default_factory=dict)
+    events: list[dict[str, Any]] = Field(default_factory=list, max_length=10)
 
 
 @dataclass(frozen=True)
@@ -39,7 +42,9 @@ class Capability:
 CAPABILITIES: dict[str, Capability] = {
     "declare_request": Capability(
         "declare_request",
-        "首轮声明用户本次要办的事项和最多三个具体缺项；多事项分别列出，不能补造时间。",
+        "首轮同时声明事项、提取每条事实或档案改动，并列最多三个具体缺项；"
+        "events 每项附用户原话 source_quote；field_changes 每个字段在 "
+        "field_change_quotes 中附对应原话。不要补造完成时间或人员时段。",
         frozenset(),
         "declare",
     ),

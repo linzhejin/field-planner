@@ -204,10 +204,10 @@ def test_model_update_is_only_a_proposal_until_the_user_confirms_it(tmp_path: Pa
                     '{"field_id":"field-1","changes":{"maintenance_need_confirmed":true}}',
                 ),
             )
-        return httpx.Response(200, json=final_response("我准备把巡田需求设为需要，请确认。"))
+        return httpx.Response(200, json=final_response("我准备把沟渠清理需求设为需要，请确认。"))
 
     agent, service, _ = make_agent(tmp_path, respond)
-    result = agent.run("field-1", "我想巡田")
+    result = agent.run("field-1", "仍需清理既有沟渠")
     state = service.get_field("field-1")
 
     assert result.status == "success"
@@ -581,10 +581,7 @@ def test_declared_resource_flow_does_not_call_weather(tmp_path: Path) -> None:
     result = agent.run("field-1", "请修改人员时间")
 
     assert result.workflow_actions == ["resource"]
-    assert any(
-        trace.name == "query_current_weather" and trace.status == "invalid_arguments"
-        for trace in result.tools
-    )
+    assert all(trace.name != "query_current_weather" for trace in result.tools)
     assert result.business_outcome == "needs_information"
     agent.close()
 
@@ -702,7 +699,11 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         expected_plan_id=None,
         operation_id="adopt-first",
     )
-    response = agent.run("field-1", "把明天有空时间改成下午两点到四点")
+    response = agent.run(
+        "field-1",
+        "把明天有空时间改成下午两点到四点",
+        received_at=datetime(2026, 10, 18, 2, 0, tzinfo=UTC),
+    )
     assert len(response.proposals) == 1
     agent.close()
 

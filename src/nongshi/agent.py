@@ -15,6 +15,7 @@ import httpx
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from nongshi.config import Settings
+from nongshi.feedback_time import ground_completed_time
 from nongshi.model_http import ModelBudgetExceeded, post_model_json
 from nongshi.rule_retrieval import RuleRetrieverV3
 from nongshi.schema_v2 import LOCAL_ZONE, TimeWindow
@@ -137,6 +138,7 @@ ProposedFeedback = Annotated[
 class ProposedEvent(ToolArgs):
     event_id: str | None = None
     source: Literal["user", "assistant", "import"] = "user"
+    source_quote: str | None = None
     feedback: ProposedFeedback | None = None
     correction_of: str | None = None
     retracts: bool = False
@@ -153,7 +155,7 @@ class ProposeFeedbackArgs(ToolArgs):
             normalized: list[Any] = []
             for event in value.get("events") or []:
                 if isinstance(event, dict) and "feedback" not in event and "kind" in event:
-                    envelope = {"event_id", "source", "correction_of", "retracts"}
+                    envelope = {"event_id", "source", "source_quote", "correction_of", "retracts"}
                     event = {
                         **{key: item for key, item in event.items() if key in envelope},
                         "feedback": {
@@ -177,9 +179,22 @@ class ProposeFeedbackArgs(ToolArgs):
 
     def validated_events(self) -> list[FactEventInputV3]:
         return [
-            FactEventInputV3.model_validate(event.model_dump(mode="python", exclude_none=True))
+            FactEventInputV3.model_validate(
+                event.model_dump(mode="python", exclude_unset=True, exclude={"source_quote"})
+            )
             for event in self.events
         ]
+
+
+class DeclaredEvent(ProposedEvent):
+    source_quote: str = Field(
+        min_length=1,
+        description="与这条事实对应的用户原话，必须逐字摘自本轮用户消息",
+    )
+
+
+class AgentDeclareRequestArgs(DeclareRequestArgs):
+    events: list[DeclaredEvent] = Field(default_factory=list, max_length=10)
 
 
 class ModelFunction(BaseModel):
@@ -226,7 +241,7 @@ def _tool(name: str, description: str, arguments: type[BaseModel]) -> dict[str, 
 
 
 ARGUMENT_MODELS: dict[str, type[BaseModel]] = {
-    "declare_request": DeclareRequestArgs,
+    "declare_request": AgentDeclareRequestArgs,
     "read_field": ReadFieldArgs,
     "search_rules": SearchRulesArgs,
     "evaluate_field": EvaluateFieldArgs,
@@ -298,6 +313,7 @@ class AgentServiceV3:
         token_usage_seen = False
         workflow_actions: set[str] | None = None
         declared_missing: list[str] = []
+        runtime_missing: dict[str, str] = {}
         steps: list[AgentWorkflowStepV3] = []
         request_ids: list[str] = []
 
@@ -342,7 +358,12 @@ class AgentServiceV3:
             )
             try:
                 with self.workbench.store.connection_budget(1.0):
-                    self.workbench.store.save_agent_run(run, proposals)
+                    pending_ids = {
+                        proposal.id for proposal in self.workbench.pending_agent_proposals(field_id)
+                    }
+                    self.workbench.store.save_agent_run(
+                        run, [proposal for proposal in proposals if proposal.id not in pending_ids]
+                    )
             except sqlite3.OperationalError:
                 status = "error"
                 text = ""
@@ -387,23 +408,137 @@ class AgentServiceV3:
                 user_message,
             )
         ) and not bool(re.search(r"刚保存.*预览", user_message))
+        preview_requested = bool(re.search(r"预览|生成.*计划|安排.*七天", user_message))
 
         messages: list[dict[str, object]] = [
             {
                 "role": "system",
                 "content": self._system_message(
                     field_id, received_at=started_at.astimezone(LOCAL_ZONE)
-                ),
+                )
+                + "\n当前已保存状态（只读）："
+                + json.dumps(self._field_context(field_id), ensure_ascii=False, default=str),
             }
         ]
         for item in (conversation or [])[-8:]:
             if item.get("role") in {"user", "assistant"} and isinstance(item.get("content"), str):
                 messages.append({"role": item["role"], "content": item["content"]})
         messages.append({"role": "user", "content": user_message})
+        requested_resource_days = self._resource_days_in_message(
+            user_message,
+            received_at=started_at,
+            plan_start=self.workbench.get_field(field_id).draft.start_date,
+        )
         deadline = started + self.settings.llm_timeout_seconds
         last_tool_summary = ""
         read_cache: dict[str, dict[str, object]] = {}
+        weather_attempt_failed = False
+        weather_error_code: str | None = None
+        weather_error_message = ""
+        weather_failure_reviewed = False
+        recovery_attempted = False
         url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
+
+        def missing_items() -> list[str]:
+            # The model may ask redundant questions after it has supplied every
+            # requested, locally grounded change. Keep rejected facts visible,
+            # but do not let such questions downgrade a complete proposal.
+            all_actions_proposed = bool(
+                proposals
+                and workflow_actions
+                and self._actions_satisfied(workflow_actions, proposals, previews)
+            )
+            missing = [
+                *([] if all_actions_proposed else declared_missing),
+                *runtime_missing.values(),
+            ]
+            observed = {
+                event.feedback.field
+                for proposal in proposals
+                for event in proposal.events
+                if event.feedback and event.feedback.kind == "observation"
+            }
+            if change_requested or (workflow_actions and "observation" in workflow_actions):
+                for field, label in self._requested_observations(user_message).items():
+                    if field not in observed:
+                        missing.append(f"请确认{label}的现场情况")
+            if workflow_actions:
+                covered = {
+                    event.feedback.kind
+                    for proposal in proposals
+                    for event in proposal.events
+                    if event.feedback is not None
+                }
+                if "completed" in workflow_actions and "completed" not in covered:
+                    missing.append("请提供该任务实际完成的准确日期和时间")
+                if "resource" in workflow_actions and "resource" not in covered:
+                    missing.append("请给出人员可用时段的具体日期、开始和结束时间")
+                if "workability" in workflow_actions and "workability" not in covered:
+                    missing.append("请确认当天的现场和天气作业条件")
+                if "field_update" in workflow_actions and not any(
+                    proposal.kind == "field_update" for proposal in proposals
+                ):
+                    missing.append("请明确需要修改的地块档案字段")
+                if "location" in workflow_actions and not any(
+                    proposal.kind == "field_update" for proposal in proposals
+                ):
+                    missing.append("请确认天气查询位置")
+            proposed_resource_days = {
+                event.feedback.day
+                for proposal in proposals
+                for event in proposal.events
+                if event.feedback and event.feedback.kind == "resource"
+            }
+            for day in sorted(requested_resource_days - proposed_resource_days):
+                missing.append(f"请确认{day.isoformat()}的人员可用时段")
+            return list(dict.fromkeys(missing))[:3]
+
+        def event_key(raw: dict[str, object]) -> str:
+            """Identify the requested fact across a rejected value and its correction."""
+            feedback = raw.get("feedback")
+            if not isinstance(feedback, dict):
+                return "feedback:unrecognized"
+            kind = str(feedback.get("kind", "unrecognized"))
+            identity = {
+                "observation": feedback.get("field"),
+                "resource": feedback.get("day"),
+                "workability": feedback.get("day"),
+                "completed": feedback.get("task_id"),
+            }.get(kind)
+            return f"feedback:{kind}:{identity}"
+
+        def result_from_progress() -> AgentResponseV3 | None:
+            missing = missing_items()
+            if proposals:
+                return finish(
+                    "success",
+                    text="；".join(missing) if missing else "已生成待确认内容，请逐项核对后保存。",
+                    business_outcome="partial" if missing else "awaiting_confirmation",
+                )
+            if previews:
+                return finish(
+                    "success", text="已生成可采用的计划预览。", business_outcome="preview_ready"
+                )
+            if weather_error_code:
+                next_action = {
+                    "weather_missing_dates": (
+                        "天气数据未覆盖完整七天；请核对计划日期后刷新天气重试。"
+                    ),
+                    "weather_invalid": "天气快照已过期或不可用；请刷新天气后重试。",
+                }.get(
+                    weather_error_code,
+                    f"{weather_error_message}；请核对查询位置和计划日期后重试。",
+                )
+                return finish(
+                    "error",
+                    error_message=next_action,
+                    error_category=weather_error_code,
+                )
+            if missing:
+                return finish(
+                    "success", text="；".join(missing), business_outcome="needs_information"
+                )
+            return None
 
         for _ in range(MAX_MODEL_REQUESTS):
             remaining = deadline - self._monotonic()
@@ -428,9 +563,17 @@ class AgentServiceV3:
                             definition
                             for definition in TOOL_DEFINITIONS
                             if definition["function"]["name"]
-                            in allowed_capabilities(workflow_actions)
+                            in (
+                                {"declare_request"}
+                                if request_count == 1
+                                else allowed_capabilities(workflow_actions)
+                            )
                         ],
-                        "tool_choice": "auto",
+                        "tool_choice": (
+                            {"type": "function", "function": {"name": "declare_request"}}
+                            if request_count == 1
+                            else "auto"
+                        ),
                         "thinking": {"type": "disabled"},
                     },
                     deadline=deadline,
@@ -489,6 +632,17 @@ class AgentServiceV3:
                         text=last_tool_summary,
                         error_message="模型没有返回说明或工具结果。",
                     )
+                if preview_requested and not previews and not proposals:
+                    if request_count < MAX_MODEL_REQUESTS:
+                        messages.append({"role": "assistant", "content": message.content})
+                        messages.append(
+                            {"role": "user", "content": "请调用 preview_plan 生成实际预览。"}
+                        )
+                        continue
+                    return finish(
+                        "invalid_response",
+                        error_message="未生成计划预览；已保存输入不受影响，可用结构化入口重试。",
+                    )
                 if (
                     workflow_actions
                     and not self._actions_satisfied(workflow_actions, proposals, previews)
@@ -534,6 +688,10 @@ class AgentServiceV3:
                         text="；".join(declared_missing[:3]),
                         business_outcome="needs_information",
                     )
+                if weather_attempt_failed and not proposals and not previews:
+                    return result_from_progress() or finish(
+                        "error", error_message="天气查询未完成，请检查后重试。"
+                    )
                 return finish("success", text=self._safe_explanation(message.content.strip()))
 
             messages.append(
@@ -553,12 +711,28 @@ class AgentServiceV3:
                     ],
                 }
             )
-            for call in message.tool_calls:
+            calls_to_process = list(message.tool_calls)
+            generated_call_ids: set[str] = set()
+            for call_index, call in enumerate(calls_to_process):
                 if self._monotonic() >= deadline:
                     return finish(
                         "timeout",
                         text=last_tool_summary,
                         error_message="总时间预算已用尽，已保留有效提案。",
+                    )
+                if tool_count >= MAX_TOOL_EXECUTIONS:
+                    traces.append(
+                        AgentToolTraceV3(
+                            name=call.function.name,
+                            status="limit_reached",
+                            elapsed_ms=0,
+                            result_summary="本轮工具执行次数已达上限。",
+                        )
+                    )
+                    return finish(
+                        "error",
+                        text=last_tool_summary,
+                        error_message="本轮工具执行次数已达上限；已有结果已保留，请检查后重试。",
                     )
                 if call.function.name not in allowed_capabilities(workflow_actions):
                     tool_result, proposal, preview, trace_status = (
@@ -586,32 +760,113 @@ class AgentServiceV3:
                         }
                     )
                     continue
-                if tool_count >= MAX_TOOL_EXECUTIONS:
+                if weather_attempt_failed and call.function.name in {
+                    "query_weather",
+                    "query_current_weather",
+                }:
+                    weather_failure_reviewed = True
+                    tool_count += 1
+                    tool_names.append(call.function.name)
+                    tool_result = {
+                        "error": "duplicate_weather_attempt",
+                        "message": "本轮天气查询已失败；请先处理原失败原因，再重新查询。",
+                    }
                     traces.append(
                         AgentToolTraceV3(
                             name=call.function.name,
-                            status="limit_reached",
+                            status="invalid_arguments",
                             elapsed_ms=0,
-                            result_summary="本轮工具执行次数已达上限。",
+                            result_summary=tool_result["message"],
+                            result=tool_result,
                         )
                     )
-                    return finish(
-                        "error",
-                        text=last_tool_summary,
-                        error_message="本轮工具执行次数已达上限；已有结果已保留，请检查后重试。",
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": json.dumps(tool_result, ensure_ascii=False),
+                        }
                     )
+                    continue
                 else:
                     tool_count += 1
                     tool_names.append(call.function.name)
                     tool_started = self._monotonic()
+                    effective_arguments = call.function.arguments
+                    grounding_error: str | None = None
+                    if (
+                        call.function.name == "propose_feedback"
+                        and call.id not in generated_call_ids
+                    ):
+                        try:
+                            raw_feedback = json.loads(effective_arguments)
+                            accepted_events: list[dict[str, object]] = []
+                            for raw_event in raw_feedback.get("events", []):
+                                if not isinstance(raw_event, dict):
+                                    continue
+                                with_quote = {
+                                    "source_quote": user_message,
+                                    **raw_event,
+                                }
+                                accepted, problem = self._ground_declared_event(
+                                    with_quote,
+                                    field_id=field_id,
+                                    user_message=user_message,
+                                    received_at=started_at,
+                                )
+                                if accepted:
+                                    accepted_events.append(accepted)
+                                    runtime_missing.pop(event_key(raw_event), None)
+                                elif problem:
+                                    runtime_missing[event_key(raw_event)] = problem
+                            if accepted_events:
+                                effective_arguments = json.dumps(
+                                    {**raw_feedback, "events": accepted_events},
+                                    ensure_ascii=False,
+                                )
+                            else:
+                                grounding_error = (
+                                    list(runtime_missing.values())[-1]
+                                    if runtime_missing
+                                    else ("请核对反馈是否有用户原话支持")
+                                )
+                        except (TypeError, ValueError, AttributeError):
+                            pass
+                    if (
+                        call.function.name == "propose_field_update"
+                        and call.id not in generated_call_ids
+                    ):
+                        try:
+                            raw_update = json.loads(effective_arguments)
+                            changes = raw_update.get("changes", {})
+                            accepted_changes = {
+                                key: value
+                                for key, value in changes.items()
+                                if self._ground_field_change(key, value, user_message)
+                            }
+                            for key in changes.keys() - accepted_changes.keys():
+                                runtime_missing[f"field:{key}"] = (
+                                    f"请确认地块档案字段 {key} 的具体改动"
+                                )
+                            for key in accepted_changes:
+                                runtime_missing.pop(f"field:{key}", None)
+                            if accepted_changes:
+                                effective_arguments = json.dumps(
+                                    {**raw_update, "changes": accepted_changes},
+                                    ensure_ascii=False,
+                                )
+                            else:
+                                grounding_error = "地块档案修改与用户原话不符"
+                        except (TypeError, ValueError, AttributeError):
+                            pass
                     try:
                         normalized_arguments = json.dumps(
-                            json.loads(call.function.arguments),
+                            json.loads(effective_arguments),
                             sort_keys=True,
                             ensure_ascii=False,
                         )
                     except (TypeError, ValueError):
-                        normalized_arguments = call.function.arguments
+                        normalized_arguments = effective_arguments
                     with self.workbench.store.connection_budget(
                         max(0.001, deadline - self._monotonic())
                     ):
@@ -632,8 +887,15 @@ class AgentServiceV3:
                             "success",
                         )
                     else:
-                        if call.function.name == "propose_feedback" and self._vague_resource_time(
-                            user_message, call.function.arguments
+                        if grounding_error:
+                            tool_result, proposal, preview, trace_status = (
+                                {"error": "ungrounded_feedback", "message": grounding_error},
+                                None,
+                                None,
+                                "invalid_arguments",
+                            )
+                        elif call.function.name == "propose_feedback" and self._vague_resource_time(
+                            user_message, effective_arguments
                         ):
                             tool_result, proposal, preview, trace_status = (
                                 {
@@ -649,7 +911,7 @@ class AgentServiceV3:
                             with self.workbench.store.connection_budget(tool_budget):
                                 tool_result, proposal, preview, trace_status = self._execute_tool(
                                     call.function.name,
-                                    call.function.arguments,
+                                    effective_arguments,
                                     field_id=field_id,
                                     run_id=run_id,
                                     timeout_seconds=tool_budget,
@@ -663,8 +925,76 @@ class AgentServiceV3:
                     if call.function.name == "declare_request" and trace_status == "success":
                         workflow_actions = set(tool_result["actions"])
                         declared_missing = list(tool_result["missing"])
+                        declaration = AgentDeclareRequestArgs.model_validate(tool_result)
+                        accepted_events: list[dict[str, object]] = []
+                        for raw_event in declaration.events:
+                            accepted, problem = self._ground_declared_event(
+                                raw_event.model_dump(mode="json", exclude_unset=True),
+                                field_id=field_id,
+                                user_message=user_message,
+                                received_at=started_at,
+                            )
+                            if accepted:
+                                accepted_events.append(accepted)
+                                runtime_missing.pop(event_key(raw_event.model_dump()), None)
+                            elif problem:
+                                runtime_missing[event_key(raw_event.model_dump())] = problem
+                        generated: list[tuple[str, dict[str, object]]] = []
+                        if accepted_events:
+                            generated.append(
+                                (
+                                    "propose_feedback",
+                                    {"field_id": field_id, "events": accepted_events},
+                                )
+                            )
+                        grounded_changes: dict[str, object] = {}
+                        for key, value in declaration.field_changes.items():
+                            quote = declaration.field_change_quotes.get(key)
+                            if (
+                                quote
+                                and quote in user_message
+                                and self._ground_field_change(key, value, quote)
+                            ):
+                                grounded_changes[key] = value
+                                runtime_missing.pop(f"field:{key}", None)
+                            else:
+                                runtime_missing[f"field:{key}"] = (
+                                    f"请确认地块档案字段 {key} 的具体改动"
+                                )
+                        if grounded_changes:
+                            generated.append(
+                                (
+                                    "propose_field_update",
+                                    {"field_id": field_id, "changes": grounded_changes},
+                                )
+                            )
+                        if "preview" in workflow_actions and not generated:
+                            generated.append(("preview_plan", {"field_id": field_id}))
+                        generated_calls: list[ModelToolCall] = []
+                        for index, (tool_name, tool_args) in enumerate(generated):
+                            generated_id = f"controller-{call.id}-{index}"
+                            generated_call_ids.add(generated_id)
+                            generated_calls.append(
+                                ModelToolCall(
+                                    id=generated_id,
+                                    function=ModelFunction(
+                                        name=tool_name,
+                                        arguments=json.dumps(tool_args, ensure_ascii=False),
+                                    ),
+                                )
+                            )
+                        calls_to_process[call_index + 1 : call_index + 1] = generated_calls
                     if call.function.name in {"query_weather", "query_current_weather"}:
                         read_cache.clear()
+                        if trace_status != "success":
+                            weather_attempt_failed = True
+                            weather_error_code = str(tool_result.get("error", "weather_failed"))
+                            weather_error_message = str(tool_result.get("message", "天气查询失败"))
+                            runtime_missing["weather"] = str(
+                                tool_result.get("message", "请核对天气查询条件")
+                            )
+                        else:
+                            runtime_missing.pop("weather", None)
                     elapsed_ms = max(0, int((self._monotonic() - tool_started) * 1000))
                     if proposal:
                         proposals.append(proposal)
@@ -690,20 +1020,73 @@ class AgentServiceV3:
                             elapsed_ms=elapsed_ms,
                         )
                     )
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.id,
-                        "content": json.dumps(tool_result, ensure_ascii=False, default=str),
-                    }
-                )
+                if call.id not in generated_call_ids:
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": json.dumps(tool_result, ensure_ascii=False, default=str),
+                        }
+                    )
                 if self._monotonic() >= deadline:
                     return finish(
                         "timeout",
                         text=last_tool_summary,
                         error_message="总时间预算已用尽，已保留有效提案。",
                     )
+                if call.id in generated_call_ids and (proposal or preview):
+                    if not any(
+                        following.id in generated_call_ids
+                        for following in calls_to_process[call_index + 1 :]
+                    ):
+                        break
 
+            if workflow_actions and not proposals and not previews and not recovery_attempted:
+                extractable = (
+                    bool({"field_update", "location"} & workflow_actions)
+                    or (
+                        "workability" in workflow_actions
+                        and bool(re.search(r"现场|田里|进田|下地|可作业", user_message))
+                    )
+                    or (
+                        "resource" in workflow_actions
+                        and len(self._clock_minutes(user_message)) >= 2
+                    )
+                    or (
+                        "observation" in workflow_actions
+                        and bool(self._requested_observations(user_message))
+                    )
+                    or (
+                        "completed" in workflow_actions
+                        and bool(re.search(r"\d{1,2}:\d{2}.*(?:完成|做完)", user_message))
+                    )
+                )
+                if extractable and request_count < MAX_MODEL_REQUESTS and not declared_missing:
+                    recovery_attempted = True
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "请根据已保存状态完成本轮声明的动作。"
+                                "事实修改调用 propose_feedback，"
+                                "档案修改调用 propose_field_update，位置先搜索候选。"
+                                "每条事实附原话 source_quote；不要要求用户重复已给信息。"
+                            ),
+                        }
+                    )
+                    continue
+            if (
+                weather_attempt_failed
+                and not weather_failure_reviewed
+                and not proposals
+                and not previews
+                and request_count < MAX_MODEL_REQUESTS
+            ):
+                weather_failure_reviewed = True
+                continue
+            progress = result_from_progress()
+            if progress and (proposals or previews or missing_items()):
+                return progress
             if proposals or (previews and not change_requested):
                 if (
                     workflow_actions
@@ -756,6 +1139,393 @@ class AgentServiceV3:
                 if event.feedback is not None:
                     covered.add(event.feedback.kind)
         return actions <= covered
+
+    def _field_context(self, field_id: str) -> dict[str, object]:
+        """Give the first model call the IDs and saved values it may actually use."""
+        state = self.workbench.get_field(field_id)
+        current = self.workbench.get_current_plan(field_id)
+        return {
+            "field_id": field_id,
+            "draft_version": state.draft_version,
+            "fact_version": state.fact_version,
+            "plan_id": current.id if current else None,
+            "draft": state.draft.model_dump(mode="json"),
+            "current_tasks": [
+                {
+                    "task_id": item.task_id,
+                    "task_type": item.task_type,
+                    "completed": item.completed,
+                    "start_at": item.start_at.isoformat() if item.start_at else None,
+                    "end_at": item.end_at.isoformat() if item.end_at else None,
+                }
+                for item in (current.items if current else [])
+            ],
+            "recent_facts": [
+                {
+                    "event_id": event.event_id,
+                    "feedback": event.feedback.model_dump(mode="json") if event.feedback else None,
+                }
+                for event in self.workbench.list_events(field_id)[-8:]
+            ],
+        }
+
+    @staticmethod
+    def _requested_observations(message: str) -> dict[str, str]:
+        names = {
+            "standing_water": (r"积水", "积水"),
+            "pest_signs": (r"虫情|害虫|虫害", "虫情"),
+            "ditch_connectivity": (r"沟渠.*?(?:堵|不通|连通|通畅)|堵塞", "沟渠连通情况"),
+            "maintenance_purpose": (r"清理既有沟渠|既有沟渠清理", "沟渠维护目的"),
+            "maintenance_need_confirmed": (r"(?:仍需|需要).*?(?:清理|维护)", "维护需求"),
+            "maintenance_problem_confirmed": (r"堵塞|沟渠受阻|沟渠不通", "沟渠现场问题"),
+        }
+        return {
+            field: label for field, (pattern, label) in names.items() if re.search(pattern, message)
+        }
+
+    @staticmethod
+    def _resource_days_in_message(
+        message: str, *, received_at: datetime, plan_start: date | None
+    ) -> set[date]:
+        days: set[date] = set()
+        received_day = received_at.astimezone(LOCAL_ZONE).date()
+        for clause in re.split(r"[,，。；;\n]", message):
+            if not re.search(r"有空|可用|人员.*时间|工作时段|空闲", clause):
+                continue
+            if "明天" in clause:
+                days.add(received_day + timedelta(days=1))
+            if "后天" in clause:
+                days.add(received_day + timedelta(days=2))
+            if "今天" in clause:
+                days.add(received_day)
+            if "第二天" in clause and plan_start:
+                days.add(plan_start + timedelta(days=1))
+            days.update(AgentServiceV3._explicit_dates(clause))
+        return days
+
+    @staticmethod
+    def _explicit_dates(source: str) -> set[date]:
+        """Recognize dates as written, without inventing a day for malformed input."""
+        found: set[date] = set()
+        for year, month, day in re.findall(
+            r"(?<!\d)(20\d{2})[-年](\d{1,2})[-月](\d{1,2})(?:日)?(?!\d)", source
+        ):
+            try:
+                found.add(date(int(year), int(month), int(day)))
+            except ValueError:
+                continue
+        return found
+
+    @staticmethod
+    def _clock_minutes(source: str) -> list[int]:
+        """Only exact user clock expressions can ground resource interval endpoints."""
+        values: list[int] = []
+        period: str | None = None
+        numerals = {
+            "一": 1,
+            "二": 2,
+            "两": 2,
+            "三": 3,
+            "四": 4,
+            "五": 5,
+            "六": 6,
+            "七": 7,
+            "八": 8,
+            "九": 9,
+            "十": 10,
+        }
+        pattern = (
+            r"(?:(上午|下午|晚上|中午|凌晨)\s*)?"
+            r"(\d{1,2}|[一二两三四五六七八九十])"
+            r"(?::(\d{2})|点(?:(\d{1,2})分?)?)"
+        )
+        for match in re.finditer(pattern, source):
+            period = match[1] or period
+            hour = int(match[2]) if match[2].isdigit() else numerals[match[2]]
+            minute = int(match[3] or match[4] or 0)
+            if period in {"下午", "晚上", "中午"} and hour < 12:
+                hour += 12
+            if period in {"上午", "凌晨"} and hour == 12:
+                hour = 0
+            if hour < 24 and minute < 60:
+                values.append(hour * 60 + minute)
+        return values
+
+    @staticmethod
+    def _ground_field_change(field: str, value: object, quote: str) -> bool:
+        """Accept only field values supported by a matching fragment of the user's message."""
+        if value is None:
+            return bool(re.search(r"未知|不确定|未确认|还没确认", quote))
+        if isinstance(value, bool):
+            patterns = {
+                "inspection_requested": (
+                    r"(?<!不)(?:想|要|需要|请|安排).*?(?:巡田|巡查|检查)",
+                    r"(?:不想|不要|不用|无需|不需要|取消).*?(?:巡田|巡查|检查)",
+                ),
+                "maintenance_need_confirmed": (
+                    r"(?<!不)(?:仍需|需要|要).*?(?:清理|维护|疏通)",
+                    r"(?:不要|不用|无需|不需要|取消).*?(?:清理|维护|疏通)",
+                ),
+                "maintenance_problem_confirmed": (
+                    r"(?:堵塞|沟渠受阻|沟渠不通)",
+                    r"(?:未堵|没有堵|通畅)",
+                ),
+                "province_confirmed": (r"(?:已确认|确定).*?(?:省份|省|地区)", r"省份未确认"),
+                "crop_confirmed": (r"(?:已确认|确定).*?(?:作物|油菜)", r"作物未确认"),
+                "stage_confirmed": (r"(?:已确认|确定).*?(?:生育期|苗期)", r"生育期未确认"),
+                "winter_before_context_confirmed": (r"(?:已确认|确定).*?冬前", r"冬前未确认"),
+            }
+            pair = patterns.get(field)
+            if pair is None:
+                return False
+            positive, negative = pair
+            negative_found = bool(re.search(negative, quote))
+            positive_quote = (
+                re.sub(negative, "", quote)
+                if field in {"inspection_requested", "maintenance_need_confirmed"}
+                else quote
+            )
+            positive_found = bool(re.search(positive, positive_quote))
+            if positive_found and negative_found:
+                return False
+            return positive_found if value else negative_found
+        if field == "maintenance_purpose" and value == "clear_existing_ditch":
+            return bool(re.search(r"清理既有沟渠|既有沟渠清理", quote)) and not bool(
+                re.search(r"(?:不想|不要|不用|无需|不需要|取消).*?清理", quote)
+            )
+        if field == "crop" and value == "rapeseed":
+            return "油菜" in quote
+        if isinstance(value, (str, int, float)):
+            return str(value).casefold() in quote.casefold()
+        return False
+
+    @staticmethod
+    def _mentioned_days(quote: str, received_at: datetime, plan_start: date | None) -> set[date]:
+        local_day = received_at.astimezone(LOCAL_ZONE).date()
+        days: set[date] = set()
+        if "今天" in quote:
+            days.add(local_day)
+        if "明天" in quote:
+            days.add(local_day + timedelta(days=1))
+        if "后天" in quote:
+            days.add(local_day + timedelta(days=2))
+        if "第二天" in quote and plan_start:
+            days.add(plan_start + timedelta(days=1))
+        days.update(AgentServiceV3._explicit_dates(quote))
+        return days
+
+    @staticmethod
+    def _ground_observation_value(field: str, value: object, quote: str) -> bool:
+        if value is None:
+            names = {
+                "standing_water": r"积水",
+                "pest_signs": r"虫情|害虫|虫害",
+                "ditch_connectivity": r"沟渠|堵塞|连通",
+                "maintenance_purpose": r"清理|维护目的",
+                "maintenance_need_confirmed": r"清理|维护需求",
+                "maintenance_problem_confirmed": r"沟渠|堵塞|维护问题",
+            }
+            target = names.get(field)
+            return bool(
+                target
+                and any(
+                    re.search(target, clause) and re.search(r"未知|不清楚|未确认|待确认", clause)
+                    for clause in re.split(r"[,，。；;\n]", quote)
+                )
+            )
+        if field in {"maintenance_need_confirmed", "maintenance_problem_confirmed"}:
+            return AgentServiceV3._ground_field_change(field, value, quote)
+        if field == "maintenance_purpose":
+            return AgentServiceV3._ground_field_change(field, value, quote)
+        if field == "ditch_connectivity":
+            impaired = bool(re.search(r"堵塞|不通|受阻", quote))
+            clear = bool(re.search(r"通畅|已疏通|连通良好", quote))
+            return not (impaired and clear) and (
+                (value == "impaired" and impaired) or (value == "clear" and clear)
+            )
+        if field in {"standing_water", "pest_signs"}:
+            if not isinstance(value, bool):
+                return False
+            if field == "standing_water":
+                negative = bool(
+                    re.search(r"无积水|没有积水|未见积水|未发现积水|没发现积水|不积水", quote)
+                )
+                positive = bool(
+                    re.search(r"(?:(?<![未没])发现|(?<!没)有|出现|存在|仍有|看到).*?积水", quote)
+                )
+            else:
+                negative = bool(
+                    re.search(
+                        r"无虫情|没有虫|未见(?:虫情|害虫)|未发现(?:虫情|害虫|虫害)|无害虫", quote
+                    )
+                )
+                positive = bool(
+                    re.search(
+                        r"(?:(?<![未没])发现|(?<!没)有|出现|看到).*?(?:虫情|害虫|虫害)", quote
+                    )
+                )
+            if positive and negative:
+                return False
+            return positive if value else negative
+        return False
+
+    @staticmethod
+    def _ground_observation_at(quote: str, received_at: datetime) -> datetime | None:
+        """Use message receipt unless the observation clause explicitly gives one exact clock."""
+        if re.search(r"(?:\d{1,2}|[一二两三四五六七八九十])\s*点|\d{1,2}月\d{1,2}日", quote):
+            return None
+        clocks = list(re.finditer(r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)", quote))
+        if not clocks:
+            if re.search(r"昨天|前天|明天|后天|上午|下午|晚上|凌晨|20\d{2}-\d{2}-\d{2}", quote):
+                return None
+            return received_at
+        if len(clocks) != 1:
+            return None
+        hour, minute = int(clocks[0][1]), int(clocks[0][2])
+        if hour > 23 or minute > 59:
+            return None
+        local_day = received_at.astimezone(LOCAL_ZONE).date()
+        explicit_days = re.findall(r"20\d{2}-\d{2}-\d{2}", quote)
+        if len(explicit_days) > 1:
+            return None
+        if explicit_days:
+            local_day = date.fromisoformat(explicit_days[0])
+        elif "昨天" in quote:
+            local_day -= timedelta(days=1)
+        elif "明天" in quote or "后天" in quote:
+            return None
+        observed_at = datetime(
+            local_day.year, local_day.month, local_day.day, hour, minute, tzinfo=LOCAL_ZONE
+        )
+        return observed_at if observed_at <= received_at else None
+
+    def _ground_declared_event(
+        self,
+        raw: dict[str, object],
+        *,
+        field_id: str,
+        user_message: str,
+        received_at: datetime,
+    ) -> tuple[dict[str, object] | None, str | None]:
+        quote = raw.get("source_quote")
+        if not isinstance(quote, str) or not quote.strip() or quote not in user_message:
+            return None, "请指出这条修改对应的用户原话"
+        event = {key: value for key, value in raw.items() if key != "source_quote"}
+        try:
+            args = ProposeFeedbackArgs.model_validate({"field_id": field_id, "events": [event]})
+            feedback = args.validated_events()[0].feedback
+            if feedback is None:
+                raise ValueError("缺少事实内容")
+            if feedback.kind == "completed":
+                current = self.workbench.get_current_plan(field_id)
+                task = (
+                    next((item for item in current.items if item.task_id == feedback.task_id), None)
+                    if current
+                    else None
+                )
+                if task is None:
+                    return None, "请核对要记录完成的任务"
+                aliases = (
+                    r"巡田|巡查|检查|巡视"
+                    if task.task_type == "inspection"
+                    else r"清沟|沟渠|维护|疏通"
+                )
+                if feedback.task_id not in quote and not re.search(aliases, quote):
+                    return None, "请说明实际完成的是哪项任务"
+                grounded = ground_completed_time(feedback.at, received_at, quote)
+                if not grounded.accepted:
+                    return None, "请提供该任务实际完成的准确日期和时间"
+            elif feedback.kind == "resource":
+                if not re.search(r"有空|可用|时段|人员|工时|时间", quote):
+                    return None, "请说明人员可用时间"
+                clocks = self._clock_minutes(quote)
+                expected = [
+                    item
+                    for window in feedback.intervals or []
+                    for item in (
+                        window.start.hour * 60 + window.start.minute,
+                        window.end.hour * 60 + window.end.minute,
+                    )
+                ]
+                if not clocks or clocks != expected:
+                    return None, "请给出人员可用时段的具体开始和结束时间"
+                start_day = self.workbench.get_field(field_id).draft.start_date
+                mentioned_days = self._mentioned_days(quote, received_at, start_day)
+                if feedback.day not in mentioned_days:
+                    return None, "请确认人员时间对应的具体日期"
+                interval_minutes = sum(window.minutes for window in feedback.intervals or [])
+                capacity = feedback.resource_minutes
+                if capacity is not None and (
+                    capacity <= 0
+                    or capacity > interval_minutes
+                    or (
+                        capacity != interval_minutes
+                        and not re.search(rf"(?<!\d){capacity}\s*分钟", quote)
+                    )
+                ):
+                    return None, "请核对人员可用工时与时段是否一致"
+            elif feedback.kind == "observation":
+                names = self._requested_observations(quote)
+                if feedback.field not in names:
+                    return None, "请核对现场观察项目与用户原话"
+                if not self._ground_observation_value(feedback.field, feedback.value, quote):
+                    return None, "请核对现场观察结果与用户原话"
+                observed_at = self._ground_observation_at(quote, received_at)
+                if observed_at is None or (
+                    observed_at != received_at and feedback.at != observed_at
+                ):
+                    return None, "请核对现场观察的实际日期和时间"
+                if feedback.day is not None and feedback.day != observed_at.date():
+                    return None, "请确认现场观察对应的日期"
+            elif feedback.kind == "workability":
+                if re.search(r"可能|预计|预报|也许|大概", quote) or not re.search(
+                    r"现场|田里|地里|进田|下地|可作业|不能作业|不可作业", quote
+                ):
+                    return None, "请确认当天的现场和天气作业条件"
+                if feedback.day not in self._mentioned_days(
+                    quote, received_at, self.workbench.get_field(field_id).draft.start_date
+                ):
+                    return None, "请确认现场作业条件对应的日期"
+                negative = bool(re.search(r"不能|不可|无法|下不了|进不了|不适合", quote))
+                positive = bool(
+                    re.search(r"(?<!不)(?:可以|可|能够|能|适合).*?(?:作业|进田|下地)", quote)
+                )
+                raw_feedback = event.get("feedback", event)
+                if (
+                    isinstance(raw_feedback, dict)
+                    and "site_workable" in raw_feedback
+                    and feedback.site_workable is None
+                    and not re.search(r"未知|不清楚|未确认|待确认", quote)
+                ):
+                    return None, "请确认当天现场是否可以作业"
+                if feedback.site_workable is not None and (
+                    positive == negative or feedback.site_workable != positive
+                ):
+                    return None, "请核对当天能否进田作业"
+                if feedback.weather_workable is not None:
+                    weather_quote = re.search(r"天气条件[^，。；;]*", quote)
+                    if not weather_quote:
+                        return None, "请单独确认当天的天气作业条件"
+                    weather_negative = bool(re.search(r"不能|不可|无法|不适合", weather_quote[0]))
+                    weather_positive = bool(
+                        re.search(r"(?<!不)(?:可以|可|能够|能|适合).*?作业", weather_quote[0])
+                    )
+                    if (
+                        weather_positive == weather_negative
+                        or feedback.weather_workable != weather_positive
+                    ):
+                        return None, "请核对当天的天气作业条件"
+            if feedback.kind != "completed":
+                feedback_data = feedback.model_dump(mode="json", exclude_unset=True)
+                feedback_data["at"] = (
+                    observed_at.isoformat()
+                    if feedback.kind == "observation"
+                    else received_at.isoformat()
+                )
+                event["feedback"] = feedback_data
+            return event, None
+        except (ValidationError, ValueError, TypeError):
+            return None, "请核对修改内容、日期和字段值"
 
     @staticmethod
     def _vague_resource_time(user_message: str, arguments_json: str) -> bool:
@@ -849,9 +1619,10 @@ class AgentServiceV3:
                 raise ValueError("工具参数必须是 JSON 对象")
             proposal: AgentProposalV3 | None = None
             if name == "declare_request":
-                args = DeclareRequestArgs.model_validate(raw_arguments)
+                args = AgentDeclareRequestArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
-                result = args.model_dump(mode="json")
+                result = args.model_dump(mode="json", exclude_unset=True)
+                result.setdefault("missing", [])
             elif name == "read_field":
                 args = ReadFieldArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
@@ -1092,7 +1863,7 @@ class AgentServiceV3:
             }
             for key in changes
         }
-        return AgentProposalV3(
+        proposal = AgentProposalV3(
             kind="field_update",
             field_id=field_id,
             expected_draft_version=state.draft_version,
@@ -1100,6 +1871,14 @@ class AgentServiceV3:
             summary="助手提出地块档案修改，确认后才保存。",
             changes=differences,
         )
+        for pending in self.workbench.pending_agent_proposals(field_id):
+            if (
+                pending.kind == "field_update"
+                and pending.expected_draft_version == state.draft_version
+                and pending.draft == new_draft
+            ):
+                return pending
+        return proposal
 
     def _feedback_proposal(
         self,
@@ -1127,6 +1906,20 @@ class AgentServiceV3:
                     raise ValueError("完成反馈引用的任务不存在于当前采用版")
                 if item.completed or item.start_at is None:
                     raise ValueError("只能提出当前已安排且尚未完成的任务完成反馈")
+
+        def content(values: list[FactEventInputV3]) -> list[str]:
+            return sorted(
+                json.dumps(event.model_dump(mode="json", exclude={"event_id"}), sort_keys=True)
+                for event in values
+            )
+
+        for pending in self.workbench.pending_agent_proposals(field_id):
+            if (
+                pending.kind == "facts"
+                and pending.expected_fact_version == state.fact_version
+                and content(pending.events) == content(events)
+            ):
+                return pending
         return AgentProposalV3(
             kind="facts",
             field_id=field_id,

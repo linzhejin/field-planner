@@ -31,8 +31,9 @@ from nongshi.d02_runner import (
 )
 from nongshi.d02_scoring import score_case, summarize_scores
 from nongshi.d02_semantic import judge_packet, write_blind_review_packets
+from nongshi.feedback_time import audit_completed_time_visibility
 
-SEAL_VERSION = "internal-auto-v3"
+SEAL_VERSION = "internal-auto-v4"
 FILES = {
     "main_cases": "main_cases.jsonl",
     "main_constraints": "main_constraints.jsonl",
@@ -196,6 +197,9 @@ def seal(
             for row in loaded["main_constraints"] + loaded["boundary_constraints"]
         }
         for case in all_cases:
+            time_problems = audit_completed_time_visibility(case)
+            if time_problems:
+                raise ValueError("；".join(time_problems))
             if by_id[case["case_id"]].get("expected_fault_injection") and not case.get(
                 "adapter_failure_fixture"
             ):

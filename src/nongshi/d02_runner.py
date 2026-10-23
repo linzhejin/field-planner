@@ -204,10 +204,18 @@ class _FixedWeatherService:
         self.store = store
         self.now = now
 
-    def search_locations(self, query: str) -> list[GeocodingResultV3]:
+    def search_locations(
+        self, query: str, *, count: int = 10, timeout_seconds: float | None = None
+    ) -> list[GeocodingResultV3]:
+        if len(query.strip()) < 2:
+            raise ValueError("地点至少输入两个字")
+        if not 1 <= count <= 10:
+            raise ValueError("地点候选最多显示十条")
+        deadline = time.perf_counter() + timeout_seconds if timeout_seconds is not None else None
+        self._check_budget(deadline)
         lookup = self.case.get("location_lookup_fixture") or {}
         if query.strip() and query.strip().casefold() == str(lookup.get("query") or "").casefold():
-            return [
+            results = [
                 GeocodingResultV3(
                     id=str(raw["candidate_id"]),
                     name=str(raw.get("display_name") or raw.get("query") or ""),
@@ -218,8 +226,10 @@ class _FixedWeatherService:
                     match_source="local_gazetteer",
                     resolution=str(raw.get("resolution") or "unknown"),
                 )
-                for raw in lookup.get("candidates") or []
+                for raw in (lookup.get("candidates") or [])[:count]
             ]
+            self._check_budget(deadline)
+            return results
         raw = (self.case.get("weather_fixture") or {}).get("location") or {}
         location = _weather_location(raw)
         if location is None or not query.strip():
@@ -227,7 +237,7 @@ class _FixedWeatherService:
         target = f"{location.query} {location.display_name}".casefold()
         if query.strip().casefold() not in target:
             return []
-        return [
+        results = [
             GeocodingResultV3(
                 id="fixed-weather-location",
                 name=location.display_name,
@@ -239,6 +249,13 @@ class _FixedWeatherService:
                 resolution=location.resolution,
             )
         ]
+        self._check_budget(deadline)
+        return results
+
+    @staticmethod
+    def _check_budget(deadline: float | None) -> None:
+        if deadline is not None and time.perf_counter() >= deadline:
+            raise WeatherServiceError("timeout", "固定天气工具超过本轮时间预算")
 
     @staticmethod
     def select_location(results: list[GeocodingResultV3], result_id: str) -> WeatherLocationV3:
@@ -250,7 +267,15 @@ class _FixedWeatherService:
         location: WeatherLocationV3,
         start_date: date,
         end_date: date,
+        *,
+        force_refresh: bool = False,
+        timeout_seconds: float | None = None,
     ) -> WeatherSnapshotV3:
+        if end_date - start_date != timedelta(days=6):
+            raise ValueError("天气查询范围需要覆盖完整七天")
+        deadline = time.perf_counter() + timeout_seconds if timeout_seconds is not None else None
+        self._check_budget(deadline)
+        # Fixed responses are rebuilt from the fixture even on force_refresh; never use HTTP.
         fixture = self.case.get("weather_fixture") or {}
         if fixture.get("attempts"):
             available = [
@@ -289,6 +314,7 @@ class _FixedWeatherService:
             or snapshot.location.longitude != location.longitude
         ):
             raise WeatherServiceError("invalid", "固定天气夹具位置与当前地块不符")
+        self._check_budget(deadline)
         self.store.save_weather_snapshot(snapshot)
         return snapshot
 

@@ -1692,7 +1692,9 @@ def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[
     if user_message:
         try:
             with st.status("正在理解请求…", expanded=True) as progress:
-                response = agent.run(field_id, user_message, conversation=history)
+                response = agent.run(
+                    field_id, user_message, conversation=history, received_at=_now()
+                )
                 progress.update(
                     label=(
                         "待确认修改"

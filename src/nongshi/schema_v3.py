@@ -125,7 +125,7 @@ class FactEventInputV3(BaseModel):
 class FactEventV3(FactEventInputV3):
     field_id: str
     fact_version: int = Field(ge=1)
-    created_at: AwareDatetime
+    created_at: AwareDatetime = Field(description="事件持久化时间，不代表实际完成时间")
 
 
 class EventCommitResultV3(BaseModel):
@@ -347,7 +347,9 @@ class AgentRunV3(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     field_id: str
     model: str
-    started_at: AwareDatetime
+    started_at: AwareDatetime = Field(
+        description="本轮消息接收时间；仅明确现在完成时可据此定位完成时间"
+    )
     elapsed_ms: int = Field(ge=0)
     request_count: int = Field(ge=0)
     tool_count: int = Field(ge=0)
