@@ -50,7 +50,7 @@ def test_development_seal_detects_changed_input(monkeypatch: pytest.MonkeyPatch)
         directory = root / "sealed"
         manifest = seal(_sources(root), directory, development=True)
         assert manifest["classification"] == "public_development_only"
-        assert manifest["version"] == "internal-auto-v2"
+        assert manifest["version"] == "internal-auto-v3"
         assert "source_tree" in manifest["materials"]
         assert verify_seal(directory)["code_commit"] == "abc123"
         (directory / FILES["main_cases"]).write_text("tampered\n", encoding="utf-8")

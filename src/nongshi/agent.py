@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -14,6 +15,7 @@ import httpx
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from nongshi.config import Settings
+from nongshi.model_http import ModelBudgetExceeded, post_model_json
 from nongshi.rule_retrieval import RuleRetrieverV3
 from nongshi.schema_v2 import LOCAL_ZONE, TimeWindow
 from nongshi.schema_v3 import (
@@ -22,6 +24,7 @@ from nongshi.schema_v3 import (
     AgentRunV3,
     AgentToolMetricV3,
     AgentToolTraceV3,
+    AgentWorkflowStepV3,
     FactEventInputV3,
     GeocodingResultV3,
     PlanPreviewV3,
@@ -29,6 +32,11 @@ from nongshi.schema_v3 import (
 )
 from nongshi.service_v3 import WorkbenchServiceV3
 from nongshi.weather import OpenMeteoService, WeatherServiceError
+from nongshi.workflows import (
+    CAPABILITIES,
+    DeclareRequestArgs,
+    allowed_capabilities,
+)
 
 MAX_MODEL_REQUESTS = 3
 MAX_TOOL_EXECUTIONS = 6
@@ -217,44 +225,22 @@ def _tool(name: str, description: str, arguments: type[BaseModel]) -> dict[str, 
     }
 
 
+ARGUMENT_MODELS: dict[str, type[BaseModel]] = {
+    "declare_request": DeclareRequestArgs,
+    "read_field": ReadFieldArgs,
+    "search_rules": SearchRulesArgs,
+    "evaluate_field": EvaluateFieldArgs,
+    "query_weather": QueryWeatherArgs,
+    "query_current_weather": QueryCurrentWeatherArgs,
+    "search_locations": SearchLocationsArgs,
+    "propose_location": ProposeLocationArgs,
+    "preview_plan": PreviewPlanArgs,
+    "propose_field_update": ProposeFieldUpdateArgs,
+    "propose_feedback": ProposeFeedbackArgs,
+}
 TOOL_DEFINITIONS: list[dict[str, object]] = [
-    _tool("read_field", "读取指定地块当前已保存的档案与版本状态。", ReadFieldArgs),
-    _tool(
-        "search_rules",
-        "按地区、作物、生育期、田型和任务筛选有来源的规则候选；暂缓卡仅作历史参考，"
-        "检索总体状态不代表具体任务必要性，不能当作排程依据。",
-        SearchRulesArgs,
-    ),
-    _tool("evaluate_field", "计算当前地块候选事项、四层状态、缺项与规则证据。", EvaluateFieldArgs),
-    _tool(
-        "query_weather",
-        "兼容旧接口：查询指定完整七天日期的天气；新请求优先使用 query_current_weather。",
-        QueryWeatherArgs,
-    ),
-    _tool(
-        "query_current_weather",
-        "查询当前地块已保存起始日起完整七天的天气；无需填写日期，不能判断现场能否作业。",
-        QueryCurrentWeatherArgs,
-    ),
-    _tool(
-        "search_locations",
-        "按用户给出的地名查找天气查询点；必须由用户明确确认候选项。",
-        SearchLocationsArgs,
-    ),
-    _tool(
-        "propose_location",
-        "只根据本轮已查询的候选地点提出位置修改，不直接保存。",
-        ProposeLocationArgs,
-    ),
-    _tool("preview_plan", "根据已保存的输入生成计划预览；不会采用或覆盖计划。", PreviewPlanArgs),
-    _tool("propose_field_update", "提出档案修改，须由用户确认后才会保存。", ProposeFieldUpdateArgs),
-    _tool(
-        "propose_feedback",
-        "提出待确认事实：completed=任务完成，observation=现场观察，"
-        "workability=田间/天气作业条件，resource=人员可用时段和分钟数。"
-        "修改时段只能用 resource；每项须有北京时间 at，不能直接保存。",
-        ProposeFeedbackArgs,
-    ),
+    _tool(name, capability.description, ARGUMENT_MODELS[name])
+    for name, capability in CAPABILITIES.items()
 ]
 
 
@@ -265,7 +251,7 @@ class AgentServiceV3:
         workbench: WorkbenchServiceV3,
         *,
         weather: OpenMeteoService | None = None,
-        transport: httpx.BaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
         monotonic=time.perf_counter,
         evaluation_rule_query: Callable[[], RuleSearchQueryV3] | None = None,
     ) -> None:
@@ -276,18 +262,13 @@ class AgentServiceV3:
             timeout_seconds=settings.weather_timeout_seconds,
             cache_hours=settings.weather_cache_hours,
         )
-        self._client = httpx.Client(
-            transport=transport,
-            timeout=settings.llm_timeout_seconds,
-            follow_redirects=True,
-        )
+        self._transport = transport
         self._monotonic = monotonic
         self._retriever = RuleRetrieverV3(workbench.catalog)
         self._evaluation_rule_query = evaluation_rule_query
         self._geocoding_candidates: dict[str, tuple[str, GeocodingResultV3]] = {}
 
     def close(self) -> None:
-        self._client.close()
         self.weather.close()
 
     def run(
@@ -298,12 +279,13 @@ class AgentServiceV3:
         conversation: list[dict[str, str]] | None = None,
         received_at: datetime | None = None,
     ) -> AgentResponseV3:
-        self.workbench.get_field(field_id)
+        started = self._monotonic()
+        with self.workbench.store.connection_budget(min(1.0, self.settings.llm_timeout_seconds)):
+            self.workbench.get_field(field_id)
         run_id = str(uuid4())
         # SYS-02：正式运行接口需要可注入的接收时间，便于离线适配器与三组对照固定时钟；
         # 默认仍取系统 UTC 时钟。
         started_at = received_at or datetime.now(UTC)
-        started = self._monotonic()
         model = self.settings.llm_model.strip() or "deepseek-flash"
         request_count = 0
         tool_count = 0
@@ -314,12 +296,18 @@ class AgentServiceV3:
         prompt_tokens = 0
         completion_tokens = 0
         token_usage_seen = False
+        workflow_actions: set[str] | None = None
+        declared_missing: list[str] = []
+        steps: list[AgentWorkflowStepV3] = []
+        request_ids: list[str] = []
 
         def finish(
             status: str,
             *,
             text: str = "",
             error_message: str = "",
+            business_outcome: str | None = None,
+            error_category: str | None = None,
         ) -> AgentResponseV3:
             elapsed = max(0, int((self._monotonic() - started) * 1000))
             run = AgentRunV3(
@@ -342,8 +330,27 @@ class AgentServiceV3:
                     )
                     for trace in traces
                 ],
+                tool_traces=traces,
+                workflow_version="open-ga-reliability-v1",
+                workflow_actions=sorted(workflow_actions or []),
+                steps=[
+                    *steps,
+                    AgentWorkflowStepV3(stage="finished", status=status, elapsed_ms=elapsed),
+                ],
+                error_category=error_category or (status if status != "success" else None),
+                request_ids=request_ids,
             )
-            self.workbench.store.save_agent_run(run)
+            try:
+                with self.workbench.store.connection_budget(1.0):
+                    self.workbench.store.save_agent_run(run, proposals)
+            except sqlite3.OperationalError:
+                status = "error"
+                text = ""
+                error_message = "本地数据库正在写入；本轮提案未保存，请刷新后重试。"
+                error_category = "database_busy"
+                business_outcome = "failed"
+                proposals.clear()
+                previews.clear()
             return AgentResponseV3(
                 run_id=run_id,
                 status=status,  # type: ignore[arg-type]
@@ -356,6 +363,11 @@ class AgentServiceV3:
                 previews=previews,
                 prompt_tokens=prompt_tokens if token_usage_seen else None,
                 completion_tokens=completion_tokens if token_usage_seen else None,
+                workflow_actions=sorted(workflow_actions or []),
+                business_outcome=business_outcome
+                or ("failed" if status != "success" else "answered"),
+                error_category=error_category or (status if status != "success" else None),
+                request_ids=request_ids,
             )
 
         if self.settings.llm_provider.strip().casefold() != "deepseek":
@@ -370,7 +382,9 @@ class AgentServiceV3:
             return finish("invalid_response", error_message="请输入要处理的内容。")
         change_requested = bool(
             re.search(
-                r"保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理", user_message
+                r"保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理|"
+                r"调整|修改|重排|(?:只有|仅有|只剩|有空).*?(?:上午|下午|晚上|\d{1,2}点)",
+                user_message,
             )
         ) and not bool(re.search(r"刚保存.*预览", user_message))
 
@@ -400,34 +414,59 @@ class AgentServiceV3:
                     error_message="本轮交互超过 20 秒；已保留工具结果和待确认草稿，可重试。",
                 )
             request_count += 1
+            steps.append(AgentWorkflowStepV3(stage="understanding", status="started"))
             try:
-                response = self._client.post(
+                model_result = post_model_json(
                     url,
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    json={
+                    api_key=api_key,
+                    payload={
                         "model": model,
                         "temperature": 0,
                         "max_tokens": 4096,
                         "messages": messages,
-                        "tools": TOOL_DEFINITIONS,
+                        "tools": [
+                            definition
+                            for definition in TOOL_DEFINITIONS
+                            if definition["function"]["name"]
+                            in allowed_capabilities(workflow_actions)
+                        ],
                         "tool_choice": "auto",
                         "thinking": {"type": "disabled"},
                     },
-                    timeout=min(remaining, self.settings.llm_timeout_seconds),
+                    deadline=deadline,
+                    transport=self._transport,
+                    monotonic=self._monotonic,
                 )
+                response = model_result.response
+                if model_result.request_id:
+                    request_ids.append(model_result.request_id)
                 if response.status_code >= 400:
                     status, message = self._provider_error(response.status_code)
                     return finish(status, text=last_tool_summary, error_message=message)
                 payload = response.json()
                 completion = ModelCompletion.model_validate(payload)
-            except httpx.TimeoutException:
+                if self._monotonic() >= deadline:
+                    return finish(
+                        "timeout",
+                        text=last_tool_summary,
+                        error_message="本轮交互超过时间预算；已保留有效结果，请检查后重试。",
+                    )
+            except (httpx.TimeoutException, ModelBudgetExceeded):
                 return finish(
                     "timeout",
                     text=last_tool_summary,
                     error_message="模型请求超时；已保留已保存事实和待确认草稿。",
                 )
-            except httpx.RequestError:
-                return finish("error", text=last_tool_summary, error_message="模型服务暂不可用。")
+            except httpx.RequestError as error:
+                category = (
+                    "connection_tls" if isinstance(error, httpx.ConnectError) else "connection"
+                )
+                return finish(
+                    "error",
+                    text=last_tool_summary,
+                    error_message="模型连接失败；请稍后重试或使用结构化表单。",
+                    error_category=category,
+                )
             except (ValueError, ValidationError):
                 return finish(
                     "invalid_response",
@@ -440,12 +479,25 @@ class AgentServiceV3:
                 prompt_tokens += completion.usage.prompt_tokens or 0
                 completion_tokens += completion.usage.completion_tokens or 0
             message = completion.choices[0].message
+            steps[-1] = AgentWorkflowStepV3(
+                stage="understanding", status="success", elapsed_ms=model_result.elapsed_ms
+            )
             if not message.tool_calls:
                 if not message.content:
                     return finish(
                         "invalid_response",
                         text=last_tool_summary,
                         error_message="模型没有返回说明或工具结果。",
+                    )
+                if (
+                    workflow_actions
+                    and not self._actions_satisfied(workflow_actions, proposals, previews)
+                    and proposals
+                ):
+                    return finish(
+                        "success",
+                        text="部分事项已形成待确认修改，其余事项仍需补充或重新提出。",
+                        business_outcome="partial",
                     )
                 if (
                     change_requested
@@ -470,6 +522,18 @@ class AgentServiceV3:
                         text=last_tool_summary,
                         error_message="未生成待确认修改；请补充事实或使用结构化表单。",
                     )
+                if change_requested and not proposals:
+                    return finish(
+                        "success",
+                        text=message.content.strip(),
+                        business_outcome="needs_information",
+                    )
+                if declared_missing and not proposals:
+                    return finish(
+                        "success",
+                        text="；".join(declared_missing[:3]),
+                        business_outcome="needs_information",
+                    )
                 return finish("success", text=self._safe_explanation(message.content.strip()))
 
             messages.append(
@@ -490,6 +554,38 @@ class AgentServiceV3:
                 }
             )
             for call in message.tool_calls:
+                if self._monotonic() >= deadline:
+                    return finish(
+                        "timeout",
+                        text=last_tool_summary,
+                        error_message="总时间预算已用尽，已保留有效提案。",
+                    )
+                if call.function.name not in allowed_capabilities(workflow_actions):
+                    tool_result, proposal, preview, trace_status = (
+                        {"error": "capability_not_allowed", "message": "当前流程不允许此工具"},
+                        None,
+                        None,
+                        "invalid_arguments",
+                    )
+                    tool_count += 1
+                    tool_names.append(call.function.name)
+                    traces.append(
+                        AgentToolTraceV3(
+                            name=call.function.name,
+                            status=trace_status,
+                            elapsed_ms=0,
+                            result_summary="当前流程不允许此工具",
+                            result=tool_result,
+                        )
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": json.dumps(tool_result, ensure_ascii=False),
+                        }
+                    )
+                    continue
                 if tool_count >= MAX_TOOL_EXECUTIONS:
                     traces.append(
                         AgentToolTraceV3(
@@ -508,9 +604,26 @@ class AgentServiceV3:
                     tool_count += 1
                     tool_names.append(call.function.name)
                     tool_started = self._monotonic()
-                    cache_key = f"{call.function.name}:{call.function.arguments}"
-                    if call.function.name in {"read_field", "evaluate_field", "search_rules"} and (
-                        cache_key in read_cache
+                    try:
+                        normalized_arguments = json.dumps(
+                            json.loads(call.function.arguments),
+                            sort_keys=True,
+                            ensure_ascii=False,
+                        )
+                    except (TypeError, ValueError):
+                        normalized_arguments = call.function.arguments
+                    with self.workbench.store.connection_budget(
+                        max(0.001, deadline - self._monotonic())
+                    ):
+                        state_for_cache = self.workbench.get_field(field_id)
+                    cache_key = (
+                        f"{call.function.name}:{normalized_arguments}:"
+                        f"{state_for_cache.draft_version}:{state_for_cache.fact_version}"
+                    )
+                    if (
+                        CAPABILITIES.get(call.function.name)
+                        and CAPABILITIES[call.function.name].cacheable
+                        and (cache_key in read_cache)
                     ):
                         tool_result, proposal, preview, trace_status = (
                             read_cache[cache_key],
@@ -519,17 +632,39 @@ class AgentServiceV3:
                             "success",
                         )
                     else:
-                        tool_result, proposal, preview, trace_status = self._execute_tool(
-                            call.function.name,
-                            call.function.arguments,
-                            field_id=field_id,
-                            run_id=run_id,
-                        )
+                        if call.function.name == "propose_feedback" and self._vague_resource_time(
+                            user_message, call.function.arguments
+                        ):
+                            tool_result, proposal, preview, trace_status = (
+                                {
+                                    "error": "missing_time",
+                                    "message": "请给出人员可用时段的具体开始和结束时间",
+                                },
+                                None,
+                                None,
+                                "invalid_arguments",
+                            )
+                        else:
+                            tool_budget = max(0.001, deadline - self._monotonic())
+                            with self.workbench.store.connection_budget(tool_budget):
+                                tool_result, proposal, preview, trace_status = self._execute_tool(
+                                    call.function.name,
+                                    call.function.arguments,
+                                    field_id=field_id,
+                                    run_id=run_id,
+                                    timeout_seconds=tool_budget,
+                                )
                         if (
-                            call.function.name in {"read_field", "evaluate_field", "search_rules"}
+                            CAPABILITIES.get(call.function.name)
+                            and CAPABILITIES[call.function.name].cacheable
                             and trace_status == "success"
                         ):
                             read_cache[cache_key] = tool_result
+                    if call.function.name == "declare_request" and trace_status == "success":
+                        workflow_actions = set(tool_result["actions"])
+                        declared_missing = list(tool_result["missing"])
+                    if call.function.name in {"query_weather", "query_current_weather"}:
+                        read_cache.clear()
                     elapsed_ms = max(0, int((self._monotonic() - tool_started) * 1000))
                     if proposal:
                         proposals.append(proposal)
@@ -547,6 +682,14 @@ class AgentServiceV3:
                             result=tool_result,
                         )
                     )
+                    steps.append(
+                        AgentWorkflowStepV3(
+                            stage="proposal" if proposal else "preview" if preview else "tool",
+                            status=trace_status,
+                            name=call.function.name,
+                            elapsed_ms=elapsed_ms,
+                        )
+                    )
                 messages.append(
                     {
                         "role": "tool",
@@ -554,23 +697,81 @@ class AgentServiceV3:
                         "content": json.dumps(tool_result, ensure_ascii=False, default=str),
                     }
                 )
+                if self._monotonic() >= deadline:
+                    return finish(
+                        "timeout",
+                        text=last_tool_summary,
+                        error_message="总时间预算已用尽，已保留有效提案。",
+                    )
 
             if proposals or (previews and not change_requested):
+                if (
+                    workflow_actions
+                    and not self._actions_satisfied(workflow_actions, proposals, previews)
+                    and request_count < MAX_MODEL_REQUESTS
+                ):
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "仍有用户事项未形成待确认提案。请补齐，或明确写出具体缺项。",
+                        }
+                    )
+                    continue
                 return finish(
                     "success",
                     text="已生成待确认内容，请逐项核对后再保存或采用。",
+                    business_outcome="partial"
+                    if workflow_actions
+                    and not self._actions_satisfied(workflow_actions, proposals, previews)
+                    else "awaiting_confirmation"
+                    if proposals
+                    else "preview_ready",
                 )
 
         if (proposals or previews) and traces and traces[-1].status == "success":
             return finish(
                 "success",
                 text="已生成待确认内容，请逐项核对后再保存或采用。",
+                business_outcome="awaiting_confirmation" if proposals else "preview_ready",
             )
         return finish(
             "error",
             text=last_tool_summary,
             error_message="本轮最多请求模型三次；工具结果已保留，请检查后重试。",
         )
+
+    @staticmethod
+    def _actions_satisfied(
+        actions: set[str],
+        proposals: list[AgentProposalV3],
+        previews: list[PlanPreviewV3],
+    ) -> bool:
+        covered = {"query"}
+        if previews:
+            covered.add("preview")
+        for proposal in proposals:
+            if proposal.kind == "field_update":
+                covered.update({"field_update", "location"})
+            for event in proposal.events:
+                if event.feedback is not None:
+                    covered.add(event.feedback.kind)
+        return actions <= covered
+
+    @staticmethod
+    def _vague_resource_time(user_message: str, arguments_json: str) -> bool:
+        if not re.search(r"上午|下午|晚上|有空|可用时间", user_message):
+            return False
+        if re.search(r"\d{1,2}:\d{2}|[\d一二三四五六七八九十两]{1,3}\s*点", user_message):
+            return False
+        try:
+            arguments = json.loads(arguments_json)
+            return any(
+                (event.get("feedback") or event).get("kind") == "resource"
+                for event in arguments.get("events", [])
+                if isinstance(event, dict)
+            )
+        except (TypeError, ValueError, AttributeError):
+            return False
 
     @staticmethod
     def _trace_arguments(raw: str) -> dict[str, object] | None:
@@ -586,6 +787,8 @@ class AgentServiceV3:
             "你是农时窗口的中文农事助手。当前地块 ID 是 "
             f"{field_id}。本轮接收时间为北京时间 {received_at:%Y-%m-%d %H:%M}。"
             "只能根据本地工具结果解释任务、依据、天气和排程。"
+            "首轮必须调用 declare_request，列出本轮每个用户动作和具体缺项；"
+            "声明与参数提取在同一轮，不额外请求分类。"
             "先读取或核对状态，再按需调用地点搜索、天气、规则、评估或计划预览工具。"
             "查询天气优先用 query_current_weather，不要猜测起止日期。"
             "用户要求记录完成、现场观察或修改可用时间时，必须调用 propose_feedback；"
@@ -634,14 +837,22 @@ class AgentServiceV3:
         *,
         field_id: str,
         run_id: str,
+        timeout_seconds: float | None = None,
     ) -> tuple[dict[str, object], AgentProposalV3 | None, PlanPreviewV3 | None, str]:
         started = self._monotonic()
         try:
+            weather_kwargs = (
+                {"timeout_seconds": timeout_seconds} if timeout_seconds is not None else {}
+            )
             raw_arguments = json.loads(arguments_json)
             if not isinstance(raw_arguments, dict):
                 raise ValueError("工具参数必须是 JSON 对象")
             proposal: AgentProposalV3 | None = None
-            if name == "read_field":
+            if name == "declare_request":
+                args = DeclareRequestArgs.model_validate(raw_arguments)
+                self._check_field(field_id, args.field_id)
+                result = args.model_dump(mode="json")
+            elif name == "read_field":
                 args = ReadFieldArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
                 result = self.workbench.get_field(field_id).model_dump(mode="json")
@@ -694,6 +905,7 @@ class AgentServiceV3:
                     state.draft.location,
                     start,
                     end,
+                    **weather_kwargs,
                 )
                 result = snapshot.model_dump(mode="json")
             elif name == "query_current_weather":
@@ -710,12 +922,13 @@ class AgentServiceV3:
                     state.draft.location,
                     start,
                     start + timedelta(days=6),
+                    **weather_kwargs,
                 )
                 result = snapshot.model_dump(mode="json")
             elif name == "search_locations":
                 args = SearchLocationsArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
-                candidates = self.weather.search_locations(args.query)
+                candidates = self.weather.search_locations(args.query, **weather_kwargs)
                 result_items = []
                 for candidate in candidates:
                     candidate_id = uuid4().hex
@@ -791,12 +1004,25 @@ class AgentServiceV3:
             else:
                 raise ValueError("工具未注册")
             return result, proposal, None, "success"
+        except WeatherServiceError as error:
+            return (
+                {"error": f"weather_{error.code}", "message": str(error)},
+                None,
+                None,
+                "failed",
+            )
+        except sqlite3.OperationalError:
+            return (
+                {"error": "database_busy", "message": "数据正在写入，请稍后重试"},
+                None,
+                None,
+                "failed",
+            )
         except (
             json.JSONDecodeError,
             ValidationError,
             ValueError,
             KeyError,
-            WeatherServiceError,
         ) as error:
             return (
                 {"error": "tool_validation_failed", "message": str(error)},

@@ -32,7 +32,7 @@ from nongshi.d02_runner import (
 from nongshi.d02_scoring import score_case, summarize_scores
 from nongshi.d02_semantic import judge_packet, write_blind_review_packets
 
-SEAL_VERSION = "internal-auto-v2"
+SEAL_VERSION = "internal-auto-v3"
 FILES = {
     "main_cases": "main_cases.jsonl",
     "main_constraints": "main_constraints.jsonl",
@@ -266,6 +266,9 @@ def seal(
         for name in [
             "uv.lock",
             "src/nongshi/agent.py",
+            "src/nongshi/workflows.py",
+            "src/nongshi/model_http.py",
+            "src/nongshi/d02_runner.py",
             "src/nongshi/d02_model_groups.py",
             "src/nongshi/d02_scoring.py",
             "src/nongshi/d02_sealed.py",

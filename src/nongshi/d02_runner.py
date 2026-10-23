@@ -941,21 +941,45 @@ class _ScriptSession:
             matching = False
         if not actual or not matching:
             return "rejected", {}, "模型提案与用户确认内容不一致；未改写提案或补写事实"
-        versions = {proposal.expected_fact_version for proposal in proposals}
-        if len(versions) != 1 or None in versions:
-            return "rejected", {}, "模型提案的依据版本不一致"
-        result = self.service.commit_events(
-            self.field_id,
-            actual,
-            expected_fact_version=versions.pop(),
-            operation_id=self._operation_id(step),
-        )
+        if len(proposals) != 1:
+            return "rejected", {}, "模型须将本轮已确认事实合并为一份可原子提交的提案"
+        proposal = proposals[0]
+        try:
+            was_confirmed = self.service.store.agent_proposal(proposal.id).status == "confirmed"
+            result = self.service.confirm_agent_proposal(
+                proposal.id, operation_id=self._operation_id(step)
+            )
+        except (KeyError, ValueError) as error:
+            return "rejected", {}, f"模型提案未持久化或已过期：{error}"
+        saved = self.service.list_events(self.field_id)
+        event_ids = {event.event_id for event in actual}
+        saved_ids = [event.event_id for event in saved if event.event_id in event_ids]
+        preview = result.preview
+        if preview is not None:
+            self.bindings[f"preview_{step['step']}"] = preview.id
+            binding = payload.get("preview_binding")
+            if binding:
+                self.bindings[str(binding)] = preview.id
+            self._remember_tasks(list(preview.version.plan.items))
+            self._displayed_result = {
+                "tasks": _plan_rows(list(preview.version.plan.items)),
+                "missing_fields": list(
+                    dict.fromkeys(
+                        field
+                        for item in preview.version.plan.items
+                        for field in item.missing_fields
+                    )
+                ),
+                "step": step["step"],
+            }
         return (
             "ok",
             {
                 "fact_version": result.fact_version,
-                "event_ids": [e.event_id for e in result.events],
-                "replayed": result.replayed,
+                "event_ids": saved_ids,
+                "replayed": was_confirmed,
+                "plan_state": result.plan_state,
+                "preview_id": preview.id if preview else None,
             },
             None,
         )

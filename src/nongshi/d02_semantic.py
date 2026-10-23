@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from nongshi.config import Settings
 from nongshi.d02_scoring import _effective_inputs, _tasks
+from nongshi.model_http import ModelBudgetExceeded, post_model_json
 from nongshi.rules import load_rule_catalog
 
 JUDGE_PROMPT = (
@@ -164,38 +165,38 @@ def judge_packet(
     started = time.perf_counter()
     raw_content: str | None = None
     try:
-        with httpx.Client(transport=transport, timeout=20.0) as client:
-            response = client.post(
-                settings.llm_base_url.rstrip("/") + "/chat/completions",
-                headers={"Authorization": f"Bearer {key}"},
-                json={
-                    "model": settings.llm_model,
-                    "temperature": 0,
-                    "thinking": {"type": "disabled"},
-                    "max_tokens": 4096,
-                    "response_format": {"type": "json_object"},
-                    "messages": [
-                        {"role": "system", "content": JUDGE_PROMPT},
-                        {
-                            "role": "user",
-                            "content": json.dumps(
-                                {
-                                    "facts": packet["facts"],
-                                    "daily_facts": packet.get("daily_facts") or [],
-                                    "start_date": packet.get("start_date"),
-                                    "user_confirmed_facts": packet.get("user_confirmed_facts")
-                                    or {},
-                                    "saved_facts": packet.get("saved_facts") or {},
-                                    "saved_daily_facts": packet.get("saved_daily_facts") or [],
-                                    "sources": packet.get("sources") or [],
-                                    "claims": claims,
-                                },
-                                ensure_ascii=False,
-                            ),
-                        },
-                    ],
-                },
-            )
+        response = post_model_json(
+            settings.llm_base_url.rstrip("/") + "/chat/completions",
+            api_key=key,
+            payload={
+                "model": settings.llm_model,
+                "temperature": 0,
+                "thinking": {"type": "disabled"},
+                "max_tokens": 4096,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": JUDGE_PROMPT},
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "facts": packet["facts"],
+                                "daily_facts": packet.get("daily_facts") or [],
+                                "start_date": packet.get("start_date"),
+                                "user_confirmed_facts": packet.get("user_confirmed_facts") or {},
+                                "saved_facts": packet.get("saved_facts") or {},
+                                "saved_daily_facts": packet.get("saved_daily_facts") or [],
+                                "sources": packet.get("sources") or [],
+                                "claims": claims,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                ],
+            },
+            deadline=started + 20.0,
+            transport=transport,
+        ).response
         if response.status_code != 200:
             return {
                 "status": "provider_error",
@@ -242,7 +243,14 @@ def judge_packet(
             "cost_status": "unknown",
             "reviewer_independence": "same_provider_ai_assistance_not_expert_review",
         }
-    except (httpx.RequestError, ValueError, ValidationError, KeyError, IndexError) as error:
+    except (
+        httpx.RequestError,
+        ModelBudgetExceeded,
+        ValueError,
+        ValidationError,
+        KeyError,
+        IndexError,
+    ) as error:
         return {
             "status": "review_error",
             "error": f"{type(error).__name__}: {error}",

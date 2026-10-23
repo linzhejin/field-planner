@@ -7,6 +7,7 @@ import json
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import TypeVar
@@ -14,6 +15,8 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from nongshi.schema_v3 import (
+    AgentProposalRecordV3,
+    AgentProposalV3,
     AgentRunV3,
     EventCommitResultV3,
     FactEventInputV3,
@@ -28,14 +31,24 @@ from nongshi.schema_v3 import (
 )
 
 T = TypeVar("T", bound=BaseModel)
+_connection_timeout: ContextVar[float] = ContextVar("nongshi_sqlite_timeout", default=10.0)
 
 
 class WorkbenchStoreV3:
     """Persist drafts, confirmed facts, previews and adopted snapshots separately."""
 
+    @contextmanager
+    def connection_budget(self, seconds: float) -> Iterator[None]:
+        token = _connection_timeout.set(max(0.001, min(1.0, seconds)))
+        try:
+            yield
+        finally:
+            _connection_timeout.reset(token)
+
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._backup_before_upgrade()
         with self._connection() as connection:
             connection.executescript(
                 """CREATE TABLE IF NOT EXISTS fields_v3 (
@@ -98,6 +111,15 @@ class WorkbenchStoreV3:
                     started_at TEXT NOT NULL,
                     payload TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS agent_proposals_v3 (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    run_id TEXT NOT NULL REFERENCES agent_runs_v3(id),
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS agent_proposals_v3_field
+                    ON agent_proposals_v3(field_id, status);
                 CREATE TABLE IF NOT EXISTS operations_v3 (
                     operation_id TEXT PRIMARY KEY,
                     action TEXT NOT NULL,
@@ -108,9 +130,27 @@ class WorkbenchStoreV3:
                 );"""
             )
 
+    def _backup_before_upgrade(self) -> None:
+        if not self.path.exists():
+            return
+        backup_path = self.path.with_name(f"{self.path.name}.pre-open-ga.bak")
+        if backup_path.exists():
+            return
+        with sqlite3.connect(self.path, timeout=1.0) as source:
+            existing = {
+                row[0]
+                for row in source.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            }
+            if "fields_v3" not in existing or "agent_proposals_v3" in existing:
+                return
+            with sqlite3.connect(backup_path, timeout=1.0) as target:
+                source.backup(target)
+
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        connection = sqlite3.connect(
+            self.path, timeout=_connection_timeout.get(), isolation_level=None
+        )
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         try:
@@ -198,6 +238,7 @@ class WorkbenchStoreV3:
         *,
         expected_version: int | None,
         operation_id: str,
+        proposal_id: str | None = None,
     ) -> FieldStateV3:
         if not operation_id.strip():
             raise ValueError("保存草稿需要操作编号")
@@ -262,6 +303,8 @@ class WorkbenchStoreV3:
                 ),
             )
             self._save_operation(connection, operation_id, "save_field_draft", request_hash, state)
+            if proposal_id is not None:
+                self._confirm_agent_proposal(connection, proposal_id, operation_id)
             return state
 
     def get_field(self, field_id: str) -> FieldStateV3:
@@ -293,6 +336,7 @@ class WorkbenchStoreV3:
         *,
         expected_fact_version: int,
         operation_id: str,
+        proposal_id: str | None = None,
     ) -> EventCommitResultV3:
         if not events:
             raise ValueError("至少需要一个已确认事实")
@@ -390,6 +434,8 @@ class WorkbenchStoreV3:
                 plan_stale=updated.plan_stale,
             )
             self._save_operation(connection, operation_id, "commit_events", request_hash, result)
+            if proposal_id is not None:
+                self._confirm_agent_proposal(connection, proposal_id, operation_id)
             return result
 
     def list_events(self, field_id: str) -> list[FactEventV3]:
@@ -718,11 +764,78 @@ class WorkbenchStoreV3:
             raise KeyError(f"找不到天气快照 {snapshot_id}")
         return WeatherSnapshotV3.model_validate_json(row["payload"])
 
-    def save_agent_run(self, run: AgentRunV3) -> None:
+    def save_agent_run(
+        self, run: AgentRunV3, proposals: list[AgentProposalV3] | None = None
+    ) -> None:
         with self._connection() as connection, connection:
             connection.execute(
                 "INSERT INTO agent_runs_v3 (id, field_id, started_at, payload) VALUES (?, ?, ?, ?)",
                 (run.id, run.field_id, run.started_at.isoformat(), self._json(run)),
+            )
+            for proposal in proposals or []:
+                record = AgentProposalRecordV3(
+                    proposal=proposal, run_id=run.id, proposed_at=run.started_at
+                )
+                connection.execute(
+                    "INSERT INTO agent_proposals_v3 (id, field_id, run_id, status, payload) "
+                    "VALUES (?, ?, ?, 'pending', ?)",
+                    (proposal.id, proposal.field_id, run.id, self._json(record)),
+                )
+
+    def agent_proposal(self, proposal_id: str) -> AgentProposalRecordV3:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT payload FROM agent_proposals_v3 WHERE id=?", (proposal_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"找不到待确认修改 {proposal_id}")
+        return AgentProposalRecordV3.model_validate_json(row["payload"])
+
+    def agent_proposals(self, field_id: str) -> list[AgentProposalRecordV3]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM agent_proposals_v3 WHERE field_id=? ORDER BY rowid DESC",
+                (field_id,),
+            ).fetchall()
+        return [AgentProposalRecordV3.model_validate_json(row["payload"]) for row in rows]
+
+    @staticmethod
+    def _confirm_agent_proposal(
+        connection: sqlite3.Connection, proposal_id: str, operation_id: str
+    ) -> None:
+        row = connection.execute(
+            "SELECT payload FROM agent_proposals_v3 WHERE id=?", (proposal_id,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"找不到待确认修改 {proposal_id}")
+        record = AgentProposalRecordV3.model_validate_json(row["payload"])
+        if record.status != "pending":
+            raise ValueError("修改提案已处理；请刷新状态")
+        updated = record.model_copy(
+            update={"status": "confirmed", "confirmed_operation_id": operation_id}
+        )
+        connection.execute(
+            "UPDATE agent_proposals_v3 SET status='confirmed', payload=? WHERE id=?",
+            (WorkbenchStoreV3._json(updated), proposal_id),
+        )
+
+    def update_agent_proposal(self, record: AgentProposalRecordV3) -> None:
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT payload FROM agent_proposals_v3 WHERE id=?",
+                (record.proposal.id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"找不到待确认修改 {record.proposal.id}")
+            old = AgentProposalRecordV3.model_validate_json(row["payload"])
+            if old.status != record.status and not (
+                old.status == "pending" and record.status == "ignored"
+            ):
+                raise ValueError("提案状态已变化，请刷新后重试")
+            connection.execute(
+                "UPDATE agent_proposals_v3 SET status=?, payload=? WHERE id=?",
+                (record.status, self._json(record), record.proposal.id),
             )
 
     def list_agent_runs(self, field_id: str) -> list[AgentRunV3]:

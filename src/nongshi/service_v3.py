@@ -20,6 +20,9 @@ from nongshi.schema_v2 import (
     RuleEvidenceV2,
 )
 from nongshi.schema_v3 import (
+    AgentProposalOutcomeV3,
+    AgentProposalRecordV3,
+    AgentProposalV3,
     EventCommitResultV3,
     FactEventInputV3,
     FieldDraftV3,
@@ -56,11 +59,13 @@ class WorkbenchServiceV3:
         *,
         expected_version: int | None,
         operation_id: str,
+        proposal_id: str | None = None,
     ) -> FieldStateV3:
         return self.store.save_field_draft(
             draft,
             expected_version=expected_version,
             operation_id=operation_id,
+            proposal_id=proposal_id,
         )
 
     def get_field(self, field_id: str) -> FieldStateV3:
@@ -79,6 +84,7 @@ class WorkbenchServiceV3:
         *,
         operation_id: str,
         expected_fact_version: int,
+        proposal_id: str | None = None,
     ) -> EventCommitResultV3:
         for event in events:
             feedback = event.feedback
@@ -132,6 +138,132 @@ class WorkbenchServiceV3:
             events,
             expected_fact_version=expected_fact_version,
             operation_id=operation_id,
+            proposal_id=proposal_id,
+        )
+
+    def pending_agent_proposals(self, field_id: str) -> list[AgentProposalV3]:
+        return [
+            record.proposal
+            for record in self.store.agent_proposals(field_id)
+            if record.status == "pending"
+        ]
+
+    def agent_proposal_records(self, field_id: str) -> list[AgentProposalRecordV3]:
+        return self.store.agent_proposals(field_id)
+
+    def ignore_agent_proposal(self, proposal_id: str) -> AgentProposalRecordV3:
+        record = self.store.agent_proposal(proposal_id)
+        if record.status != "pending":
+            raise ValueError("只有待确认修改可以忽略")
+        ignored = record.model_copy(update={"status": "ignored"})
+        self.store.update_agent_proposal(ignored)
+        return ignored
+
+    def confirm_agent_proposal(
+        self, proposal_id: str, *, operation_id: str
+    ) -> AgentProposalOutcomeV3:
+        record = self.store.agent_proposal(proposal_id)
+        if record.status == "ignored":
+            raise ValueError("修改提案已忽略，请重新提出")
+        if record.status == "confirmed":
+            if record.confirmed_operation_id != operation_id:
+                raise ValueError("修改已确认，不能用新操作编号重复提交")
+            return self.retry_agent_preview(proposal_id)
+        proposal = record.proposal
+        if proposal.kind == "field_update" and proposal.draft is not None:
+            saved = self.save_field_draft(
+                proposal.draft,
+                expected_version=proposal.expected_draft_version,
+                operation_id=operation_id,
+                proposal_id=proposal_id,
+            )
+            return self._preview_confirmed_agent_proposal(
+                proposal_id, draft_version=saved.draft_version
+            )
+        if proposal.kind == "facts" and proposal.events:
+            saved = self.commit_events(
+                proposal.field_id,
+                proposal.events,
+                operation_id=operation_id,
+                expected_fact_version=proposal.expected_fact_version or 0,
+                proposal_id=proposal_id,
+            )
+            return self._preview_confirmed_agent_proposal(
+                proposal_id, fact_version=saved.fact_version
+            )
+        raise ValueError("待确认修改内容不完整")
+
+    def retry_agent_preview(self, proposal_id: str) -> AgentProposalOutcomeV3:
+        record = self.store.agent_proposal(proposal_id)
+        if record.status != "confirmed":
+            raise ValueError("请先确认并保存修改，再重新计算")
+        if record.preview_id:
+            preview = self.store.load_preview(record.preview_id)
+            if preview.status == "preview":
+                return AgentProposalOutcomeV3(
+                    proposal_id=proposal_id,
+                    plan_state="preview_ready",
+                    preview=preview,
+                    fact_version=preview.expected_fact_version,
+                    draft_version=preview.expected_draft_version,
+                )
+            if preview.status == "adopted":
+                return AgentProposalOutcomeV3(
+                    proposal_id=proposal_id,
+                    plan_state="no_change",
+                    fact_version=preview.expected_fact_version,
+                    draft_version=preview.expected_draft_version,
+                )
+        state = self.get_field(record.proposal.field_id)
+        return self._preview_confirmed_agent_proposal(
+            proposal_id,
+            fact_version=state.fact_version,
+            draft_version=state.draft_version,
+        )
+
+    def _preview_confirmed_agent_proposal(
+        self,
+        proposal_id: str,
+        *,
+        fact_version: int | None = None,
+        draft_version: int | None = None,
+    ) -> AgentProposalOutcomeV3:
+        record = self.store.agent_proposal(proposal_id)
+        try:
+            preview = self.preview_plan(
+                record.proposal.field_id,
+                operation_id=f"agent-proposal-{proposal_id}-preview-{uuid4()}",
+                source="assistant",
+            )
+        except (ValueError, KeyError, RuntimeError) as error:
+            self.store.update_agent_proposal(record.model_copy(update={"last_error": str(error)}))
+            return AgentProposalOutcomeV3(
+                proposal_id=proposal_id,
+                plan_state="calculation_failed",
+                fact_version=fact_version,
+                draft_version=draft_version,
+                error_message=f"事实已保存，安排待更新：{error}",
+            )
+        if preview.expected_plan_id and all(
+            change.kind == "unchanged" for change in preview.version.changes
+        ):
+            self.cancel_preview(preview.id)
+            self.store.update_agent_proposal(record.model_copy(update={"last_error": ""}))
+            return AgentProposalOutcomeV3(
+                proposal_id=proposal_id,
+                plan_state="no_change",
+                fact_version=preview.expected_fact_version,
+                draft_version=preview.expected_draft_version,
+            )
+        self.store.update_agent_proposal(
+            record.model_copy(update={"preview_id": preview.id, "last_error": ""})
+        )
+        return AgentProposalOutcomeV3(
+            proposal_id=proposal_id,
+            plan_state="preview_ready",
+            fact_version=preview.expected_fact_version,
+            draft_version=preview.expected_draft_version,
+            preview=preview,
         )
 
     def evaluate_field(self, field_id: str) -> FieldEvaluationV3:
@@ -397,6 +529,12 @@ class WorkbenchServiceV3:
             "rule_adoptions": [
                 record.model_dump(mode="json")
                 for record in self.store.list_rule_adoptions(field_id)
+            ],
+            "workflow_runs": [
+                run.model_dump(mode="json") for run in self.store.list_agent_runs(field_id)
+            ],
+            "agent_proposals": [
+                record.model_dump(mode="json") for record in self.agent_proposal_records(field_id)
             ],
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)

@@ -1330,6 +1330,18 @@ def _render_plans(service: WorkbenchServiceV3, field_id: str, state: FieldStateV
     if state.plan_stale:
         st.warning("现场事实或档案已变化，当前采用版需要重新预览。旧版仍保留。")
     preview_id = st.session_state.get(f"current_preview:{field_id}")
+    if not preview_id:
+        for record in service.agent_proposal_records(field_id):
+            if record.status != "confirmed" or not record.preview_id:
+                continue
+            try:
+                restored = service.store.load_preview(record.preview_id)
+            except KeyError:
+                continue
+            if restored.status == "preview":
+                preview_id = restored.id
+                st.session_state[f"current_preview:{field_id}"] = preview_id
+                break
     if preview_id:
         try:
             _show_preview(service, service.store.load_preview(preview_id))
@@ -1503,22 +1515,13 @@ def _render_feedback(
 
 
 def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> str:
-    if proposal.kind == "field_update" and proposal.draft is not None:
-        saved = service.save_field_draft(
-            proposal.draft,
-            expected_version=proposal.expected_draft_version,
-            operation_id=f"confirm-{proposal.id}",
-        )
-        return f"档案修改已保存为 v{saved.draft_version}。"
-    if proposal.kind == "facts":
-        committed = service.commit_events(
-            proposal.field_id,
-            proposal.events,
-            operation_id=f"confirm-{proposal.id}",
-            expected_fact_version=proposal.expected_fact_version or 0,
-        )
-        return f"现场事实已保存为 v{committed.fact_version}；请重新预览计划。"
-    raise ValueError("此修改建议格式无效")
+    outcome = service.confirm_agent_proposal(proposal.id, operation_id=f"confirm-{proposal.id}")
+    if outcome.preview is not None:
+        st.session_state[f"current_preview:{proposal.field_id}"] = outcome.preview.id
+        return "修改已保存，调整预览可查看；采用计划仍需点击确认。"
+    if outcome.plan_state == "no_change":
+        return "修改已保存，重新计算后安排没有变化。"
+    return outcome.error_message or "修改已保存，安排待更新；可点击重新计算。"
 
 
 def _proposal_event_description(event: FactEventInputV3) -> str:
@@ -1688,7 +1691,22 @@ def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[
     )
     if user_message:
         try:
-            response = agent.run(field_id, user_message, conversation=history)
+            with st.status("正在理解请求…", expanded=True) as progress:
+                response = agent.run(field_id, user_message, conversation=history)
+                progress.update(
+                    label=(
+                        "待确认修改"
+                        if response.business_outcome == "awaiting_confirmation"
+                        else "预览可查看"
+                        if response.business_outcome == "preview_ready"
+                        else "需要补充信息"
+                        if response.business_outcome == "needs_information"
+                        else "本轮已完成"
+                        if response.status == "success"
+                        else "本轮未完成"
+                    ),
+                    state="complete" if response.status == "success" else "error",
+                )
             history.extend(
                 [
                     {"role": "user", "content": user_message},
@@ -1724,6 +1742,15 @@ def _render_agent(
             st.write(message["content"])
     response = st.session_state.get(f"agent_result:{field_id}")
     if response:
+        outcome_labels = {
+            "awaiting_confirmation": "待确认修改",
+            "needs_information": "待补充信息",
+            "preview_ready": "预览可采用",
+            "partial": "部分事项待补充",
+            "failed": "本轮未完成",
+        }
+        if response.business_outcome in outcome_labels:
+            st.info(outcome_labels[response.business_outcome])
         if response.status == "success":
             if response.text:
                 st.markdown(response.text)
@@ -1731,38 +1758,15 @@ def _render_agent(
             st.warning(response.error_message or response.status)
             st.caption("已保存的档案与现场事实不受模型失败影响；可继续用结构化表单操作。")
         if response.tools:
-            with st.expander("本轮工具调用记录"):
+            with st.expander("技术详情：本轮工具与耗时"):
+                st.caption(
+                    f"执行编号 {response.run_id} · 请求编号 {', '.join(response.request_ids)}"
+                )
                 for trace in response.tools:
                     st.write(
                         f"{trace.name} · {trace.status} · {trace.elapsed_ms} ms · "
                         f"{trace.result_summary}"
                     )
-        for proposal in response.proposals:
-            st.markdown("#### 等待你确认的修改")
-            st.write(proposal.summary)
-            if proposal.kind == "facts":
-                for index, event in enumerate(proposal.events, start=1):
-                    st.markdown(f"{index}. {_proposal_event_description(event)}")
-                with st.expander("核对完整反馈字段"):
-                    st.json(
-                        [
-                            event.model_dump(mode="json", exclude_none=True)
-                            for event in proposal.events
-                        ]
-                    )
-            else:
-                st.json(proposal.changes)
-            yes, no = st.columns(2)
-            if yes.button("确认并保存", key=f"confirm_proposal:{proposal.id}", type="primary"):
-                try:
-                    st.session_state[f"notice:{field_id}"] = _apply_proposal(service, proposal)
-                    st.session_state[f"agent_result:{field_id}"] = None
-                    st.rerun()
-                except (ValueError, KeyError) as error:
-                    st.error(f"确认失败：{error}。请刷新状态后重新提出。")
-            if no.button("忽略建议", key=f"ignore_proposal:{proposal.id}"):
-                st.session_state[f"agent_result:{field_id}"] = None
-                st.rerun()
         for preview in response.previews:
             st.markdown("#### 助手生成的预览（尚未采用）")
             st.session_state[f"current_preview:{field_id}"] = preview.id
@@ -1772,6 +1776,49 @@ def _render_agent(
                 f"本轮 {response.request_count} 次模型请求 · "
                 f"{response.prompt_tokens + (response.completion_tokens or 0)} tokens"
             )
+    records = service.agent_proposal_records(field_id)
+    for record in records:
+        proposal = record.proposal
+        if record.status != "pending":
+            continue
+        st.markdown("#### 待确认修改 · 已保存草稿")
+        st.write(proposal.summary)
+        if proposal.kind == "facts":
+            for index, event in enumerate(proposal.events, start=1):
+                st.markdown(f"{index}. {_proposal_event_description(event)}")
+            with st.expander("核对完整反馈字段"):
+                st.json(
+                    [event.model_dump(mode="json", exclude_none=True) for event in proposal.events]
+                )
+        else:
+            st.json(proposal.changes)
+        yes, no = st.columns(2)
+        if yes.button("确认并保存", key=f"confirm_proposal:{proposal.id}", type="primary"):
+            try:
+                with st.status("正在保存事实并计算调整预览…", expanded=True) as progress:
+                    st.session_state[f"notice:{field_id}"] = _apply_proposal(service, proposal)
+                    progress.update(label="事实已保存，计算已结束", state="complete")
+                st.session_state[f"agent_result:{field_id}"] = None
+                st.rerun()
+            except (ValueError, KeyError) as error:
+                st.error(f"确认失败：{error}。请刷新状态后重新提出。")
+        if no.button("放弃这条修改", key=f"ignore_proposal:{proposal.id}"):
+            service.ignore_agent_proposal(proposal.id)
+            st.session_state[f"agent_result:{field_id}"] = None
+            st.rerun()
+    for record in records:
+        if record.status == "confirmed" and record.last_error:
+            st.warning(f"事实已保存，自动预览未完成：{record.last_error}")
+            if st.button("重新计算安排", key=f"retry_agent_preview:{record.proposal.id}"):
+                result = service.retry_agent_preview(record.proposal.id)
+                if result.preview is not None:
+                    st.session_state[f"current_preview:{field_id}"] = result.preview.id
+                st.session_state[f"notice:{field_id}"] = (
+                    "调整预览已恢复，请核对后采用。"
+                    if result.preview is not None
+                    else result.error_message or "重新计算后安排没有变化。"
+                )
+                st.rerun()
 
 
 def _seed_demo(service: WorkbenchServiceV3) -> str:

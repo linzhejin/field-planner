@@ -336,6 +336,13 @@ class AgentToolMetricV3(BaseModel):
     elapsed_ms: int = Field(ge=0)
 
 
+class AgentWorkflowStepV3(BaseModel):
+    stage: Literal["understanding", "tool", "proposal", "preview", "finished"]
+    status: str
+    name: str = ""
+    elapsed_ms: int = Field(default=0, ge=0)
+
+
 class AgentRunV3(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     field_id: str
@@ -358,6 +365,12 @@ class AgentRunV3(BaseModel):
     completion_tokens: int | None = Field(default=None, ge=0)
     tools: list[str] = Field(default_factory=list)
     tool_metrics: list[AgentToolMetricV3] = Field(default_factory=list)
+    tool_traces: list[AgentToolTraceV3] = Field(default_factory=list)
+    workflow_version: str = "legacy"
+    workflow_actions: list[str] = Field(default_factory=list)
+    steps: list[AgentWorkflowStepV3] = Field(default_factory=list)
+    error_category: str | None = None
+    request_ids: list[str] = Field(default_factory=list)
 
 
 class AgentProposalV3(BaseModel):
@@ -370,6 +383,25 @@ class AgentProposalV3(BaseModel):
     events: list[FactEventInputV3] = Field(default_factory=list)
     summary: str
     changes: dict[str, object] = Field(default_factory=dict)
+
+
+class AgentProposalRecordV3(BaseModel):
+    proposal: AgentProposalV3
+    run_id: str
+    proposed_at: AwareDatetime
+    status: Literal["pending", "confirmed", "ignored"] = "pending"
+    confirmed_operation_id: str | None = None
+    preview_id: str | None = None
+    last_error: str = ""
+
+
+class AgentProposalOutcomeV3(BaseModel):
+    proposal_id: str
+    plan_state: Literal["preview_ready", "no_change", "calculation_failed"]
+    fact_version: int | None = None
+    draft_version: int | None = None
+    preview: PlanPreviewV3 | None = None
+    error_message: str = ""
 
 
 class AgentToolTraceV3(BaseModel):
@@ -402,3 +434,17 @@ class AgentResponseV3(BaseModel):
     previews: list[PlanPreviewV3] = Field(default_factory=list)
     prompt_tokens: int | None = Field(default=None, ge=0)
     completion_tokens: int | None = Field(default=None, ge=0)
+    workflow_actions: list[str] = Field(default_factory=list)
+    business_outcome: (
+        Literal[
+            "answered",
+            "needs_information",
+            "awaiting_confirmation",
+            "preview_ready",
+            "partial",
+            "failed",
+        ]
+        | None
+    ) = None
+    error_category: str | None = None
+    request_ids: list[str] = Field(default_factory=list)

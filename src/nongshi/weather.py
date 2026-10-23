@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
@@ -71,7 +72,9 @@ class OpenMeteoService:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    def search_locations(self, query: str, *, count: int = 10) -> list[GeocodingResultV3]:
+    def search_locations(
+        self, query: str, *, count: int = 10, timeout_seconds: float | None = None
+    ) -> list[GeocodingResultV3]:
         name = query.strip()
         if len(name) < 2:
             raise ValueError("地点至少输入两个字")
@@ -85,12 +88,18 @@ class OpenMeteoService:
         ):
             return [result for _, result in local_results]
         local_results = local_results[: max(1, count - 2)]
+        deadline = time.perf_counter() + timeout_seconds if timeout_seconds is not None else None
         try:
             online_results = []
             for attempt, (provider_query, context_query) in enumerate(
                 self._geocoding_queries(name)
             ):
-                candidates = self._request_geocoding(provider_query, name)
+                remaining = deadline - time.perf_counter() if deadline is not None else None
+                if remaining is not None and remaining <= 0:
+                    raise WeatherServiceError("timeout", "地点查询超过本轮时间预算")
+                candidates = self._request_geocoding(
+                    provider_query, name, timeout_seconds=remaining
+                )
                 online_results = self._filter_by_address_context(context_query, candidates)
                 if online_results:
                     if attempt:
@@ -128,7 +137,11 @@ class OpenMeteoService:
         return [result for _, result in sorted(merged.values(), key=lambda item: -item[0])[:count]]
 
     def _request_geocoding(
-        self, provider_query: str, original_query: str
+        self,
+        provider_query: str,
+        original_query: str,
+        *,
+        timeout_seconds: float | None = None,
     ) -> list[GeocodingResultV3]:
         try:
             response = self._client.get(
@@ -140,6 +153,7 @@ class OpenMeteoService:
                     "format": "json",
                     "countryCode": "CN",
                 },
+                timeout=timeout_seconds or self._client.timeout,
             )
             response.raise_for_status()
             payload = response.json()
@@ -293,9 +307,11 @@ class OpenMeteoService:
         end_date: date,
         *,
         force_refresh: bool = False,
+        timeout_seconds: float | None = None,
     ) -> WeatherSnapshotV3:
         if end_date - start_date != timedelta(days=6):
             raise ValueError("天气查询范围需要覆盖完整七天")
+        deadline = time.perf_counter() + timeout_seconds if timeout_seconds is not None else None
         now = self._now()
         if now.tzinfo is None:
             raise ValueError("天气缓存时间需要包含时区")
@@ -325,6 +341,7 @@ class OpenMeteoService:
                     "start_date": start_date.isoformat(),
                     "end_date": end_date.isoformat(),
                 },
+                timeout=timeout_seconds or self._client.timeout,
             )
             response.raise_for_status()
             payload = response.json()
@@ -340,9 +357,13 @@ class OpenMeteoService:
             ) from error
         except ValueError as error:
             raise WeatherServiceError("invalid", "天气服务返回的数据无法读取") from error
+        if deadline is not None and time.perf_counter() >= deadline:
+            raise WeatherServiceError("timeout", "天气响应超过本轮时间预算，未保存新快照")
         snapshot = self._parse_snapshot(
             field_id, location, start_date, end_date, now, payload, self.cache_ttl
         )
+        if deadline is not None and time.perf_counter() >= deadline:
+            raise WeatherServiceError("timeout", "天气解析超过本轮时间预算，未保存新快照")
         if self.store:
             self.store.save_weather_snapshot(snapshot)
         return snapshot

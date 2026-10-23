@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from nongshi.config import Settings
+from nongshi.model_http import ModelBudgetExceeded, post_model_json
 from nongshi.rule_retrieval import RuleRetrieverV3
 from nongshi.schema_v2 import FieldProfile
 from nongshi.schema_v3 import RuleSearchQueryV3
@@ -247,13 +248,14 @@ def run_model_group(
                 },
             ],
         }
-        with httpx.Client(transport=transport, timeout=config.llm_timeout_seconds) as client:
-            row["model_calls"] = 1
-            response = client.post(
-                config.llm_base_url.rstrip("/") + "/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json=request,
-            )
+        row["model_calls"] = 1
+        response = post_model_json(
+            config.llm_base_url.rstrip("/") + "/chat/completions",
+            api_key=api_key,
+            payload=request,
+            deadline=started + config.llm_timeout_seconds,
+            transport=transport,
+        ).response
         if response.status_code != 200:
             row["errors"].append(f"模型 HTTP {response.status_code}")
             return row
@@ -271,6 +273,7 @@ def run_model_group(
         row["status"] = "executed"
     except (
         httpx.RequestError,
+        ModelBudgetExceeded,
         json.JSONDecodeError,
         ValidationError,
         KeyError,

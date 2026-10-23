@@ -514,6 +514,265 @@ def test_agent_cannot_claim_feedback_saved_without_proposal(tmp_path: Path) -> N
     agent.close()
 
 
+def test_resource_change_cannot_finish_as_read_only_answer(tmp_path: Path) -> None:
+    agent, service, _ = make_agent(
+        tmp_path, lambda _: httpx.Response(200, json=final_response("已读取地块信息。"))
+    )
+
+    result = agent.run(
+        "field-1",
+        "明天下午两点到四点才有空，请调整人员时间",
+        received_at=datetime(2026, 10, 18, 0, 0, tzinfo=UTC),
+    )
+
+    assert result.status != "success"
+    assert result.proposals == []
+    assert service.list_events("field-1") == []
+    agent.close()
+
+
+def test_response_after_total_budget_is_not_accepted_as_success(tmp_path: Path) -> None:
+    import time
+
+    def slow_response(_: httpx.Request) -> httpx.Response:
+        time.sleep(0.08)
+        return httpx.Response(200, json=final_response())
+
+    agent, _, _ = make_agent(tmp_path, slow_response)
+    agent.settings.llm_timeout_seconds = 0.02
+
+    result = agent.run("field-1", "查看地块")
+
+    assert result.status == "timeout"
+    assert result.proposals == []
+    agent.close()
+
+
+def test_async_model_stall_is_cancelled_without_late_state_write(tmp_path: Path) -> None:
+    import asyncio
+    import time
+
+    async def stalled(_: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.3)
+        return httpx.Response(200, json=final_response())
+
+    agent, service, _ = make_agent(tmp_path, stalled)
+    agent.settings.llm_timeout_seconds = 0.03
+    started = time.perf_counter()
+
+    result = agent.run("field-1", "查看地块")
+
+    assert result.status == "timeout"
+    assert time.perf_counter() - started < 0.2
+    assert service.list_events("field-1") == []
+    agent.close()
+
+
+def test_declared_resource_flow_does_not_call_weather(tmp_path: Path) -> None:
+    responses = iter(
+        [
+            tool_call_response("declare_request", '{"field_id":"field-1","actions":["resource"]}'),
+            tool_call_response("query_current_weather", '{"field_id":"field-1"}'),
+            final_response("请提供具体时间。"),
+        ]
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=next(responses)))
+
+    result = agent.run("field-1", "请修改人员时间")
+
+    assert result.workflow_actions == ["resource"]
+    assert any(
+        trace.name == "query_current_weather" and trace.status == "invalid_arguments"
+        for trace in result.tools
+    )
+    assert result.business_outcome == "needs_information"
+    agent.close()
+
+
+def test_vague_afternoon_resource_proposal_is_rejected(tmp_path: Path) -> None:
+    arguments = json.dumps(
+        {
+            "field_id": "field-1",
+            "events": [
+                {
+                    "feedback": {
+                        "kind": "resource",
+                        "at": "2026-10-18T10:00:00+08:00",
+                        "day": "2026-10-19",
+                        "intervals": [{"start": "14:00", "end": "16:00"}],
+                    }
+                }
+            ],
+        }
+    )
+    responses = iter(
+        [
+            tool_call_response("propose_feedback", arguments),
+            final_response("请提供下午的具体开始和结束时间。"),
+        ]
+    )
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=next(responses)))
+
+    result = agent.run("field-1", "明天只有下午有空，请改人员时间")
+
+    assert result.business_outcome == "needs_information"
+    assert result.proposals == []
+    assert service.pending_agent_proposals("field-1") == []
+    agent.close()
+
+
+def test_agent_reports_database_lock_instead_of_claiming_success(tmp_path: Path) -> None:
+    import sqlite3
+    import time
+
+    agent, _, database = make_agent(tmp_path, lambda _: httpx.Response(200, json=final_response()))
+    lock = sqlite3.connect(database)
+    lock.execute("BEGIN IMMEDIATE")
+    started = time.perf_counter()
+    try:
+        result = agent.run("field-1", "查看地块")
+    finally:
+        lock.rollback()
+        lock.close()
+        agent.close()
+
+    assert result.status == "error"
+    assert result.error_category == "database_busy"
+    assert time.perf_counter() - started < 2
+
+
+def test_existing_v3_database_is_backed_up_before_proposal_table_upgrade(tmp_path: Path) -> None:
+    import sqlite3
+
+    database = tmp_path / "existing.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE fields_v3 (id TEXT PRIMARY KEY)")
+        connection.execute("INSERT INTO fields_v3 (id) VALUES ('old-field')")
+
+    WorkbenchStoreV3(database)
+
+    backup = database.with_name(f"{database.name}.pre-open-ga.bak")
+    assert backup.exists()
+    with sqlite3.connect(backup) as connection:
+        assert connection.execute("SELECT id FROM fields_v3").fetchone()[0] == "old-field"
+        assert (
+            connection.execute(
+                "SELECT name FROM sqlite_master WHERE name='agent_proposals_v3'"
+            ).fetchone()
+            is None
+        )
+    with sqlite3.connect(database) as connection:
+        assert (
+            connection.execute(
+                "SELECT name FROM sqlite_master WHERE name='agent_proposals_v3'"
+            ).fetchone()
+            is not None
+        )
+
+
+def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
+    tmp_path: Path,
+) -> None:
+    arguments = json.dumps(
+        {
+            "field_id": "field-1",
+            "events": [
+                {
+                    "feedback": {
+                        "kind": "resource",
+                        "at": "2026-10-18T10:00:00+08:00",
+                        "day": "2026-10-19",
+                        "intervals": [{"start": "14:00", "end": "16:00"}],
+                        "resource_minutes": 120,
+                        "plot_id": "field-1",
+                    }
+                }
+            ],
+        },
+        ensure_ascii=False,
+    )
+    agent, service, database = make_agent(
+        tmp_path,
+        lambda _: httpx.Response(200, json=tool_call_response("propose_feedback", arguments)),
+    )
+    first = service.preview_plan("field-1")
+    service.adopt_plan(
+        first.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-first",
+    )
+    response = agent.run("field-1", "把明天有空时间改成下午两点到四点")
+    assert len(response.proposals) == 1
+    agent.close()
+
+    reopened = WorkbenchServiceV3(
+        WorkbenchStoreV3(database),
+        catalog=load_rule_catalog(),
+        today=lambda: date(2026, 10, 18),
+    )
+    proposal = reopened.pending_agent_proposals("field-1")[0]
+    assert proposal.id == response.proposals[0].id
+    result = reopened.confirm_agent_proposal(proposal.id, operation_id="confirm-once")
+    assert result.fact_version == 1
+    assert result.preview is not None
+    assert result.preview.version.changes
+    assert reopened.get_current_plan("field-1").id == first.version.id
+    assert reopened.get_field("field-1").draft.days[0].intervals[0].start.isoformat() == "09:00:00"
+    assert len(reopened.list_events("field-1")) == 1
+    repeated = reopened.confirm_agent_proposal(proposal.id, operation_id="confirm-once")
+    assert repeated.fact_version == 1
+    assert len(reopened.list_events("field-1")) == 1
+    assert reopened.pending_agent_proposals("field-1") == []
+
+
+def test_saved_fact_remains_when_automatic_preview_fails_and_retry_does_not_recommit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    agent, service, database = make_agent(
+        tmp_path,
+        lambda _: httpx.Response(
+            200,
+            json=tool_call_response(
+                "propose_feedback",
+                json.dumps(
+                    {
+                        "field_id": "field-1",
+                        "events": [
+                            {
+                                "feedback": {
+                                    "kind": "observation",
+                                    "at": "2026-10-18T10:00:00+08:00",
+                                    "plot_id": "field-1",
+                                    "field": "standing_water",
+                                    "value": True,
+                                }
+                            }
+                        ],
+                    }
+                ),
+            ),
+        ),
+    )
+    response = agent.run("field-1", "记录地里有积水")
+    agent.close()
+    reopened = WorkbenchServiceV3(WorkbenchStoreV3(database), today=lambda: date(2026, 10, 18))
+    original = reopened.preview_plan
+
+    def broken(*args, **kwargs):
+        raise ValueError("模拟重排失败")
+
+    monkeypatch.setattr(reopened, "preview_plan", broken)
+    result = reopened.confirm_agent_proposal(response.proposals[0].id, operation_id="confirm-once")
+    assert result.plan_state == "calculation_failed"
+    assert reopened.get_field("field-1").fact_version == 1
+    assert len(reopened.list_events("field-1")) == 1
+    monkeypatch.setattr(reopened, "preview_plan", original)
+    retry = reopened.retry_agent_preview(response.proposals[0].id)
+    assert retry.preview is not None
+    assert len(reopened.list_events("field-1")) == 1
+
+
 def test_current_weather_uses_saved_start_and_complete_seven_days(tmp_path: Path) -> None:
     agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
     state = service.get_field("field-1")

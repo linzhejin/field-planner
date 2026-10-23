@@ -10,7 +10,7 @@ from test_d02_runner_scripted import _case
 from nongshi.d02_runner import _ScriptSession
 from nongshi.d02_sealed import _common_result
 from nongshi.schema_v2 import FeedbackV2
-from nongshi.schema_v3 import AgentProposalV3, AgentResponseV3, FactEventInputV3
+from nongshi.schema_v3 import AgentProposalV3, AgentResponseV3, AgentRunV3, FactEventInputV3
 
 
 def _session(tmp_path: Path) -> _ScriptSession:
@@ -23,6 +23,22 @@ def _session(tmp_path: Path) -> _ScriptSession:
 def _response(**kwargs) -> AgentResponseV3:
     return AgentResponseV3(
         run_id="public-run", status="success", model="test", request_count=1, **kwargs
+    )
+
+
+def _persist_fake_proposal(session: _ScriptSession, proposal: AgentProposalV3) -> None:
+    session.store.save_agent_run(
+        AgentRunV3(
+            id="public-run",
+            field_id=session.field_id,
+            model="test",
+            started_at=datetime.fromisoformat("2026-10-20T18:12:00+08:00"),
+            elapsed_ms=1,
+            request_count=1,
+            tool_count=1,
+            status="success",
+        ),
+        [proposal],
     )
 
 
@@ -111,6 +127,7 @@ def test_matching_confirmation_saves_model_event_and_replay_is_idempotent(tmp_pa
         "nongshi.agent.AgentServiceV3.run", lambda *a, **kw: _response(proposals=[proposal])
     )
     session._op_chat({"step": 2, "user_message": "看见积水"})
+    _persist_fake_proposal(session, proposal)
     oracle = deepcopy(actual.model_dump(mode="json"))
     oracle["event_id"] = "different-script-id"
     confirmation = {
@@ -121,8 +138,13 @@ def test_matching_confirmation_saves_model_event_and_replay_is_idempotent(tmp_pa
             "events": [oracle],
         },
     }
-    assert session.execute_step(confirmation)[0] == "ok"
-    assert session.execute_step(confirmation)[0] == "ok"
+    first_status, first_result, _ = session.execute_step(confirmation)
+    second_status, second_result, _ = session.execute_step(confirmation)
+    assert first_status == second_status == "ok"
+    assert first_result["replayed"] is False
+    assert second_result["replayed"] is True
+    if first_result["preview_id"]:
+        assert session.bindings["preview_3"] == first_result["preview_id"]
     saved = session.service.list_events(session.field_id)
     assert len(saved) == 1 and saved[0].event_id == actual.event_id
     session._agent.close()
@@ -159,6 +181,7 @@ def test_confirmation_accepts_consistent_redundant_completion_day(tmp_path, monk
         "nongshi.agent.AgentServiceV3.run", lambda *a, **kw: _response(proposals=[proposal])
     )
     session._op_chat({"step": 2, "user_message": "已完成"})
+    _persist_fake_proposal(session, proposal)
     expected = actual.model_dump(mode="json")
     expected["feedback"]["day"] = task.end_at.date().isoformat()
     expected["feedback"]["at"] = task.end_at.astimezone().isoformat()
