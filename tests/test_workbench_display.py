@@ -3,11 +3,36 @@
 from __future__ import annotations
 
 import re
+from datetime import date, datetime, time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from streamlit.testing.v1 import AppTest
 
+from nongshi.schema_v2 import FeedbackV2, TimeWindow
+from nongshi.schema_v3 import FactEventInputV3
+from nongshi.workbench import _proposal_event_description
+
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
+
+
+def test_feedback_proposal_shows_exact_resource_change_before_confirmation() -> None:
+    event = FactEventInputV3(
+        feedback=FeedbackV2(
+            kind="resource",
+            at=datetime(2026, 10, 24, 9, 35, tzinfo=ZoneInfo("Asia/Shanghai")),
+            day=date(2026, 10, 25),
+            resource_minutes=60,
+            intervals=[TimeWindow(start=time(14), end=time(15))],
+        )
+    )
+
+    description = _proposal_event_description(event)
+
+    assert "2026-10-25" in description
+    assert "14:00–15:00" in description
+    assert "60 分钟" in description
+    assert "人员" in description
 
 
 def _render(tmp_path: Path, monkeypatch) -> AppTest:  # type: ignore[no-untyped-def]

@@ -1521,6 +1521,57 @@ def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> s
     raise ValueError("此修改建议格式无效")
 
 
+def _proposal_event_description(event: FactEventInputV3) -> str:
+    feedback = event.feedback
+    if feedback is None:
+        return f"撤回或更正原事件 {event.correction_of or '未指定'}"
+    at = feedback.at.astimezone(ZONE).strftime("%Y-%m-%d %H:%M")
+    if feedback.kind == "completed":
+        detail = f"记录任务 {feedback.task_id} 完成"
+    elif feedback.kind == "observation":
+        field = {
+            "standing_water": "积水情况",
+            "ditch_connectivity": "沟渠连通",
+            "pest_signs": "虫情迹象",
+            "maintenance_need_confirmed": "维护需求",
+            "maintenance_problem_confirmed": "维护问题",
+            "maintenance_purpose": "维护目的",
+        }.get(feedback.field or "", feedback.field or "观察项")
+        value = (
+            "未知"
+            if feedback.value is None
+            else "是"
+            if feedback.value is True
+            else "否"
+            if feedback.value is False
+            else str(feedback.value)
+        )
+        detail = f"记录地块 {feedback.plot_id} 的{field}：{value}"
+    elif feedback.kind == "workability":
+
+        def state(value: bool | None) -> str:
+            return "未知" if value is None else "可作业" if value else "不可作业"
+
+        detail = (
+            f"将 {feedback.day} 的现场条件设为{state(feedback.site_workable)}，"
+            f"天气条件设为{state(feedback.weather_workable)}"
+        )
+    else:
+        intervals = (
+            "；".join(
+                f"{window.start:%H:%M}–{window.end:%H:%M}" for window in (feedback.intervals or [])
+            )
+            or "无可用时段"
+        )
+        minutes = (
+            "总分钟数未填写"
+            if feedback.resource_minutes is None
+            else f"{feedback.resource_minutes} 分钟"
+        )
+        detail = f"将 {feedback.day} 的人员可用时间改为 {intervals}，{minutes}"
+    return f"{detail}（反馈时间 {at}）"
+
+
 def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str) -> None:
     """在窄屏助手页签直接呈现可操作的反馈表单。"""
     state = _field_state(service, field_id)
@@ -1689,7 +1740,18 @@ def _render_agent(
         for proposal in response.proposals:
             st.markdown("#### 等待你确认的修改")
             st.write(proposal.summary)
-            st.json(proposal.changes)
+            if proposal.kind == "facts":
+                for index, event in enumerate(proposal.events, start=1):
+                    st.markdown(f"{index}. {_proposal_event_description(event)}")
+                with st.expander("核对完整反馈字段"):
+                    st.json(
+                        [
+                            event.model_dump(mode="json", exclude_none=True)
+                            for event in proposal.events
+                        ]
+                    )
+            else:
+                st.json(proposal.changes)
             yes, no = st.columns(2)
             if yes.button("确认并保存", key=f"confirm_proposal:{proposal.id}", type="primary"):
                 try:
