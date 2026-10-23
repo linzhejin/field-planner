@@ -403,11 +403,11 @@ class AgentServiceV3:
             return finish("invalid_response", error_message="请输入要处理的内容。")
         change_requested = bool(
             re.search(
-                r"保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理|"
+                r"(?<!已)(?<!已经)(?<!刚)保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理|"
                 r"调整|修改|重排|(?:只有|仅有|只剩|有空).*?(?:上午|下午|晚上|\d{1,2}点)",
                 user_message,
             )
-        ) and not bool(re.search(r"刚保存.*预览", user_message))
+        )
         preview_requested = bool(re.search(r"预览|生成.*计划|安排.*七天", user_message))
 
         messages: list[dict[str, object]] = [
@@ -428,6 +428,13 @@ class AgentServiceV3:
             user_message,
             received_at=started_at,
             plan_start=self.workbench.get_field(field_id).draft.start_date,
+        )
+        read_only_preview = bool(
+            preview_requested
+            and not change_requested
+            and not requested_resource_days
+            and not self._requested_observations(user_message)
+            and not re.search(r"田里|地里|进田|下地|作业条件", user_message)
         )
         deadline = started + self.settings.llm_timeout_seconds
         last_tool_summary = ""
@@ -926,8 +933,11 @@ class AgentServiceV3:
                         workflow_actions = set(tool_result["actions"])
                         declared_missing = list(tool_result["missing"])
                         declaration = AgentDeclareRequestArgs.model_validate(tool_result)
+                        if read_only_preview:
+                            workflow_actions = {"preview"} | (workflow_actions & {"query"})
+                            declared_missing = []
                         accepted_events: list[dict[str, object]] = []
-                        for raw_event in declaration.events:
+                        for raw_event in [] if read_only_preview else declaration.events:
                             accepted, problem = self._ground_declared_event(
                                 raw_event.model_dump(mode="json", exclude_unset=True),
                                 field_id=field_id,
@@ -948,7 +958,9 @@ class AgentServiceV3:
                                 )
                             )
                         grounded_changes: dict[str, object] = {}
-                        for key, value in declaration.field_changes.items():
+                        for key, value in (
+                            {} if read_only_preview else declaration.field_changes
+                        ).items():
                             quote = declaration.field_change_quotes.get(key)
                             if (
                                 quote

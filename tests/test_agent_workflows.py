@@ -592,6 +592,33 @@ def test_preview_is_not_reported_ready_when_declared_field_change_is_unverified(
     assert not result.previews
 
 
+def test_read_only_preview_ignores_spurious_declared_mutation(tmp_path) -> None:
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["field_update", "preview", "query"],
+                "field_changes": {"crop": "rapeseed"},
+                "field_change_quotes": {"crop": "油菜"},
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "请检查已经保存的资料并给我安排预览",
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.previews
+    assert result.business_outcome == "preview_ready"
+    assert any(tool.name == "preview_plan" for tool in result.tools)
+    assert not result.proposals
+
+
 def test_resource_clock_in_unrelated_completion_clause_cannot_ground_interval(tmp_path) -> None:
     answer = model_calls(
         (
