@@ -937,6 +937,7 @@ class AgentServiceV3:
                             workflow_actions = {"preview"} | (workflow_actions & {"query"})
                             declared_missing = []
                         accepted_events: list[dict[str, object]] = []
+                        accepted_signatures: set[str] = set()
                         for raw_event in [] if read_only_preview else declaration.events:
                             accepted, problem = self._ground_declared_event(
                                 raw_event.model_dump(mode="json", exclude_unset=True),
@@ -945,7 +946,19 @@ class AgentServiceV3:
                                 received_at=started_at,
                             )
                             if accepted:
-                                accepted_events.append(accepted)
+                                signature = json.dumps(
+                                    {
+                                        "feedback": accepted.get("feedback"),
+                                        "correction_of": accepted.get("correction_of"),
+                                        "retracts": accepted.get("retracts", False),
+                                    },
+                                    ensure_ascii=False,
+                                    sort_keys=True,
+                                    default=str,
+                                )
+                                if signature not in accepted_signatures:
+                                    accepted_events.append(accepted)
+                                    accepted_signatures.add(signature)
                                 runtime_missing.pop(event_key(raw_event.model_dump()), None)
                             elif problem:
                                 runtime_missing[event_key(raw_event.model_dump())] = problem
@@ -1465,7 +1478,9 @@ class AgentServiceV3:
     ) -> tuple[dict[str, object] | None, str | None]:
         quote = raw.get("source_quote")
         if not isinstance(quote, str) or not quote.strip() or quote not in user_message:
-            return None, "请指出这条修改对应的用户原话"
+            quote = self._current_confirmation_quote(raw, user_message)
+            if quote is None:
+                return None, "请指出这条修改对应的用户原话"
         event = {key: value for key, value in raw.items() if key != "source_quote"}
         try:
             args = ProposeFeedbackArgs.model_validate({"field_id": field_id, "events": [event]})
@@ -1607,6 +1622,49 @@ class AgentServiceV3:
             return event, None
         except (ValidationError, ValueError, TypeError):
             return None, "请核对修改内容、日期和字段值"
+
+    @staticmethod
+    def _current_confirmation_quote(raw: dict[str, object], message: str) -> str | None:
+        """Ground a repeated fact in this turn, never in an earlier model quote."""
+        if not re.search(r"确认|核对无误|同意", message):
+            return None
+        feedback = raw.get("feedback")
+        if not isinstance(feedback, dict):
+            return None
+        kind = feedback.get("kind")
+        field = feedback.get("field")
+        if kind == "completed":
+            pattern = r"巡田|巡查|检查|沟渠|清理|维护|完成|做完"
+        elif kind == "observation":
+            pattern = {
+                "standing_water": r"积水",
+                "pest_signs": r"虫情|害虫|虫害",
+                "ditch_connectivity": r"沟渠|沟口|堵塞",
+                "maintenance_problem_confirmed": r"沟渠|沟口|堵塞",
+                "maintenance_need_confirmed": r"仍需|需要.*清理|维护需求",
+                "maintenance_purpose": r"既有沟渠|维护目的",
+            }.get(field)
+        elif kind == "resource":
+            pattern = r"可用|有空|空档|分钟|时段"
+        elif kind == "workability":
+            pattern = r"进田|下地|作业条件|可作业"
+        else:
+            return None
+        if not pattern:
+            return None
+        clauses = [
+            clause.strip()
+            for clause in re.split(r"[，,。；;、\n]", message)
+            if re.search(pattern, clause)
+        ]
+        if kind == "completed":
+            direct = [
+                clause
+                for clause in clauses
+                if re.search(r"完成|做完", clause) and not re.search(r"完成时间", clause)
+            ]
+            clauses = direct or [clause for clause in clauses if re.search(r"完成时间", clause)]
+        return clauses[0] if len(clauses) == 1 else None
 
     @staticmethod
     def _vague_resource_time(user_message: str, arguments_json: str) -> bool:

@@ -84,7 +84,7 @@ def test_later_chat_cannot_supply_hidden_time():
 def test_seal_version_marks_completion_visibility_contract():
     from nongshi.d02_sealed import SEAL_VERSION
 
-    assert SEAL_VERSION == "internal-auto-v6"
+    assert SEAL_VERSION == "internal-auto-v7"
 
 
 def test_formal_seal_rejects_completion_time_only_in_confirmation(tmp_path, monkeypatch):

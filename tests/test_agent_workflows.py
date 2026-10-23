@@ -440,6 +440,149 @@ def test_completed_quote_uses_only_matching_explicit_task_time(
     assert bool(result.proposals) is accepted
 
 
+def test_repeated_completion_declaration_proposes_one_fact(tmp_path) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
+    preview = service.preview_plan("field-1")
+    service.adopt_plan(
+        preview.id, expected_fact_version=0, expected_plan_id=None, operation_id="adopt-v1"
+    )
+    inspection_id = next(
+        item.task_id for item in preview.version.plan.items if item.task_type == "inspection"
+    )
+    event = {
+        "source_quote": "巡田已经完成",
+        "feedback": {
+            "kind": "completed",
+            "at": "2026-10-19T09:30:00+08:00",
+            "task_id": inspection_id,
+            "plot_id": "field-1",
+        },
+    }
+    duplicate = {**event, "source_quote": "巡田的实际完成时间是 2026-10-19T09:30:00+08:00"}
+    answer = model_calls(
+        (
+            "declare_request",
+            {"field_id": "field-1", "actions": ["completed"], "events": [event, duplicate]},
+        )
+    )
+    agent._transport = httpx.MockTransport(lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "巡田已经完成；巡田的实际完成时间是 2026-10-19T09:30:00+08:00",
+            received_at=datetime(2026, 10, 20, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert len(result.proposals) == 1
+    assert len(result.proposals[0].events) == 1
+
+
+def test_confirmed_restatement_can_ground_events_without_stale_quotes(tmp_path) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(500))
+    preview = service.preview_plan("field-1")
+    service.adopt_plan(
+        preview.id, expected_fact_version=0, expected_plan_id=None, operation_id="adopt-v1"
+    )
+    inspection_id = next(
+        item.task_id for item in preview.version.plan.items if item.task_type == "inspection"
+    )
+    day = (service.get_field("field-1").draft.start_date + timedelta(days=1)).isoformat()
+    timestamp = "2026-10-20T10:02:00+08:00"
+    events = [
+        {
+            "source_quote": "巡田做完了",
+            "feedback": {
+                "kind": "completed",
+                "at": "2026-10-19T09:30:00+08:00",
+                "task_id": inspection_id,
+                "plot_id": "field-1",
+            },
+        },
+        {
+            "source_quote": "看见少量积水",
+            "feedback": {
+                "kind": "observation",
+                "at": timestamp,
+                "plot_id": "field-1",
+                "field": "standing_water",
+                "value": True,
+            },
+        },
+        {
+            "source_quote": "虫有没有没看",
+            "feedback": {
+                "kind": "observation",
+                "at": timestamp,
+                "plot_id": "field-1",
+                "field": "pest_signs",
+                "value": None,
+            },
+        },
+        resource_event(day, "明天下午只有14:30到15:30有空"),
+    ]
+    events[-1]["feedback"]["at"] = timestamp
+    events[-1]["feedback"]["intervals"] = [{"start": "14:30", "end": "15:30"}]
+    events[-1]["feedback"]["resource_minutes"] = 60
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["completed", "observation", "resource"],
+                "events": events,
+            },
+        )
+    )
+    agent._transport = httpx.MockTransport(lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "核对无误：巡田完成、积水有、虫情未观察；第二天仅14:30–15:30可用。"
+            "我现在确认保存这四条。补充确认：巡田的实际完成时间是 "
+            "2026-10-19T09:30:00+08:00。",
+            received_at=datetime(2026, 10, 20, 10, 2, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert len(result.proposals) == 1
+    assert len(result.proposals[0].events) == 4
+
+
+def test_confirmed_restatement_rejects_contradictory_model_value(tmp_path) -> None:
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["observation"],
+                "events": [
+                    {
+                        "source_quote": "看见积水",
+                        "feedback": {
+                            "kind": "observation",
+                            "at": "2026-10-18T10:00:00+08:00",
+                            "plot_id": "field-1",
+                            "field": "standing_water",
+                            "value": True,
+                        },
+                    }
+                ],
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "核对无误：没有积水。我确认保存这条。",
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert not result.proposals
+
+
 def test_first_three_and_third_to_seventh_days_are_grounded_from_plan_start() -> None:
     received = datetime(2026, 10, 20, 10, 0, tzinfo=ZONE)
     start = datetime(2026, 10, 19, 0, 0, tzinfo=ZONE).date()
