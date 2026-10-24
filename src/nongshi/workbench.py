@@ -145,6 +145,7 @@ h3 { margin: .5rem 0 .2rem; }
 div[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: .5rem; }
 /* 对话气泡限宽，避免窄栏里逐字换行造成的“细条”观感。 */
 [data-testid="stChatMessage"] { max-width: 92%; }
+.st-key-field_onboarding { max-width: 820px; margin-inline: auto; }
 </style>
 """
 
@@ -207,7 +208,7 @@ def _select_field(service: WorkbenchServiceV3, mode: str) -> tuple[str, FieldSta
 def _render_field_selector(service: WorkbenchServiceV3, mode: str) -> None:
     """左栏「当前地块」下拉与「+ 新增地块」按钮；沿用原有控件 key。
 
-    示意图只有一个地块时没有下拉：仅当存在两块及以上地块时才显示切换下拉。
+    尚未保存的新建表单用明确的放弃入口返回，避免切换时悄悄丢失表单输入。
     """
     fields = _saved_fields(service, mode)
     key = f"field_selection:{mode}"
@@ -232,6 +233,7 @@ def _render_field_selector(service: WorkbenchServiceV3, mode: str) -> None:
             key=key,
         )
     if st.button("+ 新增地块", key=f"add_field:{mode}", width="stretch"):
+        st.session_state[f"return_field_selection:{mode}"] = st.session_state.get(key)
         st.session_state[f"new_field_id:{mode}"] = f"field-{uuid4().hex[:10]}"
         st.session_state[f"pending_field_selection:{mode}"] = NEW_FIELD
         st.rerun()
@@ -1995,11 +1997,33 @@ def main() -> None:
         width=1,
         height=1,
     ).compact
+    selected_field_id, selected_state = _select_field(service, mode)
+    if selected_state is None or selected_state.draft.profile is None:
+        st.markdown("## 农时窗口")
+        st.caption("先建立一块地的档案。保存后可查看候选事项、天气和七天安排。")
+        st.caption("模拟示例" if mode == "demo" else "真实地块 · 尚未保存")
+        with st.container(key="field_onboarding", border=True):
+            saved_fields = _saved_fields(service, mode)
+            if saved_fields:
+                st.caption("未保存的输入不会进入档案；要保留这块地，请先保存。")
+                if st.button(
+                    "放弃未保存内容并返回",
+                    key=f"discard_new_field:{mode}",
+                    width="stretch",
+                ):
+                    valid_ids = {field.id for field in saved_fields}
+                    previous = st.session_state.get(f"return_field_selection:{mode}")
+                    st.session_state[f"pending_field_selection:{mode}"] = (
+                        previous if previous in valid_ids else saved_fields[-1].id
+                    )
+                    st.rerun()
+            _render_field_form(service, selected_field_id, selected_state, mode)
+        return
     top_slot = st.empty()
 
     def render_fields() -> tuple[str, FieldStateV3 | None]:
         st.markdown("### 我的地块")
-        field_id, field_state = _select_field(service, mode)
+        field_id, field_state = selected_field_id, selected_state
         notice = st.session_state.pop(f"notice:{field_id}", None)
         if notice:
             st.success(notice)
@@ -2038,6 +2062,12 @@ def main() -> None:
         current = _field_state(service, field_id)
         if current and current.plan_stale:
             st.warning("已保存事实或档案有更新；旧计划保留，等待重新预览和采用。")
+        pending_count = len(service.pending_agent_proposals(field_id))
+        if pending_count:
+            st.info(
+                f"助手有 {pending_count} 条待确认修改。请到「助手与历史」核对后保存；"
+                "当前计划尚未改变。"
+            )
         profile = current.draft.profile if current else None
         name = profile.name if profile and profile.name else "未命名地块"
         header_left, header_right = st.columns([2.9, 1.5], vertical_alignment="center")

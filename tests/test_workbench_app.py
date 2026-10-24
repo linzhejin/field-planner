@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -10,7 +10,7 @@ from streamlit.testing.v1 import AppTest
 import nongshi.workbench as workbench
 from nongshi.agent import AgentServiceV3
 from nongshi.repository_v3 import WorkbenchStoreV3
-from nongshi.schema_v3 import AgentResponseV3
+from nongshi.schema_v3 import AgentProposalV3, AgentResponseV3, AgentRunV3
 
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
 
@@ -58,8 +58,8 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     app = AppTest.from_file(APP, default_timeout=30).run()
 
     assert not app.exception
-    # 顶层为三页签；右栏内部另有「农事助手/最近操作」子页签，故只校验前三个。
-    assert [tab.label for tab in app.tabs][:3] == ["地块与资源", "计划结果", "助手与历史"]
+    # 尚未建档时只展示建档入口；计划与助手在保存后才进入工作台。
+    assert not app.tabs
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     field_id = app.session_state["new_field_id:real"]
     assert app.text_input(key=f"field_name:{field_id}:0").value == ""
@@ -79,6 +79,60 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     assert saved.draft.start_date is not None
     assert saved.draft.profile.observation_source == "synthetic"
     assert saved.draft.profile.observed_at is None
+
+
+def test_new_blank_field_requires_explicit_discard_to_return(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    first_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{first_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{first_id}:0").click().run()
+
+    app.button(key="add_field:real").click().run()
+    assert not app.exception
+    assert not any(box.key == "field_selection:real" for box in app.selectbox)
+    new_id = app.session_state["new_field_id:real"]
+    assert new_id != first_id
+    assert app.button(key="discard_new_field:real").label == "放弃未保存内容并返回"
+    app.button(key="discard_new_field:real").click().run()
+    assert not app.exception
+    assert app.session_state["field_selection:real"] == first_id
+    assert "一号田" in "\n".join(element.value for element in app.markdown)
+    assert len(WorkbenchStoreV3(database).list_fields(mode="real")) == 1
+
+
+def test_results_surface_pending_agent_change_until_it_is_dismissed(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    store = WorkbenchStoreV3(database)
+    store.save_agent_run(
+        AgentRunV3(
+            field_id=field_id,
+            model="test",
+            started_at=datetime.now(UTC),
+            elapsed_ms=0,
+            request_count=1,
+            tool_count=0,
+            status="success",
+        ),
+        [AgentProposalV3(kind="field_update", field_id=field_id, summary="调整地块信息")],
+    )
+    app.run()
+    assert any("助手有 1 条待确认修改" in info.value for info in app.info)
+
+    proposal_id = store.agent_proposals(field_id)[0].proposal.id
+    store.update_agent_proposal(
+        store.agent_proposal(proposal_id).model_copy(update={"status": "ignored"})
+    )
+    app.run()
+    assert not any("助手有 1 条待确认修改" in info.value for info in app.info)
 
 
 def test_narrow_assistant_quick_observation_saves_fact(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -279,15 +333,22 @@ def test_top_bar_shows_range_version_mode_and_history_export(tmp_path: Path, mon
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     app = AppTest.from_file(APP, default_timeout=30).run()
     assert not app.exception
+    assert not any(button.key == "top_history" for button in app.button)
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
 
     markdown = "\n".join(element.value for element in app.markdown)
     captions = "\n".join(element.value for element in app.caption)
 
-    # 顶栏：日期范围 + 计划版本 + 模式徽标 + 保存状态。
-    assert "未设置起始日" in markdown
+    # 保存后顶栏才出现：日期范围 + 计划版本 + 模式徽标 + 保存状态。
+    start = WorkbenchStoreV3(database).get_field(field_id).draft.start_date
+    assert start is not None
+    assert f"{start.month}月{start.day}日" in markdown
     assert "计划 未采用" in markdown
     assert 'status-chip status-neutral">真实地块' in markdown
-    assert "尚未保存" in captions
+    assert "已保存" in captions
 
     # 顶栏提供历史版本与导出计划两个按钮。
     button_keys = {button.key for button in app.button}
@@ -324,6 +385,8 @@ def test_quick_action_buttons_present(tmp_path: Path, monkeypatch) -> None:  # t
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     app = AppTest.from_file(APP, default_timeout=30).run()
     field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
 
     button_keys = {button.key for button in app.button}
     assert f"quick_observe:{field_id}" in button_keys
