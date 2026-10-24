@@ -7,6 +7,7 @@ import re
 import sqlite3
 import time
 from collections.abc import Callable
+from copy import copy
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import uuid4
@@ -14,6 +15,7 @@ from uuid import uuid4
 import httpx
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from nongshi.agent_jobs import AgentCancellation, AgentProgress
 from nongshi.config import Settings
 from nongshi.feedback_time import ground_completed_time
 from nongshi.model_http import ModelBudgetExceeded, post_model_json
@@ -41,6 +43,28 @@ from nongshi.workflows import (
 
 MAX_MODEL_REQUESTS = 3
 MAX_TOOL_EXECUTIONS = 6
+
+
+class _GuardedAgentStore:
+    """Reject late assistant writes after its UI turn has been cancelled."""
+
+    def __init__(self, store: Any, cancellation: AgentCancellation) -> None:
+        self._store = store
+        self._cancellation = cancellation
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._store, name)
+
+    def save_preview(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(lambda: self._store.save_preview(*args, **kwargs))
+
+    def save_agent_run(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(lambda: self._store.save_agent_run(*args, **kwargs))
+
+    def save_weather_snapshot(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(
+            lambda: self._store.save_weather_snapshot(*args, **kwargs)
+        )
 
 
 class ToolArgs(BaseModel):
@@ -293,6 +317,43 @@ class AgentServiceV3:
         *,
         conversation: list[dict[str, str]] | None = None,
         received_at: datetime | None = None,
+        progress: Callable[[AgentProgress], None] | None = None,
+        cancellation: AgentCancellation | None = None,
+    ) -> AgentResponseV3:
+        """Execute a turn with per-run state so cancelled network results stay private."""
+        execution = self
+        if cancellation is not None:
+            cancellation.check()
+            execution = copy(self)
+            execution.workbench = copy(self.workbench)
+            execution.workbench.store = _GuardedAgentStore(self.workbench.store, cancellation)
+            execution.weather = copy(self.weather)
+            if getattr(self.weather, "store", None) is not None:
+                execution.weather.store = _GuardedAgentStore(self.weather.store, cancellation)
+            execution._geocoding_candidates = dict(self._geocoding_candidates)
+        response = execution._run(
+            field_id,
+            user_message,
+            conversation=conversation,
+            received_at=received_at,
+            progress=progress,
+            cancellation=cancellation,
+        )
+        if cancellation is not None and response.status == "success":
+            cancellation.persist(
+                lambda: self._geocoding_candidates.update(execution._geocoding_candidates)
+            )
+        return response
+
+    def _run(
+        self,
+        field_id: str,
+        user_message: str,
+        *,
+        conversation: list[dict[str, str]] | None = None,
+        received_at: datetime | None = None,
+        progress: Callable[[AgentProgress], None] | None = None,
+        cancellation: AgentCancellation | None = None,
     ) -> AgentResponseV3:
         started = self._monotonic()
         with self.workbench.store.connection_budget(min(1.0, self.settings.llm_timeout_seconds)):
@@ -317,6 +378,14 @@ class AgentServiceV3:
         steps: list[AgentWorkflowStepV3] = []
         request_ids: list[str] = []
 
+        def report(stage: str, status: str, tool_name: str = "") -> None:
+            if cancellation is not None:
+                cancellation.check()
+            if progress is not None:
+                progress(AgentProgress(stage, status, request_count, tool_name))
+            if cancellation is not None:
+                cancellation.check()
+
         def finish(
             status: str,
             *,
@@ -325,6 +394,8 @@ class AgentServiceV3:
             business_outcome: str | None = None,
             error_category: str | None = None,
         ) -> AgentResponseV3:
+            if cancellation is not None:
+                cancellation.check()
             elapsed = max(0, int((self._monotonic() - started) * 1000))
             run = AgentRunV3(
                 id=run_id,
@@ -372,6 +443,7 @@ class AgentServiceV3:
                 business_outcome = "failed"
                 proposals.clear()
                 previews.clear()
+            report("finished", status)
             return AgentResponseV3(
                 run_id=run_id,
                 status=status,  # type: ignore[arg-type]
@@ -566,6 +638,8 @@ class AgentServiceV3:
             return None
 
         for _ in range(MAX_MODEL_REQUESTS):
+            if cancellation is not None:
+                cancellation.check()
             remaining = deadline - self._monotonic()
             if remaining <= 0:
                 return finish(
@@ -575,6 +649,7 @@ class AgentServiceV3:
                 )
             request_count += 1
             steps.append(AgentWorkflowStepV3(stage="understanding", status="started"))
+            report("model", "started")
             try:
                 model_result = post_model_json(
                     url,
@@ -605,6 +680,8 @@ class AgentServiceV3:
                     transport=self._transport,
                     monotonic=self._monotonic,
                 )
+                if cancellation is not None:
+                    cancellation.check()
                 response = model_result.response
                 if model_result.request_id:
                     request_ids.append(model_result.request_id)
@@ -650,6 +727,7 @@ class AgentServiceV3:
             steps[-1] = AgentWorkflowStepV3(
                 stage="understanding", status="success", elapsed_ms=model_result.elapsed_ms
             )
+            report("model", "success")
             if not message.tool_calls:
                 if not message.content:
                     return finish(
@@ -739,6 +817,8 @@ class AgentServiceV3:
             calls_to_process = list(message.tool_calls)
             generated_call_ids: set[str] = set()
             for call_index, call in enumerate(calls_to_process):
+                if cancellation is not None:
+                    cancellation.check()
                 if self._monotonic() >= deadline:
                     return finish(
                         "timeout",
@@ -817,6 +897,7 @@ class AgentServiceV3:
                     tool_count += 1
                     tool_names.append(call.function.name)
                     tool_started = self._monotonic()
+                    report("tool", "started", call.function.name)
                     effective_arguments = call.function.arguments
                     grounding_error: str | None = None
                     if (
@@ -973,6 +1054,8 @@ class AgentServiceV3:
                                     run_id=run_id,
                                     timeout_seconds=tool_budget,
                                 )
+                            if cancellation is not None:
+                                cancellation.check()
                         if (
                             CAPABILITIES.get(call.function.name)
                             and CAPABILITIES[call.function.name].cacheable
@@ -1151,6 +1234,7 @@ class AgentServiceV3:
                             elapsed_ms=elapsed_ms,
                         )
                     )
+                    report("tool", trace_status, call.function.name)
                 if call.id not in generated_call_ids:
                     messages.append(
                         {
@@ -1239,9 +1323,9 @@ class AgentServiceV3:
             ):
                 weather_failure_reviewed = True
                 continue
-            progress = result_from_progress()
-            if progress and (proposals or previews or missing_items()):
-                return progress
+            intermediate_result = result_from_progress()
+            if intermediate_result and (proposals or previews or missing_items()):
+                return intermediate_result
             if proposals or (previews and not change_requested):
                 if (
                     workflow_actions

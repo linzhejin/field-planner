@@ -27,6 +27,7 @@ from nongshi.schema_v3 import (
     PlanPreviewV3,
     PlanVersionV3,
     RuleAdoptionRecordV3,
+    TaskActionV3,
     WeatherSnapshotV3,
 )
 
@@ -232,6 +233,62 @@ class WorkbenchStoreV3:
     def _field_from_row(row: sqlite3.Row) -> FieldStateV3:
         return FieldStateV3.model_validate_json(row["payload"])
 
+    def task_action(
+        self, operation_id: str, action: str, request: dict[str, object]
+    ) -> TaskActionV3 | None:
+        with self._connection() as connection:
+            replay = self._replay(
+                connection, operation_id, action, self._hash(request), "TaskActionV3"
+            )
+        return TaskActionV3.model_validate_json(replay) if replay is not None else None
+
+    def prepare_task_action(
+        self, operation_id: str, action: str, request: dict[str, object], intent: TaskActionV3
+    ) -> TaskActionV3:
+        if not operation_id.strip():
+            raise ValueError("任务操作需要操作编号")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            request_hash = self._hash(request)
+            replay = self._replay(connection, operation_id, action, request_hash, "TaskActionV3")
+            if replay is not None:
+                return TaskActionV3.model_validate_json(replay)
+            row = connection.execute(
+                "SELECT * FROM fields_v3 WHERE id = ?", (intent.field_id,)
+            ).fetchone()
+            if row is None:
+                raise KeyError("找不到任务所属地块")
+            state = self._field_from_row(row)
+            if (state.draft_version, state.fact_version) != (
+                intent.expected_draft_version,
+                intent.expected_fact_version,
+            ):
+                raise ValueError("版本冲突：任务档案或现场事实已变化，请刷新后重试")
+            self._save_operation(connection, operation_id, action, request_hash, intent)
+            return intent
+
+    def task_action_preview(self, intent: TaskActionV3) -> PlanPreviewV3 | None:
+        """Recover an already persisted response before recomputing against new state."""
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT action, result_type, result_json FROM operations_v3 WHERE operation_id = ?",
+                (f"task-action:{intent.id}:preview",),
+            ).fetchone()
+        if row is None:
+            return None
+        if (row["action"], row["result_type"]) != ("preview_plan", "PlanPreviewV3"):
+            raise ValueError("操作编号已用于不同内容，不能重复使用")
+        preview = PlanPreviewV3.model_validate_json(row["result_json"])
+        if (
+            preview.field_id != intent.field_id
+            or preview.expected_draft_version
+            < intent.expected_draft_version + int(intent.draft is not None)
+            or preview.expected_fact_version
+            < intent.expected_fact_version + int(intent.event is not None)
+        ):
+            raise ValueError("任务操作与保存预览的依据不匹配，请重新生成预览")
+        return self.load_preview(preview.id)
+
     def save_field_draft(
         self,
         draft: FieldDraftV3,
@@ -239,12 +296,17 @@ class WorkbenchStoreV3:
         expected_version: int | None,
         operation_id: str,
         proposal_id: str | None = None,
+        expected_fact_version: int | None = None,
     ) -> FieldStateV3:
         if not operation_id.strip():
             raise ValueError("保存草稿需要操作编号")
-        request_hash = self._hash(
-            {"draft": draft.model_dump(mode="json"), "expected_version": expected_version}
-        )
+        request_payload = {
+            "draft": draft.model_dump(mode="json"),
+            "expected_version": expected_version,
+        }
+        if expected_fact_version is not None:
+            request_payload["expected_fact_version"] = expected_fact_version
+        request_hash = self._hash(request_payload)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             replay = self._replay(
@@ -268,6 +330,11 @@ class WorkbenchStoreV3:
                         f"版本冲突：当前草稿为 v{state.draft_version}，"
                         f"提交依据为 v{expected_version}"
                     )
+                if (
+                    expected_fact_version is not None
+                    and state.fact_version != expected_fact_version
+                ):
+                    raise ValueError("版本冲突：现场事实已变化，请刷新任务详情后重试")
                 draft_version = state.draft_version + 1
                 fact_version = state.fact_version
                 latest_plan_id = state.latest_plan_id
@@ -337,16 +404,18 @@ class WorkbenchStoreV3:
         expected_fact_version: int,
         operation_id: str,
         proposal_id: str | None = None,
+        expected_draft_version: int | None = None,
     ) -> EventCommitResultV3:
         if not events:
             raise ValueError("至少需要一个已确认事实")
-        request_hash = self._hash(
-            {
-                "field_id": field_id,
-                "events": [event.model_dump(mode="json") for event in events],
-                "expected_fact_version": expected_fact_version,
-            }
-        )
+        request_payload = {
+            "field_id": field_id,
+            "events": [event.model_dump(mode="json") for event in events],
+            "expected_fact_version": expected_fact_version,
+        }
+        if expected_draft_version is not None:
+            request_payload["expected_draft_version"] = expected_draft_version
+        request_hash = self._hash(request_payload)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             replay = self._replay(
@@ -368,6 +437,8 @@ class WorkbenchStoreV3:
                     f"版本冲突：现场事实为 v{state.fact_version}，"
                     f"提交依据为 v{expected_fact_version}"
                 )
+            if expected_draft_version is not None and state.draft_version != expected_draft_version:
+                raise ValueError("版本冲突：地块档案已变化，请刷新任务详情后重试")
             next_version = state.fact_version + 1
             now = self._now()
             saved_events: list[FactEventV3] = []
@@ -453,6 +524,8 @@ class WorkbenchStoreV3:
             "fact_version": preview.expected_fact_version,
             "plan_id": preview.expected_plan_id,
         }
+        if preview.version.plan.reference_version is not None:
+            signature["reference_version"] = preview.version.plan.reference_version
         request_hash = self._hash(signature)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -499,6 +572,30 @@ class WorkbenchStoreV3:
         if row is None:
             raise KeyError(f"找不到计划预览 {preview_id}")
         return PlanPreviewV3.model_validate_json(row["payload"])
+
+    def latest_actionable_preview(self, field_id: str) -> PlanPreviewV3 | None:
+        """Read the newest unconsumed preview whose input versions are current."""
+        with self._connection() as connection:
+            field = connection.execute(
+                "SELECT payload FROM fields_v3 WHERE id = ?", (field_id,)
+            ).fetchone()
+            if field is None:
+                raise KeyError(f"找不到地块 {field_id}")
+            state = FieldStateV3.model_validate_json(field["payload"])
+            row = connection.execute(
+                "SELECT payload FROM plan_previews_v3 WHERE field_id=? ORDER BY rowid DESC LIMIT 1",
+                (field_id,),
+            ).fetchone()
+        if row:
+            preview = PlanPreviewV3.model_validate_json(row["payload"])
+            if (
+                preview.status == "preview"
+                and preview.expected_draft_version == state.draft_version
+                and preview.expected_fact_version == state.fact_version
+                and preview.expected_plan_id == state.latest_plan_id
+            ):
+                return preview
+        return None
 
     def cancel_preview(self, preview_id: str) -> PlanPreviewV3:
         with self._connection() as connection:

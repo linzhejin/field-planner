@@ -722,6 +722,7 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         tmp_path,
         lambda _: httpx.Response(200, json=tool_call_response("propose_feedback", arguments)),
     )
+    service._now = lambda: datetime(2026, 10, 18, 2, 0, tzinfo=UTC)
     first = service.preview_plan("field-1")
     service.adopt_plan(
         first.id,
@@ -741,6 +742,7 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         WorkbenchStoreV3(database),
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
+        now=lambda: datetime(2026, 10, 18, 2, 0, tzinfo=UTC),
     )
     proposal = reopened.pending_agent_proposals("field-1")[0]
     assert proposal.id == response.proposals[0].id

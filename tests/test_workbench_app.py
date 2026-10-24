@@ -1,9 +1,10 @@
-"""Acceptance checks for the blank-first Streamlit workbench and its saved state."""
+"""Acceptance checks for the reference workbench and its saved state."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from threading import Event
 
 from streamlit.testing.v1 import AppTest
 
@@ -34,9 +35,20 @@ def test_chat_receipt_uses_the_workbench_clock(tmp_path: Path, monkeypatch) -> N
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     monkeypatch.setattr(workbench, "_now", lambda: received)
     captured: list[datetime | None] = []
+    executed = Event()
 
-    def fake_run(self, field_id, user_message, *, conversation=None, received_at=None):  # type: ignore[no-untyped-def]
+    def fake_run(
+        self,
+        field_id,
+        user_message,
+        *,
+        conversation=None,
+        received_at=None,
+        progress=None,
+        cancellation=None,
+    ):  # type: ignore[no-untyped-def]
         captured.append(received_at)
+        executed.set()
         return AgentResponseV3(
             run_id="clock-test", status="success", model="test", request_count=0, text="已读取"
         )
@@ -46,7 +58,9 @@ def test_chat_receipt_uses_the_workbench_clock(tmp_path: Path, monkeypatch) -> N
     field_id = app.session_state["new_field_id:real"]
     app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
     app.button(key=f"save_field:{field_id}:0").click().run()
-    app.chat_input(key=f"assistant_input:{field_id}").set_value("巡田已完成").run()
+    app.text_area(key=f"assistant_draft:{field_id}").set_value("巡田已完成")
+    app.button(key=f"assistant_send:{field_id}").click().run()
+    assert executed.wait(5)
 
     assert not app.exception
     assert captured == [received]
@@ -94,8 +108,8 @@ def test_new_blank_field_requires_explicit_discard_to_return(tmp_path: Path, mon
     assert not any(box.key == "field_selection:real" for box in app.selectbox)
     new_id = app.session_state["new_field_id:real"]
     assert new_id != first_id
-    assert app.button(key="discard_new_field:real").label == "放弃未保存内容并返回"
-    app.button(key="discard_new_field:real").click().run()
+    assert app.button(key="cancel_new_field:real").label == "放弃未保存内容并返回"
+    app.button(key="cancel_new_field:real").click().run()
     assert not app.exception
     assert app.session_state["field_selection:real"] == first_id
     assert "一号田" in "\n".join(element.value for element in app.markdown)
@@ -125,14 +139,14 @@ def test_results_surface_pending_agent_change_until_it_is_dismissed(
         [AgentProposalV3(kind="field_update", field_id=field_id, summary="调整地块信息")],
     )
     app.run()
-    assert any("助手有 1 条待确认修改" in info.value for info in app.info)
+    assert any("助手有 1 条修改待确认" in info.value for info in app.info)
 
     proposal_id = store.agent_proposals(field_id)[0].proposal.id
     store.update_agent_proposal(
         store.agent_proposal(proposal_id).model_copy(update={"status": "ignored"})
     )
     app.run()
-    assert not any("助手有 1 条待确认修改" in info.value for info in app.info)
+    assert not any("助手有 1 条修改待确认" in info.value for info in app.info)
 
 
 def test_narrow_assistant_quick_observation_saves_fact(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -204,6 +218,9 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
     assert not app.exception
     app.checkbox(key=f"resources_enabled:{field_id}:1").set_value(True).run()
     for offset in range(7):
+        app.checkbox(key=f"resource_known:{field_id}:1:{offset}").set_value(True)
+    app.run()
+    for offset in range(7):
         app.selectbox(key=f"site:{field_id}:1:{offset}").set_value("可作业")
         app.selectbox(key=f"weather:{field_id}:1:{offset}").set_value("可作业")
         app.number_input(key=f"minutes:{field_id}:1:{offset}").set_value(120)
@@ -249,14 +266,13 @@ def test_simulation_uses_a_separate_database_from_real_fields(tmp_path: Path, mo
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     app = AppTest.from_file(APP, default_timeout=30).run()
     app.radio(key="workspace_mode").set_value("独立模拟示例").run()
-    app.button(key="seed_demo").click().run()
 
     demo_database = database.with_name("plans.demo.sqlite3")
     assert not app.exception
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     demo_fields = WorkbenchStoreV3(demo_database).list_fields(mode="demo")
     assert len(demo_fields) == 1
-    assert demo_fields[0].draft.profile.name == "演示地块"
+    assert demo_fields[0].draft.profile.name == "我的第一块地"
 
 
 def test_field_type_facts_save_independently_and_survive_reopen(
@@ -340,20 +356,19 @@ def test_top_bar_shows_range_version_mode_and_history_export(tmp_path: Path, mon
     assert not app.exception
 
     markdown = "\n".join(element.value for element in app.markdown)
-    captions = "\n".join(element.value for element in app.caption)
-
     # 保存后顶栏才出现：日期范围 + 计划版本 + 模式徽标 + 保存状态。
     start = WorkbenchStoreV3(database).get_field(field_id).draft.start_date
     assert start is not None
     assert f"{start.month}月{start.day}日" in markdown
     assert "计划 未采用" in markdown
-    assert 'status-chip status-neutral">真实地块' in markdown
-    assert "已保存" in captions
+    assert app.session_state["workspace_mode"] == "真实地块"
+    assert "已保存" in markdown
 
-    # 顶栏提供历史版本与导出计划两个按钮。
+    # 尚无采用版时，历史入口可用，并解释导出的开启条件。
     button_keys = {button.key for button in app.button}
     assert "top_history" in button_keys
-    assert "top_export" in button_keys
+    assert "top_export" not in button_keys
+    assert any("采用后可导出" in caption.value for caption in app.caption)
 
     # 尚无采用版时点「历史版本」可在对话框内看到空态提示。
     app.button(key="top_history").click().run()
@@ -373,9 +388,9 @@ def test_result_count_strip_shows_status_counts(tmp_path: Path, monkeypatch) -> 
 
     markdown = "\n".join(element.value for element in app.markdown)
     # 三块计数卡沿用状态胶囊配色：已安排绿、待确认琥珀、未排入灰。
-    assert 'status-chip status-green">已安排' in markdown
-    assert 'status-chip status-amber">待确认' in markdown
-    assert 'status-chip status-neutral">未排入' in markdown
+    assert "count-item green" in markdown and 'count-label">已安排' in markdown
+    assert "count-item amber" in markdown and 'count-label">待确认' in markdown
+    assert "count-item neutral" in markdown and 'count-label">未排入' in markdown
     # 计数条上方有天气摘要行。
     assert any(caption.value.startswith("天气：") for caption in app.caption)
 
@@ -390,7 +405,7 @@ def test_quick_action_buttons_present(tmp_path: Path, monkeypatch) -> None:  # t
 
     button_keys = {button.key for button in app.button}
     assert f"quick_observe:{field_id}" in button_keys
-    assert f"quick_complete:{field_id}" in button_keys
+    assert f"quick_complete:{field_id}" not in button_keys
     assert f"quick_resource:{field_id}" in button_keys
 
 

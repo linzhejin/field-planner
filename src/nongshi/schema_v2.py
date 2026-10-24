@@ -13,7 +13,9 @@ Applicability = Literal["matched", "out_of_scope", "pending"]
 Necessity = Literal["required", "no_need", "unknown"]
 DailyWindowStatus = Literal["available", "unavailable", "pending"]
 WeatherSource = Literal["synthetic", "user_estimate", "official"]
-ScheduleStatus = Literal["scheduled", "unscheduled", "pending", "not_generated", "completed"]
+ScheduleStatus = Literal[
+    "scheduled", "unscheduled", "pending", "not_generated", "completed", "cancelled"
+]
 TaskType = Literal["inspection", "maintenance"]
 LOCAL_ZONE = ZoneInfo("Asia/Shanghai")
 
@@ -45,6 +47,7 @@ class DayWindow(BaseModel):
     weather_snapshot_at: AwareDatetime | None = None
     resource_minutes: int | None = Field(default=None, ge=0)
     intervals: list[TimeWindow] = Field(default_factory=list)
+    confirmation_basis: str = ""
 
     @model_validator(mode="after")
     def merge_and_validate_intervals(self) -> DayWindow:
@@ -158,6 +161,7 @@ class PlanRequestV2(BaseModel):
     )
     synthetic: bool = True
     completed_at: dict[str, AwareDatetime] = Field(default_factory=dict)
+    cancelled_tasks: dict[str, str] = Field(default_factory=dict)
     # 地块级规则复核状态（rule_id -> pending_review/adopted/rejected）；
     # 缺省为空表示全部待复核，保持现状。由服务层在评估前注入。
     rule_review_status: dict[str, str] = Field(default_factory=dict)
@@ -276,12 +280,8 @@ class PlanItemV2(BaseModel):
 
 
 class FeedbackV2(BaseModel):
-    kind: Literal["completed", "observation", "workability", "resource"]
-    at: AwareDatetime = Field(
-        description=(
-            "completed 时为用户明确提供的实际完成时间；不得用消息接收、入库或计划结束时间代替"
-        )
-    )
+    kind: Literal["completed", "observation", "workability", "resource", "cancelled"]
+    at: AwareDatetime
     task_id: str | None = None
     plot_id: str | None = None
     field: (
@@ -307,11 +307,18 @@ class FeedbackV2(BaseModel):
     weather_workable: bool | None = None
     intervals: list[TimeWindow] | None = None
     resource_minutes: int | None = Field(default=None, ge=0)
+    reason: str = ""
 
     @model_validator(mode="after")
     def validate_feedback_details(self) -> FeedbackV2:
         if self.kind == "completed" and not self.task_id:
             raise ValueError("完成反馈需要任务编号")
+        if self.kind == "cancelled":
+            if not self.task_id:
+                raise ValueError("取消任务需要任务编号")
+            self.reason = self.reason.strip()
+            if not self.reason:
+                raise ValueError("取消任务必须填写原因")
         if self.kind == "observation" and not (self.plot_id and self.field):
             raise ValueError("现场反馈需要地块和观察项")
         if self.kind == "workability" and not (self.plot_id and self.day):
