@@ -15,7 +15,13 @@ from pydantic import ValidationError
 from nongshi.agent import AgentServiceV3
 from nongshi.agent_jobs import AgentJob
 from nongshi.config import Settings
-from nongshi.presentation import CHANGE_LABELS, missing_label, task_title
+from nongshi.presentation import (
+    CHANGE_LABELS,
+    field_value_label,
+    missing_label,
+    proposal_change_rows,
+    task_title,
+)
 from nongshi.repository import PlanStore, PlanStoreV2
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
@@ -38,24 +44,26 @@ from nongshi.weather import WeatherServiceError
 ZONE = ZoneInfo("Asia/Shanghai")
 NEW_FIELD = "__new_field__"
 FIELD_TYPES = {
-    "未知": None,
+    "未填写": None,
     "低洼/稻茬田": "lowland_rice_stubble",
     "丘陵旱地": "dry_hilly",
     "其他": "other",
 }
 TERRAIN_OPTIONS = {
-    "未知": None,
+    "未填写": None,
     "低洼": "lowland",
     "丘陵": "hilly",
     "平原": "flat",
     "其他": "other",
 }
-BOOL_OPTIONS = {"未知": None, "是": True, "否": False}
-STAGE_OPTIONS = {"未知": None, "苗期": "苗期", "其他生育期": "其他生育期"}
-CROP_OPTIONS = {"未知": None, "油菜": "油菜", "其他作物": "其他作物"}
-WORKABILITY_OPTIONS = {"未知": None, "可作业": True, "不可作业": False}
+BOOL_OPTIONS = {"暂不确定": None, "是": True, "否": False}
+MAINTENANCE_NEED_OPTIONS = {"暂不确定": None, "需要": True, "不需要": False}
+MAINTENANCE_PROBLEM_OPTIONS = {"暂不确定": None, "有": True, "没有": False}
+STAGE_OPTIONS = {"未填写": None, "苗期": "苗期", "其他生育期": "其他生育期"}
+CROP_OPTIONS = {"未填写": None, "油菜": "油菜", "其他作物": "其他作物"}
+WORKABILITY_OPTIONS = {"暂不确定": None, "可作业": True, "不可作业": False}
 APPLICABILITY_LABELS = {"matched": "适用", "out_of_scope": "超出范围", "pending": "待确认"}
-NECESSITY_LABELS = {"required": "需要", "no_need": "不需要", "unknown": "未知"}
+NECESSITY_LABELS = {"required": "需要", "no_need": "不需要", "unknown": "待确认"}
 WINDOW_LABELS = {"available": "可安排", "unavailable": "暂不可安排", "pending": "待确认"}
 SCHEDULE_LABELS = {
     "scheduled": "已安排",
@@ -449,7 +457,7 @@ def _render_field_selector(service: WorkbenchServiceV3, mode: str) -> None:
 
 
 def _enum_label(mapping: dict[str, object], value: object) -> str:
-    return next((label for label, stored in mapping.items() if stored == value), "未知")
+    return next((label for label, stored in mapping.items() if stored == value), "暂不确定")
 
 
 def _profile_from_form(previous: FieldProfile | None, values: dict[str, object]) -> FieldProfile:
@@ -485,7 +493,7 @@ def _render_field_form(
     st.caption(
         "先写地块名称即可保存，其他情况可以稍后补充。"
         if initial_setup
-        else "只填写你已确认的信息；不知道的内容可以保留未知。"
+        else "先填确定的情况，拿不准的可以暂时留空。"
     )
     _render_discard("field", field_id, buffer)
     if current_version != (state.draft_version if state else 0):
@@ -604,7 +612,7 @@ def _render_field_form(
                 step=0.5,
                 key=f"field_area:{key_suffix}",
             )
-            moisture_options = {"未知": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}
+            moisture_options = {"暂不确定": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}
             moisture = st.selectbox(
                 "土壤墒情",
                 list(moisture_options),
@@ -613,7 +621,7 @@ def _render_field_form(
                 ),
                 key=f"field_moisture:{key_suffix}",
             )
-            ditch_options = {"未知": None, "通畅": "clear", "受阻": "impaired"}
+            ditch_options = {"暂不确定": None, "通畅": "clear", "受阻": "impaired"}
             ditch = st.selectbox(
                 "沟渠连通情况",
                 list(ditch_options),
@@ -652,37 +660,15 @@ def _render_field_form(
                 key=f"inspection_requested:{key_suffix}",
             )
             maintenance_label = st.selectbox(
-                "是否需要沟渠维护",
-                list(BOOL_OPTIONS),
-                index=list(BOOL_OPTIONS).index(
+                "要安排沟渠维护吗？",
+                list(MAINTENANCE_NEED_OPTIONS),
+                index=list(MAINTENANCE_NEED_OPTIONS).index(
                     _enum_label(
-                        BOOL_OPTIONS, profile.maintenance_need_confirmed if profile else None
+                        MAINTENANCE_NEED_OPTIONS,
+                        profile.maintenance_need_confirmed if profile else None,
                     )
                 ),
                 key=f"maintenance_need:{key_suffix}",
-            )
-            problem_label = st.selectbox(
-                "是否确认存在需要处理的问题",
-                list(BOOL_OPTIONS),
-                index=list(BOOL_OPTIONS).index(
-                    _enum_label(
-                        BOOL_OPTIONS, profile.maintenance_problem_confirmed if profile else None
-                    )
-                ),
-                key=f"maintenance_problem:{key_suffix}",
-            )
-            purpose_options = {
-                "未知": None,
-                "清理既有沟渠，改善已确认的连通问题": "clear_existing_ditch",
-                "其他目的（本版暂不自动安排）": "other",
-            }
-            purpose_label = st.selectbox(
-                "本次沟渠作业目的",
-                list(purpose_options),
-                index=list(purpose_options).index(
-                    _enum_label(purpose_options, profile.maintenance_purpose if profile else None)
-                ),
-                key=f"maintenance_purpose:{key_suffix}",
             )
             duration_left, duration_right = st.columns(2)
             inspection_minutes = duration_left.number_input(
@@ -749,9 +735,39 @@ def _render_field_form(
                 key=f"maintenance_due:{key_suffix}",
             )
             notes = st.text_area(
-                "补充说明（不会自动转成规则）",
+                "补充说明",
                 value=previous.notes,
                 key=f"field_notes:{key_suffix}",
+            )
+        with st.expander(
+            "沟渠情况",
+            expanded=MAINTENANCE_NEED_OPTIONS[maintenance_label] is True
+            or focus in {"maintenance_problem_confirmed", "maintenance_purpose"},
+        ):
+            st.caption("有积水或沟渠受阻时，请根据现场情况判断是否需要处理。")
+            problem_label = st.selectbox(
+                "沟渠有需要处理的堵塞或排水问题吗？",
+                list(MAINTENANCE_PROBLEM_OPTIONS),
+                index=list(MAINTENANCE_PROBLEM_OPTIONS).index(
+                    _enum_label(
+                        MAINTENANCE_PROBLEM_OPTIONS,
+                        profile.maintenance_problem_confirmed if profile else None,
+                    )
+                ),
+                key=f"maintenance_problem:{key_suffix}",
+            )
+            purpose_options = {
+                "暂不确定": None,
+                "清理沟渠，改善排水": "clear_existing_ditch",
+                "其他目的（暂不自动安排）": "other",
+            }
+            purpose_label = st.selectbox(
+                "维护沟渠是为了什么？",
+                list(purpose_options),
+                index=list(purpose_options).index(
+                    _enum_label(purpose_options, profile.maintenance_purpose if profile else None)
+                ),
+                key=f"maintenance_purpose:{key_suffix}",
             )
         submitted_below = st.button(
             "保存已填写信息" if initial_setup else "保存地块档案",
@@ -773,7 +789,7 @@ def _render_field_form(
                 ditch_options[ditch],
                 BOOL_OPTIONS[water],
                 leaf_count if leaf_known else None,
-                BOOL_OPTIONS[problem_label],
+                MAINTENANCE_PROBLEM_OPTIONS[problem_label],
             )
             has_observation = any(value is not None for value in observed_values)
             form_profile_values: dict[str, object] = {
@@ -791,8 +807,8 @@ def _render_field_form(
                 "terrain": TERRAIN_OPTIONS[terrain_label],
                 "area_mu": area_mu or None,
                 "inspection_requested": BOOL_OPTIONS[inspect_label],
-                "maintenance_need_confirmed": BOOL_OPTIONS[maintenance_label],
-                "maintenance_problem_confirmed": BOOL_OPTIONS[problem_label],
+                "maintenance_need_confirmed": MAINTENANCE_NEED_OPTIONS[maintenance_label],
+                "maintenance_problem_confirmed": MAINTENANCE_PROBLEM_OPTIONS[problem_label],
                 "maintenance_purpose": purpose_options[purpose_label],
                 "moisture": moisture_options[moisture],
                 "ditch_connectivity": ditch_options[ditch],
@@ -1257,7 +1273,7 @@ def _history_dialog(service: WorkbenchServiceV3, field_id: str) -> None:
     else:
         st.caption("首版计划，尚无上一版可比较。")
     with st.expander("当时的输入与依据（技术记录）"):
-        st.write("地块档案版本", version.draft_version, "现场事实版本", version.fact_version)
+        st.write("地块档案版本", version.draft_version, "现场记录版本", version.fact_version)
         st.write("规则资料版本", version.ruleset_version)
         st.write("天气快照编号", version.weather_snapshot_id or "未使用天气快照")
         st.json(version.plan.request.model_dump(mode="json"))
@@ -1685,7 +1701,7 @@ def _render_item(item, *, scope: str) -> None:  # type: ignore[no-untyped-def]
                 weekday = "一二三四五六日"[local_start.weekday()]
                 st.caption(f"{local_start:%m月%d日} · 周{weekday}")
             if maintenance_question:
-                st.markdown("**待确认 这块地是否需要沟渠维护**")
+                st.markdown("**沟渠维护 · 待确认**")
             else:
                 st.markdown(f"**{task_title(item.task_type)}**")
         if item.start_at and item.end_at:
@@ -1696,9 +1712,7 @@ def _render_item(item, *, scope: str) -> None:  # type: ignore[no-untyped-def]
             )
         else:
             description = (
-                "先确认沟渠实际情况，再判断维护需求。"
-                if maintenance_question
-                else f"{label} · {item.reason}"
+                "请补充沟渠问题和维护需求。" if maintenance_question else f"{label} · {item.reason}"
             )
             st.caption(description)
         # scope 用于区分候选、预览与采用版中重名的任务编号，避免按钮 key 冲突。
@@ -1983,7 +1997,7 @@ def _render_question_row(
                 if any(value.rsplit(":", 1)[-1] == subject for value in item.missing_fields)
             )
         )
-        st.markdown(f"**{missing_label(subject)}** · 影响：{'、'.join(affected or ['相关任务'])}")
+        st.markdown(f"**{missing_label(subject)}** · 关系到{'、'.join(affected or ['相关任务'])}")
         fill, skip = st.columns([1, 1], wrap=False)
         if fill.button("补充信息", key=f"fill_question:{field_id}:{subject}"):
             _open_question(field_id, subject)
@@ -1995,14 +2009,14 @@ def _render_question_row(
 def _render_evaluation(
     service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None
 ) -> None:
-    st.subheader("候选事项与待确认信息")
+    st.subheader("待核对的安排")
     if state is None or state.draft.profile is None:
-        st.info("先保存地块基本信息。这里不会用示例数据代替你的地块。")
+        st.info("先保存地块信息，再查看这块地的安排。")
         return
     evaluation = service.evaluate_field(field_id)
     st.caption(
         f"规则资料 {evaluation.ruleset_version} · {evaluation.status_label} · "
-        f"事实 v{evaluation.fact_version} / 档案 v{evaluation.draft_version}"
+        f"现场记录 v{evaluation.fact_version} / 档案 v{evaluation.draft_version}"
     )
     profile = state.draft.profile
     standing_water = profile.standing_water if profile else None
@@ -2019,9 +2033,9 @@ def _render_evaluation(
         for item in evaluation.items:
             _render_item(item, scope="candidate")
     else:
-        st.info("当前没有候选事项。")
+        st.info("目前没有待安排的任务。")
     if evaluation.missing_fields:
-        st.caption("其他缺项：" + "、".join(map(missing_label, evaluation.missing_fields[:12])))
+        st.caption("还需补充：" + "、".join(map(missing_label, evaluation.missing_fields[:12])))
 
 
 def _render_week(items: list, start: date, *, scope: str, compact_empty: bool = True) -> None:
@@ -2084,7 +2098,7 @@ def _show_preview(
     st.markdown("#### 七天计划预览")
     st.caption(
         f"依据：档案 v{preview.expected_draft_version} · "
-        f"现场事实 v{preview.expected_fact_version} · 尚未采用",
+        f"现场记录 v{preview.expected_fact_version} · 尚未采用",
     )
     for basis in preview.version.calculation_basis:
         if not basis.startswith("单地块独立计划"):
@@ -2192,7 +2206,7 @@ def _render_plans(
     if state is None or state.draft.profile is None:
         return
     if state.plan_stale:
-        st.warning("现场事实或档案已变化，当前采用版需要重新预览。旧版仍保留。")
+        st.warning("现场记录或地块信息已变化，请重新计算安排。原计划仍保留。")
     restored = service.latest_actionable_preview(field_id)
     preview_id = restored.id if restored else None
     st.session_state[f"current_preview:{field_id}"] = preview_id
@@ -2209,7 +2223,7 @@ def _render_plans(
     if not preview_id and not adopted:
         st.markdown(
             '<div class="workbench-empty"><strong>还没有已采用的日程</strong><br>'
-            "可以先补充已知信息，再计算七天安排；未知事项会保留为待确认，不会编造时间。"
+            "先补充已知情况，再计算七天安排。拿不准的内容可以暂时留空。"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -2237,17 +2251,17 @@ def _commit_feedback(
         expected_fact_version=state.fact_version,
     )
     st.session_state[f"current_preview:{state.id}"] = None
-    st.session_state[f"notice:{state.id}"] = "现场事实已保存；旧计划保留并标记待更新。"
+    st.session_state[f"notice:{state.id}"] = "现场情况已保存。原计划保留，安排待更新。"
 
 
 def _reset_observation_value(field_id: str, fact_version: int) -> None:
-    st.session_state[f"observation_value:{field_id}:{fact_version}"] = "未知"
+    st.session_state[f"observation_value:{field_id}:{fact_version}"] = "暂不确定"
 
 
 def _render_feedback(
     service: WorkbenchServiceV3, field_id: str, state: FieldStateV3 | None
 ) -> None:
-    st.subheader("记录现场事实与资源变化")
+    st.subheader("记录现场情况与可用时间")
     # 右栏快捷动作预选反馈类型：弹出对应表单组。
     kind = st.session_state.pop(f"feedback_kind:{field_id}", None)
     current = service.get_current_plan(field_id) if state else None
@@ -2283,15 +2297,21 @@ def _render_feedback(
             else:
                 st.caption("当前没有已到计划开始时间且尚未完成的任务。")
     observation_fields = {
-        "沟渠连通": ("ditch_connectivity", {"未知": None, "通畅": "clear", "受阻": "impaired"}),
+        "沟渠连通": (
+            "ditch_connectivity",
+            {"暂不确定": None, "通畅": "clear", "受阻": "impaired"},
+        ),
         "积水情况": ("standing_water", BOOL_OPTIONS),
-        "土壤墒情": ("moisture", {"未知": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"}),
-        "维护需求": ("maintenance_need_confirmed", BOOL_OPTIONS),
-        "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
+        "土壤墒情": (
+            "moisture",
+            {"暂不确定": None, "偏干": "dry", "适中": "normal", "偏湿": "wet"},
+        ),
+        "维护需求": ("maintenance_need_confirmed", MAINTENANCE_NEED_OPTIONS),
+        "维护问题": ("maintenance_problem_confirmed", MAINTENANCE_PROBLEM_OPTIONS),
         "维护目的": (
             "maintenance_purpose",
             {
-                "未知": None,
+                "暂不确定": None,
                 "清理既有沟渠": "clear_existing_ditch",
                 "其他目的": "other",
             },
@@ -2394,36 +2414,25 @@ def _apply_proposal(service: WorkbenchServiceV3, proposal: AgentProposalV3) -> s
     return outcome.error_message or "修改已保存，安排待更新；可点击重新计算。"
 
 
-def _proposal_event_description(event: FactEventInputV3) -> str:
+def _proposal_event_description(
+    event: FactEventInputV3, *, task_names: dict[str, str] | None = None
+) -> str:
     feedback = event.feedback
     if feedback is None:
         return f"撤回或更正原事件 {event.correction_of or '未指定'}"
     at = feedback.at.astimezone(ZONE).strftime("%Y-%m-%d %H:%M")
     if feedback.kind == "completed":
-        detail = f"记录任务 {feedback.task_id} 完成"
+        name = (task_names or {}).get(feedback.task_id or "", "这项任务")
+        detail = f"记录{name}已完成"
     elif feedback.kind == "observation":
-        field = {
-            "standing_water": "积水情况",
-            "ditch_connectivity": "沟渠连通",
-            "pest_signs": "虫情迹象",
-            "maintenance_need_confirmed": "维护需求",
-            "maintenance_problem_confirmed": "维护问题",
-            "maintenance_purpose": "维护目的",
-        }.get(feedback.field or "", feedback.field or "观察项")
-        value = (
-            "未知"
-            if feedback.value is None
-            else "是"
-            if feedback.value is True
-            else "否"
-            if feedback.value is False
-            else str(feedback.value)
-        )
-        detail = f"记录地块 {feedback.plot_id} 的{field}：{value}"
+        field = feedback.field or ""
+        label = missing_label(field)
+        value = field_value_label(field, feedback.value)
+        detail = f"记录{label}：{value}"
     elif feedback.kind == "workability":
 
         def state(value: bool | None) -> str:
-            return "未知" if value is None else "可作业" if value else "不可作业"
+            return "暂不确定" if value is None else "可作业" if value else "不可作业"
 
         detail = (
             f"将 {feedback.day} 的现场条件设为{state(feedback.site_workable)}，"
@@ -2442,7 +2451,7 @@ def _proposal_event_description(event: FactEventInputV3) -> str:
             else f"{feedback.resource_minutes} 分钟"
         )
         detail = f"将 {feedback.day} 的人员可用时间改为 {intervals}，{minutes}"
-    return f"{detail}（反馈时间 {at}）"
+    return f"{detail}（{at}）"
 
 
 def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str) -> None:
@@ -2453,13 +2462,16 @@ def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str
         return
     if kind == "observation":
         fields = {
-            "沟渠连通": ("ditch_connectivity", {"未知": None, "通畅": "clear", "受阻": "impaired"}),
+            "沟渠连通": (
+                "ditch_connectivity",
+                {"暂不确定": None, "通畅": "clear", "受阻": "impaired"},
+            ),
             "积水情况": ("standing_water", BOOL_OPTIONS),
-            "维护需求": ("maintenance_need_confirmed", BOOL_OPTIONS),
-            "维护问题": ("maintenance_problem_confirmed", BOOL_OPTIONS),
+            "维护需求": ("maintenance_need_confirmed", MAINTENANCE_NEED_OPTIONS),
+            "维护问题": ("maintenance_problem_confirmed", MAINTENANCE_PROBLEM_OPTIONS),
             "维护目的": (
                 "maintenance_purpose",
-                {"未知": None, "清理既有沟渠": "clear_existing_ditch", "其他目的": "other"},
+                {"暂不确定": None, "清理既有沟渠": "clear_existing_ditch", "其他目的": "other"},
             ),
         }
         label = st.selectbox("观察项目", list(fields), key=f"quick_observation_field:{field_id}")
@@ -2469,7 +2481,7 @@ def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str
                 "记录值", list(choices), key=f"quick_observation_value:{field_id}:{label}"
             )
             submitted = st.form_submit_button(
-                "保存观察事实", key=f"quick_save_observation:{field_id}:{state.fact_version}"
+                "保存现场记录", key=f"quick_save_observation:{field_id}:{state.fact_version}"
             )
         if submitted:
             try:
@@ -2646,29 +2658,22 @@ def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[
             "propose_field_update": "整理档案修改",
             "declare_request": "确认本轮请求",
         }
-        label = "正在准备本轮请求"
+        label = "正在处理，请稍候"
         if snapshot.events:
             latest = snapshot.events[-1]
             label = (
-                f"正在进行第 {latest.request_count} 次模型请求"
+                "正在处理，请稍候"
                 if latest.stage == "model"
                 else tool_labels.get(latest.tool_name, "正在整理结果")
             )
-        with st.status(label, expanded=True):
+        with st.status(label, expanded=False):
             for event in snapshot.events[-4:]:
                 stage = (
                     "模型请求"
                     if event.stage == "model"
                     else tool_labels.get(event.tool_name, "整理结果")
                 )
-                status = (
-                    "开始"
-                    if event.status == "started"
-                    else "完成"
-                    if event.status == "success"
-                    else "结束"
-                )
-                st.caption(f"{stage} · {status}")
+                st.caption(f"{stage} · {event.status} · 第 {event.request_count} 次请求")
         if st.button("退出等待", key=f"cancel_agent:{field_id}"):
             job.cancel()
             st.rerun()
@@ -2683,7 +2688,7 @@ def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[
         if retry.button("重试本轮", key=f"retry_agent:{field_id}", disabled=not last_message):
             _start_agent_job(agent, field_id, last_message, history)
             st.rerun()
-        if structured.button("用表单继续", key=f"agent_structured:{field_id}"):
+        if structured.button("手动填写", key=f"agent_structured:{field_id}"):
             _open_dialog("field", field_id)
             st.rerun()
     with st.form(f"assistant_form:{field_id}", clear_on_submit=True, border=False):
@@ -2716,7 +2721,7 @@ def _render_agent(
     # 页签名已含「农事助手」，此处不再重复大标题。
     st.caption(f"当前对话 · {name}")
     if state is None or profile is None:
-        st.info("先保存地块档案，再与助手对话。结构化表单不依赖模型密钥。")
+        st.info("先保存地块信息，再告诉助手这块地的情况。也可以直接手动填写。")
         return
     history_key = f"chat:{field_id}"
     history: list[dict[str, str]] = st.session_state.setdefault(history_key, [])
@@ -2729,13 +2734,11 @@ def _render_agent(
         )
         if pending:
             opening = (
-                f"这块地的{task_title(pending.task_type)}还不清楚。"
-                "可以补充观察到的情况，修改会先请你核对。"
+                f"{task_title(pending.task_type)}还有情况待确认。"
+                "告诉我你看到的情况，保存前会请你核对。"
             )
         else:
-            opening = (
-                "可以描述现场变化或时间安排，例如“明天只能干一小时”。助手提出的修改会先请你核对。"
-            )
+            opening = "告诉我现场有什么变化，或你哪天有空。例如：明天只能干一小时。"
         st.markdown(
             f'<div class="workbench-empty">{opening}</div>',
             unsafe_allow_html=True,
@@ -2745,15 +2748,8 @@ def _render_agent(
             st.write(message["content"])
     response = st.session_state.get(f"agent_result:{field_id}")
     if response:
-        outcome_labels = {
-            "awaiting_confirmation": "待确认修改",
-            "needs_information": "待补充信息",
-            "preview_ready": "预览可采用",
-            "partial": "部分事项待补充",
-            "failed": "本轮未完成",
-        }
-        if response.status == "success" and response.business_outcome in outcome_labels:
-            st.info(outcome_labels[response.business_outcome])
+        if response.status == "success" and response.business_outcome == "needs_information":
+            st.info("还需要补充一些情况。")
         if response.status == "success":
             if response.text and not any(
                 message["content"] == response.text for message in history[-2:]
@@ -2765,9 +2761,9 @@ def _render_agent(
                 for message in history[-2:]
             ):
                 st.warning(response.error_message or response.status)
-            st.caption("已保存的档案与现场事实不受模型失败影响；可继续用结构化表单操作。")
-        if response.tools:
-            with st.expander("技术详情：本轮工具与耗时"):
+            st.caption("已经保存的内容仍在。你可以重试，或手动填写。")
+        if response.tools or response.prompt_tokens is not None:
+            with st.expander("技术详情", expanded=False):
                 st.caption(
                     f"执行编号 {response.run_id} · 请求编号 {', '.join(response.request_ids)}"
                 )
@@ -2776,13 +2772,13 @@ def _render_agent(
                         f"{trace.name} · {trace.status} · {trace.elapsed_ms} ms · "
                         f"{trace.result_summary}"
                     )
+                if response.prompt_tokens is not None:
+                    st.caption(
+                        f"{response.request_count} 次模型请求 · "
+                        f"{response.prompt_tokens + (response.completion_tokens or 0)} tokens"
+                    )
         if response.previews:
             st.info("安排预览已生成，请在计划结果区核对并采用。")
-        if response.prompt_tokens is not None:
-            st.caption(
-                f"本轮 {response.request_count} 次模型请求 · "
-                f"{response.prompt_tokens + (response.completion_tokens or 0)} tokens"
-            )
     records = service.agent_proposal_records(field_id)
     primary_proposal_id = next(
         (record.proposal.id for record in records if record.status == "pending"), None
@@ -2791,17 +2787,23 @@ def _render_agent(
         proposal = record.proposal
         if record.status != "pending":
             continue
-        st.markdown("#### 待确认修改 · 已保存草稿")
-        st.write(proposal.summary)
+        st.markdown("#### 请核对这次修改")
         if proposal.kind == "facts":
+            current_plan = service.get_current_plan(field_id)
+            task_names = (
+                {item.task_id: item.title for item in current_plan.items} if current_plan else {}
+            )
             for index, event in enumerate(proposal.events, start=1):
-                st.markdown(f"{index}. {_proposal_event_description(event)}")
-            with st.expander("核对完整反馈字段"):
+                st.markdown(f"{index}. {_proposal_event_description(event, task_names=task_names)}")
+            with st.expander("完整记录（技术详情）", expanded=False):
                 st.json(
                     [event.model_dump(mode="json", exclude_none=True) for event in proposal.events]
                 )
         else:
-            st.json(proposal.changes)
+            for row in proposal_change_rows(proposal.changes):
+                st.markdown(f"- {row}")
+            with st.expander("完整修改（技术详情）", expanded=False):
+                st.json(proposal.changes)
         yes, no = st.columns(2)
         if yes.button(
             "确认并保存",
@@ -2809,9 +2811,9 @@ def _render_agent(
             type="primary" if proposal.id == primary_proposal_id else "secondary",
         ):
             try:
-                with st.status("正在保存事实并计算调整预览…", expanded=True) as progress:
+                with st.status("正在保存并更新安排…", expanded=False) as progress:
                     st.session_state[f"notice:{field_id}"] = _apply_proposal(service, proposal)
-                    progress.update(label="事实已保存，计算已结束", state="complete")
+                    progress.update(label="保存已完成", state="complete")
                 st.session_state[f"agent_result:{field_id}"] = None
                 st.rerun()
             except (ValueError, KeyError) as error:
@@ -2822,7 +2824,7 @@ def _render_agent(
             st.rerun()
     for record in records:
         if record.status == "confirmed" and record.last_error:
-            st.warning(f"事实已保存，自动预览未完成：{record.last_error}")
+            st.warning(f"情况已保存，但安排还没更新：{record.last_error}。请重新计算。")
             if st.button("重新计算安排", key=f"retry_agent_preview:{record.proposal.id}"):
                 result = service.retry_agent_preview(record.proposal.id)
                 if result.preview is not None:
@@ -3131,7 +3133,7 @@ def main() -> None:
             guidance = "核对下方安排和待确认事项后，才能采用为当前计划。"
         elif adopted and current.plan_stale:
             status = "已保存的计划需要更新"
-            guidance = "地块或现场事实已有变化；旧版仍保留，先查看调整预览。"
+            guidance = "地块信息或现场记录已有变化。原计划仍保留，请查看调整预览。"
         elif adopted:
             status = "当前计划已采用"
             guidance = "先看今天是否有安排；现场变化后可记录事实并重新核对七天计划。"

@@ -469,7 +469,7 @@ class AgentServiceV3:
         if not api_key:
             return finish(
                 "missing_credentials",
-                error_message="模型密钥尚未配置；可以继续使用下方的结构化表单。",
+                error_message="助手暂时不可用：还没配置模型密钥。你可以手动填写。",
             )
         if not user_message.strip():
             return finish("invalid_response", error_message="请输入要处理的内容。")
@@ -645,7 +645,7 @@ class AgentServiceV3:
                 return finish(
                     "timeout",
                     text=last_tool_summary,
-                    error_message="本轮交互超过 20 秒；已保留工具结果和待确认草稿，可重试。",
+                    error_message="处理超时，已保存的内容仍在。请重试或手动填写。",
                 )
             request_count += 1
             steps.append(AgentWorkflowStepV3(stage="understanding", status="started"))
@@ -694,13 +694,13 @@ class AgentServiceV3:
                     return finish(
                         "timeout",
                         text=last_tool_summary,
-                        error_message="本轮交互超过时间预算；已保留有效结果，请检查后重试。",
+                        error_message="处理超时，已保存的内容仍在。请检查后重试。",
                     )
             except (httpx.TimeoutException, ModelBudgetExceeded):
                 return finish(
                     "timeout",
                     text=last_tool_summary,
-                    error_message="模型请求超时；已保留已保存事实和待确认草稿。",
+                    error_message="助手响应超时，已保存的内容仍在。请重试。",
                 )
             except httpx.RequestError as error:
                 category = (
@@ -709,14 +709,14 @@ class AgentServiceV3:
                 return finish(
                     "error",
                     text=last_tool_summary,
-                    error_message="模型连接失败；请稍后重试或使用结构化表单。",
+                    error_message="助手暂时连不上。请稍后重试，或手动填写。",
                     error_category=category,
                 )
             except (ValueError, ValidationError):
                 return finish(
                     "invalid_response",
                     text=last_tool_summary,
-                    error_message="模型响应格式无效；可改用结构化表单继续。",
+                    error_message="助手没有给出可用结果。请重试，或手动填写。",
                 )
 
             if completion.usage:
@@ -777,7 +777,7 @@ class AgentServiceV3:
                     return finish(
                         "invalid_response",
                         text=last_tool_summary,
-                        error_message="未生成待确认修改；请补充事实或使用结构化表单。",
+                        error_message="还没有生成可核对的修改。请补充具体情况，或手动填写。",
                     )
                 if change_requested and not proposals:
                     return finish(
@@ -2057,7 +2057,10 @@ class AgentServiceV3:
             "涉及档案或现场事实的修改只能调用 propose_* 工具，必须向用户逐项说明并等待确认；"
             "不能声称草稿已保存、事实已记录或计划已采用。不能编造任务、工时、天气、来源和农艺结论。"
             "未知保留为未知。天气预报不代表现场可作业。候选规则标记为开发验证、适用性待复核。"
-            "最终只做简短解释，不另写一份任务列表；任务、日期、时段、状态和来源都由本地工具结果展示。"
+            "面向用户先说结果，再给一个必要操作或具体问题。用简短自然的中文，"
+            "少说‘结构化表单’‘本轮交互’‘事实提案’等内部术语；空值只说暂不确定，"
+            "不要把未填写说成已检查。不要套话，也不要重复任务清单。"
+            "任务、日期、时段、状态和来源都由本地工具结果展示。"
             "不要输出私有推理过程。"
         )
 
@@ -2412,7 +2415,7 @@ class AgentServiceV3:
             field_id=field_id,
             expected_fact_version=state.fact_version,
             events=events,
-            summary="助手拆分出现场事实，确认后才记录。",
+            summary="请核对要保存的现场情况。",
             changes={"event_count": len(events)},
         )
 

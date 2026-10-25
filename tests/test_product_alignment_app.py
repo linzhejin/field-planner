@@ -242,7 +242,7 @@ def test_observation_question_opens_matching_fact_editor(tmp_path, monkeypatch):
     app.button(key="next_question:audit-field").click().run()
     assert not app.exception
     assert app.selectbox(key="quick_observation_field:audit-field").value == "维护问题"
-    app.selectbox(key="quick_observation_value:audit-field:维护问题").set_value("是")
+    app.selectbox(key="quick_observation_value:audit-field:维护问题").set_value("有")
     app.button(key="quick_save_observation:audit-field:0").click().run()
     assert not app.exception
     assert service.get_field("audit-field").fact_version == 1

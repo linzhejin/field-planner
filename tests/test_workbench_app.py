@@ -199,7 +199,11 @@ def test_observation_type_selector_is_reactive_outside_the_submit_form(
     observation_type = app.selectbox(key=f"observation_field:{field_id}:0")
     assert observation_type.proto.form_id == ""
     observation_type.set_value("是否有实际降雨").run()
-    assert app.selectbox(key=f"observation_value:{field_id}:0").options == ["未知", "是", "否"]
+    assert app.selectbox(key=f"observation_value:{field_id}:0").options == [
+        "暂不确定",
+        "是",
+        "否",
+    ]
 
 
 def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(

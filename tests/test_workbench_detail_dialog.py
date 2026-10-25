@@ -86,7 +86,7 @@ def test_item_detail_rows_marks_unscheduled_and_missing_fields() -> None:
     assert rows["窗口"] == "未提供"
     assert rows["适用性"] == "待确认"
     assert rows["执行状态"] == "待确认"
-    assert rows["待确认项"] == "是否存在需处理的沟渠问题"
+    assert rows["待确认项"] == "沟渠问题"
 
 
 def test_completed_task_is_not_counted_as_remaining_scheduled_work(monkeypatch) -> None:  # type: ignore[no-untyped-def]
