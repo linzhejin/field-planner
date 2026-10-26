@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T01:42:47.950038+08:00",
+  "updated_at": "2026-10-27T02:03:26.190393+08:00",
   "evaluation": {
     "run_id": "sealed-internal-regression-v15-20261027",
     "sealed_at": "2026-10-26T17:24:36.251821+00:00",
@@ -55,13 +55,14 @@
     "reports/ui_interaction_review_20261024.md": "4215756927d9a5086bbb6c492d1f3b5d33190f509a14827e7a6cfa981f96edcf",
     "reports/internal_regression_v13_20261027.md": "84fc24bff824219bf9bedca8168296cb1a8c1e367aec3c5c0651d14fa44bef05",
     "reports/internal_regression_v14_20261027.md": "a149eeae2452cf7572ed047112459f4f6059a7a94f92fbbb4c5007a525ced597",
-    "reports/product_acceptance_20261027.md": "889a10b585fc71b3b13976df2f8e654ba6ad6018c373196a64e78f4521adf3dc",
+    "reports/product_acceptance_20261027.md": "ccbbcc2796ebf6de8621db52f0d768d61215f41e814e94dfd164776dc4623744",
     "reports/product_acceptance_20261027/acceptance_cases.json": "03cf12f40e09aec4de09fadf5691ff725b0fcb60dc23d36262a8aa28cf3557a9",
     "reports/product_acceptance_20261027/viewport_results.json": "b6c09f276baafaaec9088d117caa28019a3f7160ef6af8c00f1283004798f581",
     "reports/internal_regression_v15_20261027.md": "7895948ba387e34059b1b2da2fe02e0b582db90dc05c8b40e3a7a9f2a0c56d77",
     "reports/product_acceptance_20261027/migration_twice_result.json": "aeb67aaca55f842ce4bc8ac65006942ea893b7e2094f44f5d419fb3df2e047e1",
     "reports/product_acceptance_20261027/no_key_v15_result.json": "4016e3e59be94055bb22c14b056d031eed6d9d693c662fc3b527f00412172044",
-    "reports/product_acceptance_20261027/performance_v15.json": "50ab34edb2677b58ccbbb37be474050851770d8cf1e50f4caaee9091639a4ef1"
+    "reports/product_acceptance_20261027/performance_v15.json": "50ab34edb2677b58ccbbb37be474050851770d8cf1e50f4caaee9091639a4ef1",
+    "reports/product_acceptance_20261027/merge_outing_ui_result.json": "ef4dec253d328e6f24bf3b0439b08c162d5bac2278d0c82b891335e310c704a4"
   },
   "source_tests": {
     "passed": 645,

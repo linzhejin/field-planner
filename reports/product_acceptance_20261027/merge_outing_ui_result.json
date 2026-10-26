@@ -1,0 +1,19 @@
+{
+  "scope": "isolated public synthetic copy; task candidate seeded via business service; group chosen and saved in browser",
+  "code_commit": "7593b477ee5191587af56716871f3dd383bfb3c4",
+  "group_confirmed": true,
+  "member_count": 2,
+  "same_field": true,
+  "execution_date": "2026-10-29",
+  "shared_duration_minutes": 45,
+  "preview_created": true,
+  "member_schedule_statuses": [
+    "unscheduled",
+    "unscheduled"
+  ],
+  "member_reason_codes": [
+    "execution_group_time_unavailable",
+    "execution_group_time_unavailable"
+  ],
+  "note": "The 45-minute shared visit was not scheduled because this fixture lacks one continuous free slot; no plan adoption or independent member-result browser flow was claimed."
+}
