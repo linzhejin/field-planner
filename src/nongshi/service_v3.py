@@ -42,6 +42,7 @@ from nongshi.schema_v3 import (
 from nongshi.tasks_v4 import (
     TaskExecutionGroupSaveResultV4,
     TaskExecutionGroupV4,
+    TaskInstanceV4,
     TaskSeriesSaveResultV4,
     TaskSeriesUpdateResultV4,
     TaskSeriesV4,
@@ -78,6 +79,79 @@ def align_draft_dates(draft: FieldDraftV3, *, start_date: date | None = None) ->
             mode="python"
         )
     )
+
+
+def _reconcile_task_series_instances(
+    proposed: list[TaskInstanceV4],
+    existing: list[TaskInstanceV4],
+    protected_ids: set[str],
+    series_id: str,
+) -> list[TaskInstanceV4]:
+    """Keep recurring IDs stable by date while leaving protected history untouched."""
+    existing = [item for item in existing if item.series_id == series_id]
+    existing_by_date: dict[date, list[TaskInstanceV4]] = {}
+    protected_dates = {item.occurrence_date for item in existing if item.id in protected_ids}
+    for item in existing:
+        if item.id not in protected_ids:
+            existing_by_date.setdefault(item.occurrence_date, []).append(item)
+    for matches in existing_by_date.values():
+        matches.sort(key=lambda item: item.occurrence_number)
+
+    used_ids: set[str] = set()
+    used_numbers = {item.occurrence_number for item in existing}
+    next_number = max(used_numbers, default=0) + 1
+    reconciled: list[TaskInstanceV4] = []
+    unmatched: list[TaskInstanceV4] = []
+
+    for item in sorted(proposed, key=lambda row: (row.occurrence_date, row.occurrence_number)):
+        if item.occurrence_date in protected_dates:
+            continue
+        exact = next(
+            (
+                candidate
+                for candidate in existing_by_date.get(item.occurrence_date, [])
+                if candidate.id not in used_ids
+            ),
+            None,
+        )
+        if exact is None:
+            unmatched.append(item)
+            continue
+        reconciled.append(
+            item.model_copy(update={"id": exact.id, "occurrence_number": exact.occurrence_number})
+        )
+        used_ids.add(exact.id)
+
+    existing_by_number = {item.occurrence_number: item for item in existing}
+    for item in unmatched:
+        same_number = existing_by_number.get(item.occurrence_number)
+        if same_number and same_number.id not in protected_ids and same_number.id not in used_ids:
+            reconciled.append(
+                item.model_copy(
+                    update={
+                        "id": same_number.id,
+                        "occurrence_number": same_number.occurrence_number,
+                    }
+                )
+            )
+            used_ids.add(same_number.id)
+            continue
+        occurrence_number = item.occurrence_number
+        if occurrence_number in used_numbers:
+            while next_number in used_numbers:
+                next_number += 1
+            occurrence_number = next_number
+            next_number += 1
+        used_numbers.add(occurrence_number)
+        reconciled.append(
+            item.model_copy(
+                update={
+                    "id": f"{item.series_id}:{occurrence_number:06d}",
+                    "occurrence_number": occurrence_number,
+                }
+            )
+        )
+    return reconciled
 
 
 class WorkbenchServiceV3:
@@ -367,7 +441,18 @@ class WorkbenchServiceV3:
             if feedback and feedback.kind in {"cancelled", "task_result"} and feedback.task_id:
                 protected.add(feedback.task_id)
         instances = expand_task_series_all(series)
-        self._validate_task_dependencies(series.field_id, instances, replacing_series=series.id)
+        instances = _reconcile_task_series_instances(
+            instances,
+            self.store.list_task_instances(series.field_id),
+            protected,
+            series.id,
+        )
+        self._validate_task_dependencies(
+            series.field_id,
+            instances,
+            replacing_series=series.id,
+            protected_instance_ids=protected,
+        )
         return self.store.update_task_series(
             series,
             instances,
@@ -384,12 +469,14 @@ class WorkbenchServiceV3:
         proposed_instances,
         *,
         replacing_series: str | None = None,
+        protected_instance_ids: set[str] | None = None,
     ) -> None:  # type: ignore[no-untyped-def]
         state = self.get_field(field_id)
+        protected_instance_ids = protected_instance_ids or set()
         existing = [
             instance
             for instance in self.store.list_task_instances(field_id)
-            if instance.series_id != replacing_series
+            if instance.series_id != replacing_series or instance.id in protected_instance_ids
         ]
         instances = [*existing, *proposed_instances]
         task_ids = {instance.id for instance in instances}
@@ -430,6 +517,7 @@ class WorkbenchServiceV3:
         expected_fact_version: int,
         proposal_id: str | None = None,
         expected_draft_version: int | None = None,
+        expected_task_version: int | None = None,
     ) -> EventCommitResultV3:
         for event in events:
             feedback = event.feedback
@@ -449,6 +537,18 @@ class WorkbenchServiceV3:
         existing_ids = {event.event_id for event in recorded_events}
         replayed_event_ids = all(event.event_id in existing_ids for event in events)
         state = self.get_field(field_id)
+        task_bound_events = any(
+            event.feedback
+            and event.feedback.kind in {"completed", "cancelled", "task_result"}
+            and event.feedback.task_id
+            for event in events
+        )
+        if not replayed_event_ids and task_bound_events:
+            adopted = self.get_current_plan(field_id)
+            if adopted is None or adopted.task_version != state.task_version:
+                raise ValueError("任务内容已变化，请先重新计算并采用当前计划，再记录任务事实")
+            if expected_task_version is None:
+                expected_task_version = state.task_version
         if (
             not replayed_event_ids
             and expected_draft_version is not None
@@ -459,6 +559,12 @@ class WorkbenchServiceV3:
             raise ValueError(
                 f"版本冲突：现场事实为 v{state.fact_version}，提交依据为 v{expected_fact_version}"
             )
+        if (
+            not replayed_event_ids
+            and expected_task_version is not None
+            and state.task_version != expected_task_version
+        ):
+            raise ValueError("任务版本已变化，请刷新任务后重试")
         if not replayed_event_ids:
             current = self.store.get_current_plan(field_id)
             current_items = list(current.items) if current else []
@@ -561,6 +667,7 @@ class WorkbenchServiceV3:
             operation_id=operation_id,
             proposal_id=proposal_id,
             expected_draft_version=expected_draft_version,
+            expected_task_version=expected_task_version,
         )
 
     def record_task_result(
@@ -577,6 +684,10 @@ class WorkbenchServiceV3:
         operation_id: str,
     ) -> EventCommitResultV3:
         """Save actual task outcomes and, separately, an optional completion fact."""
+        state = self.get_field(field_id)
+        adopted = self.get_current_plan(field_id)
+        if adopted and adopted.task_version != state.task_version:
+            raise ValueError("任务内容已变化，请先重新计算并采用当前计划，再记录执行结果")
         at = self._now()
         events = [
             FactEventInputV3(
@@ -603,6 +714,7 @@ class WorkbenchServiceV3:
             operation_id=operation_id,
             expected_fact_version=expected_fact_version,
             expected_draft_version=expected_draft_version,
+            expected_task_version=state.task_version,
         )
 
     def _editable_task(
@@ -757,7 +869,7 @@ class WorkbenchServiceV3:
         }
 
         def prepare() -> TaskActionV3:
-            self._editable_task(
+            editable_state, _ = self._editable_task(
                 field_id,
                 task_id,
                 expected_draft_version=expected_draft_version,
@@ -777,6 +889,7 @@ class WorkbenchServiceV3:
                 event=event,
                 expected_draft_version=expected_draft_version,
                 expected_fact_version=expected_fact_version,
+                expected_task_version=editable_state.task_version,
             )
 
         intent = self._task_action_intent(operation_id, "cancel_task", request, prepare)
@@ -787,6 +900,7 @@ class WorkbenchServiceV3:
             [intent.event],
             expected_fact_version=expected_fact_version,
             expected_draft_version=expected_draft_version,
+            expected_task_version=intent.expected_task_version,
             operation_id=f"task-action:{intent.id}:fact",
         )
         return self.store.task_action_preview(intent) or self.preview_plan(

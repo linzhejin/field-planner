@@ -9,11 +9,80 @@ from zoneinfo import ZoneInfo
 
 from streamlit.testing.v1 import AppTest
 
-from nongshi.schema_v2 import FeedbackV2, TimeWindow
+import nongshi.workbench as workbench
+from nongshi.repository_v3 import WorkbenchStoreV3
+from nongshi.rules import load_rule_catalog
+from nongshi.schema_v2 import FeedbackV2, PlanItemV2, TimeWindow
 from nongshi.schema_v3 import FactEventInputV3, FieldDraftV3, FieldStateV3, PlanPreviewV3
-from nongshi.workbench import _preview_matches_state, _proposal_event_description
+from nongshi.service_v3 import WorkbenchServiceV3
+from nongshi.workbench import (
+    _adopted_display_items,
+    _day_workability_label,
+    _item_detail_rows,
+    _preview_matches_state,
+    _proposal_event_description,
+)
 
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
+
+
+def test_adopted_view_shows_saved_completion_before_new_plan_is_adopted() -> None:
+    item = PlanItemV2.model_construct(
+        task_id="task-1", schedule_status="scheduled", completed=False
+    )
+    plan = type("Plan", (), {"items": [item], "plan": None})()
+    service = type("Service", (), {"_completion_facts": lambda *_: {"task-1": datetime.now()}})()
+
+    shown = _adopted_display_items(service, "field-1", plan)
+
+    assert shown[0].schedule_status == "completed"
+    assert shown[0].completed
+    assert item.schedule_status == "scheduled"
+
+
+def test_follow_up_detail_uses_user_labels_and_hides_issue_identifier() -> None:
+    item = PlanItemV2.model_construct(
+        task_id="task-1",
+        title="积水复查",
+        task_type="follow_up",
+        start_at=None,
+        end_at=None,
+        duration_minutes=30,
+        window_by_date={},
+        applicability="matched",
+        necessity="required",
+        schedule_status="pending",
+        reason="待确认",
+        missing_fields=[],
+        execution_group_id=None,
+        template_snapshot={"related_issue_id": "secret-issue-id", "purpose": "核查积水"},
+    )
+
+    detail = "\n".join(value for _, value in _item_detail_rows(item))
+
+    assert "问题复查" in detail
+    assert "follow_up" not in detail
+    assert "secret-issue-id" not in detail
+
+
+def test_finished_tasks_do_not_mark_another_day_as_unconfirmed() -> None:
+    day = date(2026, 10, 29)
+    finished = PlanItemV2.model_construct(
+        category="onsite",
+        schedule_status="completed",
+        applicability="matched",
+        necessity="required",
+        window_by_date={day: "pending"},
+    )
+    scheduled = PlanItemV2.model_construct(
+        category="onsite",
+        schedule_status="scheduled",
+        applicability="matched",
+        necessity="required",
+        window_by_date={day: "available"},
+    )
+
+    assert _day_workability_label([finished, scheduled], day) == "可作业"
 
 
 def test_old_preview_is_not_shown_after_a_new_plan_is_adopted() -> None:
@@ -99,3 +168,76 @@ def test_candidate_card_uses_chinese_status_chip(tmp_path: Path, monkeypatch) ->
     assert not re.search(r"适用性 (适用|待确认|超出范围)", joined)
     assert not re.search(r"窗口 (可安排|暂不可安排|待确认|未提供)", joined)
     assert not re.search(r"编号 field-", joined)
+
+
+def test_week_view_renders_unresolved_task_once(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.setenv("NONGSHI_DEFAULT_MODE", "demo")
+    demo_database = database.with_name("plans.demo.sqlite3")
+    service = WorkbenchServiceV3(WorkbenchStoreV3(demo_database), catalog=load_rule_catalog())
+    field_id = workbench._seed_demo(service, scenario="sparse")
+    app = AppTest.from_file(APP, default_timeout=30).run()
+
+    app.session_state[f"plan_view:{field_id}"] = "week"
+    app.run()
+    pending = next(item for item in app.expander if "待确认或未排入" in item.label)
+    pending.proto.expanded = True
+    app.run()
+
+    assert not app.exception
+    pending = next(item for item in app.expander if "待确认或未排入" in item.label)
+    card_titles = [
+        str(element.value)
+        for children in pending.children.values()
+        for element in children
+        if getattr(element, "type", None) == "markdown"
+    ]
+    assert card_titles.count("**待确认：要安排沟渠维护吗？**") == 1
+
+
+def test_task_series_form_always_shows_the_duration_input(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.setenv("NONGSHI_DEFAULT_MODE", "demo")
+    service = WorkbenchServiceV3(
+        WorkbenchStoreV3(database.with_name("plans.demo.sqlite3")),
+        catalog=load_rule_catalog(),
+    )
+    workbench._seed_demo(service, scenario="sparse")
+    app = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert any(item.label == "预计时长（分钟）" for item in app.number_input)
+
+
+def test_saved_task_edit_is_not_reported_as_unsaved_when_preview_fails() -> None:
+    app = AppTest.from_string(
+        """
+import streamlit as st
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from nongshi.schema_v3 import FieldDraftV3, FieldStateV3
+from nongshi.workbench import _report_task_action_failure
+
+previous = FieldStateV3(
+    id="field-1", mode="real", draft_version=1, fact_version=0, task_version=0,
+    draft=FieldDraftV3(field_id="field-1"),
+    updated_at=datetime(2026, 10, 26, 10, tzinfo=ZoneInfo("Asia/Shanghai")),
+)
+current = previous.model_copy(update={"task_version": 1})
+
+class FakeService:
+    def get_field(self, field_id):
+        return current
+
+if not st.session_state.get("failure_report_called"):
+    st.session_state["failure_report_called"] = True
+    _report_task_action_failure(
+        FakeService(), "field-1", previous, RuntimeError("preview unavailable"), "任务修改"
+    )
+"""
+    ).run()
+
+    assert app.session_state.get("notice:field-1") == (
+        "任务修改已保存，但预览未生成：preview unavailable。请点「重新计算计划」后核对。"
+    )

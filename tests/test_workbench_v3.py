@@ -10,7 +10,7 @@ import pytest
 
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
-from nongshi.schema_v2 import DayWindow, FieldProfile, TimeWindow
+from nongshi.schema_v2 import DayWindow, FeedbackV2, FieldProfile, TimeWindow
 from nongshi.schema_v3 import (
     FactEventInputV3,
     FieldDraftV3,
@@ -626,6 +626,7 @@ def test_reconfirmed_group_reserves_new_slot_after_member_completion(tmp_path: P
                 "task_type": "custom",
                 "category": "offsite",
                 "purpose": "汇总巡田记录",
+                "completion_standard": "完成记录汇总并保存",
             },
             recurrence="once",
             anchor_date=date(2026, 10, 21),
@@ -1068,6 +1069,373 @@ def test_period_edit_revises_open_occurrences_without_deleting_history(tmp_path:
     assert superseded.schedule_status == "not_generated"
     assert len(instances) == 3
     assert instances[-1].status == "superseded"
+
+
+def test_period_edit_keeps_new_dates_when_completed_occurrence_uses_old_ordinal(
+    tmp_path: Path,
+) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    state = service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    series = TaskSeriesV4(
+        id="protected-date-shift",
+        field_id="field-1",
+        template={
+            "id": "inspection-v1",
+            "title": "周期巡田",
+            "task_type": "inspection",
+            "category": "onsite",
+            "purpose": "记录田间变化",
+            "result_fields": ["现场情况"],
+            "completion_standard": "保存本次观察结果",
+        },
+        recurrence="dates",
+        anchor_date=date(2026, 10, 19),
+        selected_dates=[date(2026, 10, 19), date(2026, 10, 21)],
+        duration_minutes=20,
+    )
+    service.save_task_series(
+        series,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="save-protected-date-series",
+    )
+    preview = service.preview_plan("field-1", operation_id="preview-protected-date-series")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=None,
+        operation_id="adopt-protected-date-series",
+    )
+    after_visit = WorkbenchServiceV3(
+        WorkbenchStoreV3(service.store.path),
+        catalog=load_rule_catalog(),
+        today=lambda: date(2026, 10, 19),
+        now=lambda: datetime(2026, 10, 19, 4, tzinfo=UTC),
+    )
+    state = after_visit.get_field("field-1")
+    after_visit.record_task_result(
+        "field-1",
+        "protected-date-shift:000001",
+        {"现场情况": "normal"},
+        completed=True,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="complete-protected-date",
+    )
+    state = after_visit.get_field("field-1")
+    revised = series.model_copy(
+        update={
+            "selected_dates": [date(2026, 10, 20), date(2026, 10, 22)],
+            "template": series.template.model_copy(update={"version": 2}),
+        }
+    )
+
+    after_visit.update_task_series(
+        revised,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="revise-protected-date-series",
+    )
+    instances = after_visit.store.list_task_instances("field-1")
+
+    assert {
+        instance.occurrence_date for instance in instances if instance.status != "superseded"
+    } == {date(2026, 10, 19), date(2026, 10, 20), date(2026, 10, 22)}
+
+
+def test_period_edit_retains_cancelled_dependency_for_downstream_task(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    state = service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    series = TaskSeriesV4(
+        id="cancelled-prerequisite",
+        field_id="field-1",
+        template={
+            "id": "cancelled-prerequisite-template",
+            "title": "巡查排水沟",
+            "task_type": "inspection",
+            "category": "onsite",
+            "purpose": "核查排水情况",
+            "result_fields": ["现场情况"],
+            "completion_standard": "保存本次检查记录",
+        },
+        recurrence="dates",
+        anchor_date=date(2026, 10, 20),
+        selected_dates=[date(2026, 10, 20), date(2026, 10, 22)],
+        duration_minutes=20,
+    )
+    service.save_task_series(
+        series,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="save-prerequisite-series",
+    )
+    preview = service.preview_plan("field-1", operation_id="preview-prerequisite-series")
+    state = service.get_field("field-1")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=state.latest_plan_id,
+        operation_id="adopt-prerequisite-series",
+    )
+    state = service.get_field("field-1")
+    service.cancel_task(
+        "field-1",
+        "cancelled-prerequisite:000001",
+        reason="现场确认本次无需巡查",
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="cancel-prerequisite-occurrence",
+    )
+    state = service.get_field("field-1")
+    downstream = TaskSeriesV4(
+        id="dependent-follow-up",
+        field_id="field-1",
+        template={
+            "id": "dependent-follow-up-template",
+            "title": "整理巡查记录",
+            "task_type": "custom",
+            "category": "offsite",
+            "purpose": "归档前一项巡查结果",
+            "completion_standard": "记录归档完成",
+        },
+        recurrence="once",
+        anchor_date=date(2026, 10, 23),
+        duration_minutes=15,
+        prerequisites=["cancelled-prerequisite:000001"],
+    )
+    service.save_task_series(
+        downstream,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="save-dependent-follow-up",
+    )
+    state = service.get_field("field-1")
+    updated = series.model_copy(
+        update={"template": series.template.model_copy(update={"version": 2})}
+    )
+
+    service.update_task_series(
+        updated,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="update-cancelled-prerequisite-series",
+    )
+
+    instances = {item.id: item for item in service.store.list_task_instances("field-1")}
+    assert "cancelled-prerequisite:000001" in instances
+    assert any(
+        event.feedback
+        and event.feedback.kind == "cancelled"
+        and event.feedback.task_id == "cancelled-prerequisite:000001"
+        for event in service.store.list_events("field-1")
+    )
+    assert instances["dependent-follow-up:000001"].prerequisites == [
+        "cancelled-prerequisite:000001"
+    ]
+
+
+def test_task_result_cannot_use_an_outdated_task_plan_snapshot(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "workbench.sqlite3"
+    service = make_service(database)
+    state = service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    series = TaskSeriesV4(
+        id="edited-result-task",
+        field_id="field-1",
+        template={
+            "id": "edited-result-template",
+            "title": "核查田间情况",
+            "task_type": "inspection",
+            "category": "onsite",
+            "purpose": "保存现场检查结果",
+            "result_fields": ["现场情况"],
+            "completion_standard": "完成检查并记录结果",
+        },
+        recurrence="once",
+        anchor_date=date(2026, 10, 20),
+        duration_minutes=30,
+        earliest_date=date(2026, 10, 20),
+        due_date=date(2026, 10, 20),
+    )
+    service.save_task_series(
+        series,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="save-task",
+    )
+    preview = service.preview_plan("field-1", operation_id="preview-task")
+    state = service.get_field("field-1")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=state.latest_plan_id,
+        operation_id="adopt-task",
+    )
+    state = service.get_field("field-1")
+    service.update_task_series(
+        series.model_copy(
+            update={
+                "duration_minutes": 45,
+                "anchor_date": date(2026, 10, 21),
+                "earliest_date": date(2026, 10, 21),
+                "due_date": date(2026, 10, 21),
+                "template": series.template.model_copy(update={"version": 2}),
+            }
+        ),
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="edit-task-after-adoption",
+    )
+    after_start = WorkbenchServiceV3(
+        WorkbenchStoreV3(database),
+        catalog=load_rule_catalog(),
+        today=lambda: date(2026, 10, 20),
+        now=lambda: datetime(2026, 10, 20, 4, tzinfo=UTC),
+    )
+    state = after_start.get_field("field-1")
+
+    with pytest.raises(ValueError, match="任务内容已变化"):
+        after_start.record_task_result(
+            "field-1",
+            "edited-result-task:000001",
+            {"现场情况": "normal"},
+            completed=True,
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            operation_id="record-old-task-result",
+        )
+    with pytest.raises(ValueError, match="任务内容已变化"):
+        after_start.commit_events(
+            "field-1",
+            [
+                FactEventInputV3(
+                    feedback=FeedbackV2(
+                        kind="task_result",
+                        task_id="edited-result-task:000001",
+                        plot_id="field-1",
+                        at=datetime(2026, 10, 20, 4, tzinfo=UTC),
+                        result_values={"现场情况": "normal"},
+                    )
+                )
+            ],
+            operation_id="generic-stale-task-result",
+            expected_fact_version=state.fact_version,
+        )
+
+    current_preview = after_start.preview_plan("field-1", operation_id="preview-current-task")
+    state = after_start.get_field("field-1")
+    after_start.adopt_plan(
+        current_preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=state.latest_plan_id,
+        operation_id="adopt-current-task",
+    )
+    after_due = WorkbenchServiceV3(
+        WorkbenchStoreV3(database),
+        catalog=load_rule_catalog(),
+        today=lambda: date(2026, 10, 21),
+        now=lambda: datetime(2026, 10, 21, 4, tzinfo=UTC),
+    )
+    state = after_due.get_field("field-1")
+    original_commit = after_due.store.commit_events
+
+    def race_with_task_edit(field_id, events, **kwargs):  # type: ignore[no-untyped-def]
+        current = after_due.get_field(field_id)
+        after_due.save_task_series(
+            TaskSeriesV4(
+                id="concurrent-task-edit",
+                field_id=field_id,
+                template={
+                    "id": "concurrent-task-template",
+                    "title": "另一项记录工作",
+                    "category": "offsite",
+                    "purpose": "模拟并发修改任务清单",
+                    "completion_standard": "保存修改记录",
+                },
+                recurrence="once",
+                anchor_date=date(2026, 10, 22),
+                duration_minutes=10,
+            ),
+            expected_draft_version=current.draft_version,
+            expected_fact_version=current.fact_version,
+            operation_id="concurrent-edit-before-result-write",
+        )
+        return original_commit(field_id, events, **kwargs)
+
+    monkeypatch.setattr(after_due.store, "commit_events", race_with_task_edit)
+
+    with pytest.raises(ValueError, match="任务版本已变化"):
+        after_due.record_task_result(
+            "field-1",
+            "edited-result-task:000001",
+            {"现场情况": "normal"},
+            completed=True,
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            operation_id="record-during-task-edit",
+        )
+
+
+def test_task_bound_event_replay_is_idempotent_with_derived_task_version(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    state = service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    series = TaskSeriesV4(
+        id="idempotent-task",
+        field_id="field-1",
+        template={
+            "id": "idempotent-task-template",
+            "title": "记录巡田结果",
+            "task_type": "inspection",
+            "category": "onsite",
+            "purpose": "记录现场情况",
+            "result_fields": ["现场情况"],
+            "completion_standard": "保存现场检查结果",
+        },
+        recurrence="once",
+        anchor_date=date(2026, 10, 19),
+        duration_minutes=30,
+        earliest_date=date(2026, 10, 19),
+        due_date=date(2026, 10, 19),
+    )
+    service.save_task_series(
+        series,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        operation_id="save-idempotent-task",
+    )
+    preview = service.preview_plan("field-1", operation_id="preview-idempotent-task")
+    state = service.get_field("field-1")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=state.latest_plan_id,
+        operation_id="adopt-idempotent-task",
+    )
+    state = service.get_field("field-1")
+    event = FactEventInputV3(
+        feedback=FeedbackV2(
+            kind="task_result",
+            task_id="idempotent-task:000001",
+            plot_id="field-1",
+            at=datetime(2026, 10, 19, 2, tzinfo=UTC),
+            result_values={"现场情况": "normal"},
+        )
+    )
+
+    first = service.commit_events(
+        "field-1",
+        [event],
+        operation_id="commit-idempotent-task-result",
+        expected_fact_version=state.fact_version,
+    )
+    replay = service.commit_events(
+        "field-1",
+        [event],
+        operation_id="commit-idempotent-task-result",
+        expected_fact_version=state.fact_version,
+    )
+
+    assert first.fact_version == replay.fact_version
+    assert replay.replayed is True
 
 
 def test_issue_from_inspection_links_to_follow_up_and_closes_only_after_recheck(

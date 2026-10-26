@@ -2,6 +2,8 @@
 
 from datetime import date
 
+from nongshi.tasks_v4 import TaskSeriesV4, expand_task_series_all
+
 FIELD_LABELS = {
     "province": "所在省份",
     "province_confirmation": "省份确认",
@@ -125,4 +127,41 @@ def proposal_change_rows(changes: dict[str, object]) -> list[str]:
             rows.append(f"{label}：{old} → {new}")
         else:
             rows.append(f"{label}：{field_value_label(field, change)}")
+    return rows
+
+
+def task_series_confirmation_rows(series: TaskSeriesV4) -> list[str]:
+    """Show the saved recurrence and instructions before a user accepts them."""
+    template = series.template
+    dates = [item.occurrence_date.isoformat() for item in expand_task_series_all(series)]
+    frequency = {
+        "once": "单次",
+        "dates": "指定多个日期",
+        "interval": f"每隔 {series.interval_days} 天",
+    }[series.recurrence]
+    displayed_dates = "、".join(dates[:10])
+    if len(dates) > 10:
+        displayed_dates += f"，另有 {len(dates) - 10} 次（见下方全部执行日期）"
+    rows = [
+        f"任务：{template.title} · {'现场' if template.category == 'onsite' else '非现场'}",
+        f"目的：{template.purpose or '未填写'}",
+        f"频次：{frequency}",
+        f"执行日期（共 {len(dates)} 次）：{displayed_dates}",
+        f"每次预计时长：{series.duration_minutes} 分钟"
+        if series.duration_minutes is not None
+        else "每次预计时长：未填写",
+        f"执行步骤：{'；'.join(template.steps) if template.steps else '未填写'}",
+        f"记录项目：{'、'.join(template.result_fields) if template.result_fields else '未填写'}",
+        f"完成标准：{template.completion_standard or '未填写'}",
+        "必要条件："
+        + ("；".join(template.necessary_conditions) if template.necessary_conditions else "未填写"),
+    ]
+    if series.earliest_date or series.due_date:
+        rows.append(
+            f"允许日期与期限：{series.earliest_date or '按本次日期'} 至 "
+            f"{series.due_date or '按本次日期'}"
+        )
+    if series.prerequisites:
+        rows.append(f"前置任务：{len(series.prerequisites)} 项（编号见技术详情）")
+    rows.append("农艺适用性：用户自定，尚未评估")
     return rows

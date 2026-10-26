@@ -22,12 +22,13 @@ from nongshi.presentation import (
     field_value_label,
     missing_label,
     proposal_change_rows,
+    task_series_confirmation_rows,
     task_title,
 )
 from nongshi.repository import PlanStore, PlanStoreV2
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import load_rule_catalog
-from nongshi.schema_v2 import DayWindow, FeedbackV2, FieldProfile, TimeWindow
+from nongshi.schema_v2 import DayWindow, FeedbackV2, FieldProfile, PlanItemV2, TimeWindow
 from nongshi.schema_v3 import (
     AgentProposalV3,
     FactEventInputV3,
@@ -36,12 +37,13 @@ from nongshi.schema_v3 import (
     FieldStateV3,
     GeocodingResultV3,
     PlanPreviewV3,
+    PlanVersionV3,
     WeatherDayV3,
     WeatherLocationV3,
     WeatherSnapshotV3,
 )
 from nongshi.service_v3 import WorkbenchServiceV3, align_draft_dates
-from nongshi.tasks_v4 import TaskSeriesV4
+from nongshi.tasks_v4 import TaskSeriesV4, expand_task_series_all
 from nongshi.weather import WeatherServiceError
 
 ZONE = ZoneInfo("Asia/Shanghai")
@@ -76,7 +78,13 @@ SCHEDULE_LABELS = {
     "completed": "已完成",
     "cancelled": "已取消",
 }
-TASK_TYPE_LABELS = {"inspection": "巡田检查", "maintenance": "沟渠维护"}
+TASK_TYPE_LABELS = {
+    "inspection": "巡田检查",
+    "maintenance": "沟渠维护",
+    "custom": "自定义农事",
+    "follow_up": "问题复查",
+    "management": "农务管理",
+}
 
 _VIEWPORT_LAYOUT = st.components.v2.component(
     "workbench_viewport_layout",
@@ -271,11 +279,34 @@ button[kind="primaryFormSubmit"] {
 [role="tab"][aria-selected="true"] { color:#25634b !important; }
 [role="tab"][aria-selected="true"] .react-aria-SelectionIndicator {
   background:#25634b !important; border-color:#25634b !important; }
+@media (max-width:999px) {
+  button[data-testid^="stBaseButton"],
+  .st-key-compact_workbench [data-testid="stButton"] button,
+  .st-key-workbench_header [data-testid="stButton"] button,
+  .st-key-workbench_header [data-testid="stPopover"] button,
+  .st-key-compact_workbench [data-testid="stFormSubmitButton"] button,
+  .st-key-compact_workbench [data-testid="stDownloadButton"] button {
+    min-height:44px !important;
+  }
+  [data-testid="stSelectbox"] button,
+  [data-testid="stMultiSelect"] button,
+  [data-testid="stDateInput"] button,
+  [data-testid="stNumberInput"] button {
+    min-width:44px !important; min-height:44px !important;
+  }
+}
 @media (max-width:700px) {
   [data-testid="stMainBlockContainer"] { padding:9px 12px 24px !important; }
   .st-key-workbench_header { min-height:0; }
   .st-key-workbench_header p { white-space:normal; }
   .st-key-workbench_header [data-testid="stPopover"] button { width:100%; }
+  [class*="st-key-date_strip"] [data-testid="stHorizontalBlock"] {
+    display:flex !important; flex-wrap:nowrap !important; gap:6px !important;
+    overflow-x:auto; overscroll-behavior-x:contain; padding-bottom:5px;
+  }
+  [class*="st-key-date_strip"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex:0 0 86px !important; width:86px !important; min-width:86px !important;
+  }
 }
 </style>
 """
@@ -1245,12 +1276,19 @@ def _render_field_card(state: FieldStateV3) -> None:
         )
 
 
-def _render_availability_panel(state: FieldStateV3 | None) -> None:
+def _render_availability_panel(state: FieldStateV3 | None, service: WorkbenchServiceV3) -> None:
     """左栏可用时间面板：一名执行者，汇总逐日可用时段。"""
     st.caption("一名执行者")
     days = state.draft.days if state else []
     if not days:
-        st.caption("尚未录入可用时段")
+        has_saved_resource = bool(
+            state
+            and any(
+                event.feedback and event.feedback.kind == "resource" and not event.retracts
+                for event in service.list_events(state.id)
+            )
+        )
+        st.caption("已逐日记录可用时间；详见计划结果" if has_saved_resource else "尚未录入可用时段")
         return
     signatures = {
         (tuple((window.start, window.end) for window in day.intervals), day.resource_minutes)
@@ -1780,15 +1818,13 @@ def _item_detail_rows(item) -> list[tuple[str, str]]:  # type: ignore[no-untyped
         rows.append(
             (
                 "合并出行",
-                f"分组 {item.execution_group_id[:8]} · 总时长 {item.group_duration_minutes} 分钟；"
-                "本项结果单独记录",
+                f"总时长 {item.group_duration_minutes} 分钟；本项结果单独记录",
             )
         )
     snapshot = item.template_snapshot or {}
     content_rows = [
         ("本次目的", snapshot.get("purpose")),
         ("触发原因", snapshot.get("trigger")),
-        ("关联问题编号", snapshot.get("related_issue_id")),
         ("必要条件", "、".join(snapshot.get("necessary_conditions", []))),
         (
             "执行步骤",
@@ -1885,6 +1921,7 @@ def _report_task_action_failure(
     if (
         current.draft_version != previous.draft_version
         or current.fact_version != previous.fact_version
+        or current.task_version != previous.task_version
     ):
         st.session_state[f"notice:{field_id}"] = (
             f"{subject}已保存，但预览未生成：{error}。请点「重新计算计划」后核对。"
@@ -1914,6 +1951,10 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
             st.info(f"关联问题：{issue.title} · {'待处理' if issue.status == 'open' else '已解决'}")
     with st.expander("技术编号"):
         st.markdown(f"**编号**：`{item.task_id}`")
+        if related_issue_id:
+            st.markdown(f"**关联问题编号**：`{related_issue_id}`")
+        if item.execution_group_id:
+            st.markdown(f"**合并出行编号**：`{item.execution_group_id}`")
     st.divider()
     if item.evidence:
         _render_evidence(item)
@@ -1983,6 +2024,9 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
         return
     if item.schedule_status == "cancelled":
         st.caption("这项任务已取消，原因保留在历史记录中。")
+        return
+    if current.task_version != state.task_version:
+        st.info("任务内容已修改。旧版计划仅供查看；请重新计算并采用当前计划后，再记录执行结果。")
         return
     st.markdown("#### 这项任务的操作")
     eligible = item.start_at is not None and item.start_at.astimezone(ZONE) <= _now()
@@ -2354,11 +2398,10 @@ def _render_task_series_form(service: WorkbenchServiceV3, state: FieldStateV3) -
                     "最迟完成日期", value=anchor_date + timedelta(days=6), min_value=anchor_date
                 )
             duration_known = st.checkbox("预计时长已确认", value=False)
-            duration = (
-                int(st.number_input("预计时长（分钟）", min_value=1, max_value=1440, value=30))
-                if duration_known
-                else None
+            duration_value = int(
+                st.number_input("预计时长（分钟）", min_value=1, max_value=1440, value=30)
             )
+            duration = duration_value if duration_known else None
             necessary_conditions_text = st.text_area(
                 "必要条件（每行一项）", height=54, placeholder="例如：现场已确认可进田"
             )
@@ -2847,12 +2890,6 @@ def _render_week(items: list, start: date, *, scope: str, compact_empty: bool = 
             st.caption(f"{day:%m月%d日} · 周{weekday}　暂无安排")
         else:
             empty_days.append(day)
-    unresolved = [
-        item for item in items if not item.start_at and item.schedule_status != "not_generated"
-    ]
-    if unresolved:
-        for item in unresolved:
-            _render_item(item, scope=scope)
     if empty_days:
         spans: list[tuple[date, date]] = []
         for day in empty_days:
@@ -2922,6 +2959,24 @@ def _render_field_issues(service: WorkbenchServiceV3, field_id: str) -> None:
                 st.caption(f"复查确认解决：{issue.resolved_at.astimezone(ZONE):%Y-%m-%d %H:%M}")
 
 
+def _day_workability_label(items: list[PlanItemV2], day: date) -> str:
+    """Describe current candidates without letting completed tasks affect future days."""
+    windows = {
+        item.window_by_date.get(day)
+        for item in items
+        if item.category == "onsite"
+        and item.schedule_status in {"scheduled", "pending", "unscheduled"}
+        and item.applicability == "matched"
+        and item.necessity == "required"
+        and day in item.window_by_date
+    }
+    if "unavailable" in windows:
+        return "现场不可作业"
+    if "pending" in windows:
+        return "作业条件待确认"
+    return "可作业" if windows else "无现场任务"
+
+
 def _render_plan_contents(
     items: list,
     start: date,
@@ -2971,20 +3026,7 @@ def _render_plan_contents(
                 and item.due_date is not None
                 and item.earliest_date <= day <= item.due_date
             ]
-            field_windows = {
-                item.window_by_date.get(day)
-                for item in items
-                if item.category == "onsite"
-                and item.applicability == "matched"
-                and item.necessity == "required"
-                and day in item.window_by_date
-            }
-            if "unavailable" in field_windows:
-                condition = "现场不可作业"
-            elif "pending" in field_windows:
-                condition = "作业条件待确认"
-            else:
-                condition = "可作业" if field_windows else "无现场任务"
+            condition = _day_workability_label(items, day)
             workload = f"{len(scheduled)}项·{minutes}分"
             status = f"{len(unresolved)}项待核对" if unresolved else condition
             selected_marker = "✓ " if selected_day == day else ""
@@ -3157,6 +3199,19 @@ def _preview_matches_state(preview: PlanPreviewV3, state: FieldStateV3) -> bool:
     )
 
 
+def _adopted_display_items(
+    service: WorkbenchServiceV3, field_id: str, adopted: PlanVersionV3
+) -> list[PlanItemV2]:
+    """Show saved completions immediately, while the adopted plan awaits recalculation."""
+    completed_ids = service._completion_facts(field_id, adopted.plan)
+    return [
+        item.model_copy(update={"schedule_status": "completed", "completed": True})
+        if item.task_id in completed_ids and item.schedule_status == "scheduled"
+        else item
+        for item in adopted.items
+    ]
+
+
 def _render_plans(
     service: WorkbenchServiceV3,
     field_id: str,
@@ -3193,14 +3248,14 @@ def _render_plans(
         if preview_id:
             with st.expander("查看当前采用的安排"):
                 _render_plan_contents(
-                    adopted.items,
+                    _adopted_display_items(service, field_id, adopted),
                     adopted.plan.request.start_date,
                     field_id=field_id,
                     scope=f"adopted-{adopted.id}",
                 )
         else:
             _render_plan_contents(
-                adopted.items,
+                _adopted_display_items(service, field_id, adopted),
                 adopted.plan.request.start_date,
                 field_id=field_id,
                 scope=f"adopted-{adopted.id}",
@@ -3771,6 +3826,16 @@ def _render_agent(
                 st.json(
                     [event.model_dump(mode="json", exclude_none=True) for event in proposal.events]
                 )
+        elif proposal.kind == "task_series" and proposal.task_series is not None:
+            series = proposal.task_series
+            for row in task_series_confirmation_rows(series):
+                st.markdown(f"- {row}")
+            dates = [item.occurrence_date for item in expand_task_series_all(series)]
+            if len(dates) > 10:
+                with st.expander("查看全部执行日期", expanded=False):
+                    st.write("、".join(day.isoformat() for day in dates))
+            with st.expander("完整修改（技术详情）", expanded=False):
+                st.json(series.model_dump(mode="json", exclude_none=True))
         else:
             for row in proposal_change_rows(proposal.changes):
                 st.markdown(f"- {row}")
@@ -4075,7 +4140,7 @@ def main() -> None:
         if st.button("编辑当前地块", key=f"edit_field:{field_id}", width="stretch"):
             _open_dialog("field", field_id)
         st.markdown("#### 可用时间")
-        _render_availability_panel(field_state)
+        _render_availability_panel(field_state, service)
         if st.button("调整可用时段", key=f"edit_schedule:{field_id}", width="stretch"):
             _open_dialog("schedule", field_id)
         st.caption("开发验证，适用性待复核")

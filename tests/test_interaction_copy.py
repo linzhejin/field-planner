@@ -6,12 +6,49 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from nongshi.presentation import field_value_label, proposal_change_rows
+from nongshi.presentation import (
+    field_value_label,
+    proposal_change_rows,
+    task_series_confirmation_rows,
+)
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.schema_v3 import AgentProposalV3, AgentRunV3, FactEventInputV3
+from nongshi.tasks_v4 import TaskSeriesV4
 from nongshi.workbench import _proposal_event_description
 
 APP = Path(__file__).resolve().parents[1] / "src/nongshi/app.py"
+
+
+def test_periodic_task_confirmation_shows_every_requested_date_and_execution_content() -> None:
+    series = TaskSeriesV4.model_validate(
+        {
+            "id": "series-1",
+            "field_id": "field-1",
+            "template": {
+                "id": "template-1",
+                "title": "周期巡田",
+                "task_type": "inspection",
+                "category": "onsite",
+                "purpose": "检查苗情和沟渠",
+                "result_fields": ["苗情", "积水", "沟渠是否堵塞"],
+                "completion_standard": "三项均实际检查并记录",
+            },
+            "recurrence": "interval",
+            "anchor_date": "2026-10-27",
+            "end_date": "2026-11-02",
+            "interval_days": 2,
+            "duration_minutes": 30,
+        }
+    )
+
+    rows = "\n".join(task_series_confirmation_rows(series))
+
+    assert "每隔 2 天" in rows
+    assert "2026-10-27、2026-10-29、2026-10-31、2026-11-02" in rows
+    assert "30 分钟" in rows
+    assert "苗情、积水、沟渠是否堵塞" in rows
+    assert "三项均实际检查并记录" in rows
+    assert "interval" not in rows
 
 
 def test_proposal_rows_show_old_and_new_values_without_dropping_unknown_fields() -> None:

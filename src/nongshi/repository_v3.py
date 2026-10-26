@@ -1121,6 +1121,7 @@ class WorkbenchStoreV3:
         operation_id: str,
         proposal_id: str | None = None,
         expected_draft_version: int | None = None,
+        expected_task_version: int | None = None,
     ) -> EventCommitResultV3:
         if not events:
             raise ValueError("至少需要一个已确认事实")
@@ -1131,6 +1132,9 @@ class WorkbenchStoreV3:
         }
         if expected_draft_version is not None:
             request_payload["expected_draft_version"] = expected_draft_version
+        # Task version is an execution-time concurrency guard, not operation identity.
+        # Keeping it out of the hash lets a replay use the original event payload after
+        # the service has already committed and no longer derives the same current token.
         request_hash = self._hash(request_payload)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -1155,6 +1159,8 @@ class WorkbenchStoreV3:
                 )
             if expected_draft_version is not None and state.draft_version != expected_draft_version:
                 raise ValueError("版本冲突：地块档案已变化，请刷新任务详情后重试")
+            if expected_task_version is not None and state.task_version != expected_task_version:
+                raise ValueError("任务版本已变化，请刷新任务后重试")
             next_version = state.fact_version + 1
             now = self._now()
             saved_events: list[FactEventV3] = []

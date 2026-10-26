@@ -153,6 +153,28 @@ def test_custom_task_missing_duration_remains_visible_but_unplanned() -> None:
     assert "duration_minutes" in planned[instance.id].missing_fields
 
 
+def test_custom_task_missing_purpose_or_completion_standard_is_not_scheduled() -> None:
+    series = TaskSeriesV4(
+        id="series-incomplete-details",
+        field_id="A",
+        template={"id": "custom-v1", "title": "待补充信息的农事", "category": "offsite"},
+        recurrence="once",
+        anchor_date=START,
+        duration_minutes=30,
+        earliest_date=START,
+        due_date=START,
+    )
+    instance = expand_task_series(series, START)[0]
+    request = request_v2(inspection_requested=False, maintenance_need_confirmed=False)
+    request.task_instances_v4 = [instance]
+
+    planned = items(build_plan_v2(request))
+
+    assert planned[instance.id].schedule_status == "pending"
+    assert planned[instance.id].reason_code == "task_details_pending"
+    assert {"purpose", "completion_standard"} <= set(planned[instance.id].missing_fields)
+
+
 @pytest.mark.parametrize(
     ("preference", "different_days"),
     [("early", False), ("balanced", True), ("concentrated", False)],
@@ -220,6 +242,38 @@ def test_recurring_maintenance_keeps_existing_business_confirmation_gates() -> N
     assert planned["A-M"].schedule_status == "not_generated"
     assert planned[instance.id].schedule_status == "pending"
     assert "maintenance_need_confirmed" in planned[instance.id].missing_fields
+
+
+def test_user_created_inspection_series_confirms_need_when_profile_is_blank() -> None:
+    series = TaskSeriesV4(
+        id="requested-inspection",
+        field_id="A",
+        template={
+            "id": "inspection-v1",
+            "title": "周期巡田",
+            "task_type": "inspection",
+            "category": "onsite",
+            "purpose": "检查苗情与排水情况",
+            "completion_standard": "实际检查并记录结果",
+        },
+        recurrence="once",
+        anchor_date=START,
+        duration_minutes=30,
+    )
+    instance = expand_task_series(series, START)[0]
+    request = request_v2(inspection_requested=None, maintenance_need_confirmed=False)
+    request.task_instances_v4 = [instance]
+    for later_day in request.days[1:]:
+        later_day.site_workable = None
+        later_day.weather_workable = None
+
+    planned = items(build_plan_v2(request))
+
+    assert planned[instance.id].necessity == "required"
+    assert planned[instance.id].schedule_status == "scheduled"
+    assert "inspection_requested" not in planned[instance.id].missing_fields
+    assert not any(":site_workability" in value for value in planned[instance.id].missing_fields)
+    assert planned["A-I"].schedule_status == "not_generated"
 
 
 def test_confirmed_hubei_province_with_suffix_remains_in_scope() -> None:

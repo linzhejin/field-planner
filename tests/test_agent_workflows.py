@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -814,6 +814,91 @@ def test_first_three_and_third_to_seventh_days_are_grounded_from_plan_start() ->
         )
         == expected
     )
+
+
+def test_month_day_without_year_is_grounded_inside_current_plan_window() -> None:
+    received = datetime(2026, 10, 27, 10, 35, tzinfo=ZONE)
+    assert AgentServiceV3._mentioned_days(
+        "10月29日只能14:00到15:00有空", received, date(2026, 10, 27)
+    ) == {date(2026, 10, 29)}
+    assert AgentServiceV3._mentioned_days(
+        "1月2日有空", datetime(2026, 12, 30, 10, tzinfo=ZONE), date(2026, 12, 30)
+    ) == {date(2027, 1, 2)}
+
+
+def test_declared_cycle_uses_same_fields_as_task_proposal(tmp_path) -> None:
+    quote = (
+        "请新增周期巡田：从2026年10月19日到10月25日，每隔2天巡一次，"
+        "每次30分钟。每次记录苗情、积水、沟渠是否堵塞。"
+    )
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["task_series"],
+                "task_series_quote": quote,
+                "task_series": {
+                    "name": "周期巡田",
+                    "start_date": "2026-10-19",
+                    "end_date": "2026-10-25",
+                    "interval_days": 2,
+                    "duration_minutes": 30,
+                    "purpose": "检查苗情和沟渠",
+                    "record_items": ["苗情", "积水", "沟渠是否堵塞"],
+                    "completion_criteria": "三项均实际检查并记录",
+                },
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", quote, received_at=datetime(2026, 10, 18, 10, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.business_outcome in {"awaiting_confirmation", "partial"}, result.text
+    assert result.proposals, result.text
+    series = result.proposals[0].task_series
+    assert series is not None
+    assert series.template.task_type == "inspection"
+    assert series.recurrence == "interval"
+    assert series.template.result_fields == ["苗情", "积水", "沟渠是否堵塞"]
+
+
+def test_declared_cycle_accepts_checklist_and_completion_rule(tmp_path) -> None:
+    quote = (
+        "请新增周期巡田：从2026年10月19日到10月25日，每隔2天巡一次，"
+        "每次30分钟。每次记录苗情、积水、沟渠是否堵塞。"
+    )
+    answer = model_calls(
+        (
+            "declare_request",
+            {
+                "field_id": "field-1",
+                "actions": ["task_series"],
+                "task_series_quote": quote,
+                "task_series": {
+                    "name": "周期巡田",
+                    "start_date": "2026-10-19",
+                    "end_date": "2026-10-25",
+                    "interval_days": 2,
+                    "duration_minutes": 30,
+                    "checklist": ["苗情", "积水", "沟渠是否堵塞"],
+                    "completion_rule": "三项均实际检查并记录才算完成",
+                },
+            },
+        )
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run("field-1", quote, received_at=datetime(2026, 10, 18, 10, tzinfo=ZONE))
+    finally:
+        agent.close()
+    assert result.proposals, result.text
+    series = result.proposals[0].task_series
+    assert series is not None
+    assert series.template.task_type == "inspection"
+    assert series.template.result_fields == ["苗情", "积水", "沟渠是否堵塞"]
 
 
 def test_zero_resource_minutes_for_five_days_propose_five_distinct_facts(tmp_path) -> None:

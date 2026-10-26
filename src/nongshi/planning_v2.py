@@ -443,11 +443,18 @@ def _task_instance_item(
     governed = instance.template.task_type in {"inspection", "maintenance"}
     if governed:
         applicability, necessity, missing = _task_state(plot, instance.template.task_type)
+        if instance.template.task_type == "inspection" and plot.inspection_requested is None:
+            # Saving a concrete inspection instance is an explicit request for that task.
+            # Keep an earlier explicit refusal distinct and preserve all scope checks.
+            necessity = "required"
+            missing = [field for field in missing if field != "inspection_requested"]
     else:
         applicability, necessity, missing = "matched", "required", []
     missing.extend(instance.missing_fields)
     windows: dict[date, str] = {}
     for day in request.days:
+        if day.day < instance.earliest_date or day.day > instance.due_date:
+            continue
         if necessity != "required" or applicability != "matched":
             continue
         if instance.template.category == "offsite":
@@ -761,6 +768,7 @@ def build_plan_v2(
         for item in sorted(items, key=order_key)
         if not item.completed
         and item.schedule_status not in {"not_generated", "scheduled", "cancelled"}
+        and item.reason_code != "task_details_pending"
         and item.applicability == "matched"
         and item.necessity == "required"
         and item.duration_minutes is not None

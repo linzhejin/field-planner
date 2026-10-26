@@ -1223,7 +1223,9 @@ class AgentServiceV3:
                                         {
                                             "field_id": field_id,
                                             "source_quote": quote,
-                                            **declaration.task_series,
+                                            **self._normalize_declared_task_series(
+                                                declaration.task_series, quote
+                                            ),
                                         },
                                     )
                                 )
@@ -1603,6 +1605,57 @@ class AgentServiceV3:
         return found
 
     @staticmethod
+    def _normalize_declared_task_series(
+        declared: dict[str, object], source_quote: str
+    ) -> dict[str, object]:
+        """Map the first-turn draft into the validated proposal contract."""
+        normalized = dict(declared)
+        aliases = {
+            "name": "title",
+            "start_date": "anchor_date",
+            "record_items": "result_fields",
+            "checklist": "result_fields",
+            "completion_criteria": "completion_standard",
+            "completion_rule": "completion_standard",
+        }
+        for alias, canonical in aliases.items():
+            if alias not in normalized:
+                continue
+            value = normalized[alias]
+            if canonical not in normalized:
+                normalized[canonical] = value
+            if normalized[canonical] == value:
+                normalized.pop(alias)
+        if "recurrence" not in normalized:
+            normalized["recurrence"] = (
+                "interval"
+                if normalized.get("interval_days") and normalized.get("end_date")
+                else "dates"
+                if normalized.get("selected_dates")
+                else "once"
+            )
+        title = str(normalized.get("title") or "")
+        if "task_type" not in normalized:
+            if re.fullmatch(r".{0,6}巡田(?:检查)?", title) and "巡田" in source_quote:
+                normalized["task_type"] = "inspection"
+            elif re.fullmatch(r"(?:既有)?沟渠(?:清理|维护)", title) and re.search(
+                r"沟渠|清沟", source_quote
+            ):
+                normalized["task_type"] = "maintenance"
+        if "result_fields" not in normalized:
+            steps = normalized.get("steps")
+            if (
+                isinstance(steps, list)
+                and steps
+                and all(
+                    isinstance(step, str) and step.startswith("记录") and step[2:] in source_quote
+                    for step in steps
+                )
+            ):
+                normalized["result_fields"] = [step[2:] for step in steps]
+        return normalized
+
+    @staticmethod
     def _clock_minutes(source: str) -> list[int]:
         """Only exact user clock expressions can ground resource interval endpoints."""
         values: list[int] = []
@@ -1750,6 +1803,15 @@ class AgentServiceV3:
             for raw in re.findall(r"(?:前面|前)([一二三四五六七1-7])天", quote):
                 days.update(plan_start + timedelta(days=index) for index in range(ordinal(raw)))
         days.update(AgentServiceV3._explicit_dates(quote))
+        for month, day in re.findall(r"(?<!\d)(\d{1,2})月(\d{1,2})日(?!\d)", quote):
+            years = (plan_start.year, plan_start.year + 1) if plan_start else (local_day.year,)
+            for year in years:
+                try:
+                    mentioned = date(year, int(month), int(day))
+                except ValueError:
+                    continue
+                if plan_start is None or plan_start <= mentioned <= plan_start + timedelta(days=6):
+                    days.add(mentioned)
         return days
 
     @staticmethod
