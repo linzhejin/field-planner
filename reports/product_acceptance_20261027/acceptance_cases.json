@@ -1,0 +1,52 @@
+{
+  "version": "product-acceptance-v1",
+  "classification": "公开模拟农情；依据运行前书面方案整理，但本文件成稿于浏览器主线之后，不属于预注册答案或独立农艺答案",
+  "business_clock": "2026-10-27T08:00:00+08:00",
+  "cases": [
+    {
+      "id": "RICH",
+      "purpose": "周期巡田、问题处理、复查、时间调整与历史恢复",
+      "field": {"province": "湖北省", "crop": "油菜", "stage": "苗期"},
+      "user_confirmed_inputs": {
+        "inspection_dates": ["2026-10-27", "2026-10-29", "2026-10-31"],
+        "inspection_duration_minutes": 30,
+        "maintenance_duration_minutes": 45,
+        "maintenance_purpose": "清理既有沟渠",
+        "resource_windows": "由用户逐日确认；不从天气推断",
+        "weather_location": "由用户从候选点明确选择"
+      },
+      "must_hold": [
+        "三次巡田实例具有不同稳定 ID，刷新和重排不重复生成",
+        "完成记录保持锁定，维护完成不自动代表积水解决",
+        "复查结果和再次发生的问题分别保存，并保留历史关联",
+        "用户确认事实后生成预览；采用计划仍需明确操作",
+        "同一时段同一人不能安排重叠任务"
+      ],
+      "must_not": ["预报自动证明现场积水", "跳过需求确认", "跨地块混排人员"]
+    },
+    {
+      "id": "SPARSE",
+      "purpose": "没有实际需求时不凑满七天",
+      "field": {"province": "湖北省", "crop": "油菜", "stage": "苗期"},
+      "user_confirmed_inputs": {"inspection_requested": false, "maintenance_needed": false},
+      "must_hold": ["七天仍可查看", "没有依据和需求的日期保持空白"],
+      "must_not": ["自动生成七项任务", "把天气风险当作已确认现场问题"]
+    },
+    {
+      "id": "UNKNOWN_FAILURE",
+      "purpose": "缺项和服务故障下保留已保存事实",
+      "field": {"province": "湖北省", "crop": "油菜", "stage": "苗期"},
+      "user_confirmed_inputs": {
+        "site_condition": null,
+        "maintenance_purpose": null,
+        "resource_windows": null
+      },
+      "must_hold": [
+        "相关任务显示具体缺项，其他已满足条件事项仍可继续",
+        "天气或模型失败时已确认事实和草稿仍可恢复",
+        "失败不得显示为已采用或已完成"
+      ],
+      "must_not": ["猜测人员时段", "补造维护目的", "从缺失天气推断可进田"]
+    }
+  ]
+}

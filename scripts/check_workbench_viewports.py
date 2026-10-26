@@ -1,6 +1,7 @@
 """Read-only browser smoke check for the current seven-day workbench.
 
 Requires Playwright and an already running Streamlit app with a saved field.
+Uses Playwright Chromium, or installed Microsoft Edge when its browser bundle is absent.
 It does not create fields, call the model, or change saved plans. Example:
 
     python scripts/check_workbench_viewports.py --url http://127.0.0.1:8501 \
@@ -11,8 +12,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 VIEWPORTS = [(1440, 900), (1158, 714), (900, 844), (390, 844), (360, 800)]
@@ -27,7 +31,12 @@ def main() -> int:
 
     rows: list[dict[str, object]] = []
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        try:
+            browser = playwright.chromium.launch(headless=True)
+        except PlaywrightError as exc:
+            if "Executable doesn't exist" not in str(exc):
+                raise
+            browser = playwright.chromium.launch(headless=True, channel="msedge")
         for width, height in VIEWPORTS:
             page = browser.new_page(viewport={"width": width, "height": height})
             page.goto(args.url, wait_until="networkidle")
@@ -37,16 +46,35 @@ def main() -> int:
             page.wait_for_timeout(600)
             body = page.locator("body").inner_text()
             has_workbench = "今日执行台" in body
-            week_button = page.get_by_role("button", name="整周清单")
-            week_button.click()
-            page.wait_for_timeout(600)
-            has_week = "整周清单" in page.locator("body").inner_text()
-            page.get_by_role("button", name="今日执行台").click()
+            ui_retries = 0
+            day_heading = page.get_by_role(
+                "heading", name=re.compile(r"^(今日|\d{2}月\d{2}日)安排$")
+            )
+            day_heading.wait_for(state="visible", timeout=15000)
+            for attempt in range(2):
+                try:
+                    page.get_by_role("button", name="整周清单").click(timeout=10000)
+                    day_heading.wait_for(state="hidden", timeout=10000)
+                    page.get_by_role("button", name="今日执行台").click(timeout=10000)
+                    day_heading.wait_for(state="visible", timeout=10000)
+                    break
+                except PlaywrightTimeoutError:
+                    if attempt:
+                        raise
+                    # A Streamlit rerender can replace the button tree between clicks.
+                    # Record the first failed attempt and retry in a new browser session.
+                    ui_retries = 1
+                    page.reload(wait_until="networkidle")
+                    if width < 1000:
+                        page.get_by_role("tab", name="计划结果").click()
+                    day_heading.wait_for(state="visible", timeout=15000)
+            has_week = True
             page.wait_for_timeout(600)
             dates = page.locator('[class*="st-key-date_strip"] [data-testid="stButton"] button')
             date_count = dates.count()
             if date_count >= 2:
                 dates.nth(1).click()
+                page.wait_for_timeout(800)
             page.screenshot(path=str(args.output_dir / f"workbench_{width}x{height}.png"))
             geometry = page.evaluate(
                 """() => ({
@@ -66,6 +94,7 @@ def main() -> int:
                     "workbench_visible": has_workbench,
                     "week_view_visible": has_week,
                     "date_buttons": date_count,
+                    "ui_retries": ui_retries,
                     "horizontal_overflow": geometry["content"] > geometry["viewport"] + 1,
                     "small_button_labels": geometry["smallButtons"],
                 }
