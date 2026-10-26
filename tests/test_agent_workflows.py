@@ -1064,6 +1064,31 @@ def test_read_only_preview_ignores_spurious_declared_mutation(tmp_path) -> None:
     assert not result.proposals
 
 
+def test_preview_saved_adjustment_is_read_only_even_if_model_repeats_resource_intent(
+    tmp_path,
+) -> None:
+    answer = model_calls(
+        (
+            "declare_request",
+            {"field_id": "field-1", "actions": ["resource", "preview"]},
+        )
+    )
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=answer))
+    try:
+        result = agent.run(
+            "field-1",
+            "请根据刚保存的反馈预览调整。",
+            received_at=datetime(2026, 10, 18, 10, 0, tzinfo=ZONE),
+        )
+    finally:
+        agent.close()
+    assert result.business_outcome == "preview_ready"
+    assert result.previews
+    assert any(tool.name == "preview_plan" for tool in result.tools)
+    assert not result.proposals
+    assert service.list_events("field-1") == []
+
+
 def test_resource_clock_in_unrelated_completion_clause_cannot_ground_interval(tmp_path) -> None:
     answer = model_calls(
         (

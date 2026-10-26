@@ -500,11 +500,13 @@ class AgentServiceV3:
             )
         if not user_message.strip():
             return finish("invalid_response", error_message="请输入要处理的内容。")
+        # “预览调整”描述的是查看已保存改动；“调整到明天”才是新的写入请求。
+        intent_text = re.sub(r"(?:预览调整|调整预览)(?=$|[。！？.!?，,]|后)", "预览", user_message)
         change_requested = bool(
             re.search(
                 r"(?<!已)(?<!已经)(?<!刚)保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理|"
                 r"调整|修改|重排|(?:只有|仅有|只剩|有空).*?(?:上午|下午|晚上|\d{1,2}点)",
-                user_message,
+                intent_text,
             )
         )
         completion_only_requested = bool(
