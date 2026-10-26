@@ -1,6 +1,7 @@
 """Plan history must survive a process restart without rewriting prior versions."""
 
 import json
+import sqlite3
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from test_planning_v2 import request_v2
 from nongshi.planning import apply_feedback, build_plan
 from nongshi.planning_v2 import apply_feedback_v2, build_plan_v2
 from nongshi.repository import PlanStore, PlanStoreV2
+from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.schema import Feedback
 from nongshi.schema_v2 import LOCAL_ZONE, FeedbackV2, PlanVersionV2
 
@@ -93,6 +95,33 @@ def test_v2_history_persists_without_rewriting_legacy_snapshots(tmp_path: Path) 
     assert PlanStore(database).load(legacy.id) == legacy
     assert v2_store.latest() == modern
     assert v2_store.history(modern.id) == [modern]
+
+
+def test_legacy_database_is_backed_up_once_before_workbench_upgrade(tmp_path: Path) -> None:
+    database = tmp_path / "legacy.sqlite3"
+    legacy = build_plan(demo_request())
+    modern = build_plan_v2(request_v2())
+    PlanStore(database).save(legacy)
+    PlanStoreV2(database).save(modern)
+
+    backup = database.with_name(f"{database.name}.pre-open-ga.bak")
+    assert not backup.exists()
+    WorkbenchStoreV3(database)
+    assert backup.exists()
+    first_backup = backup.read_bytes()
+    with sqlite3.connect(backup) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+    assert "plan_versions" in tables
+    assert "plan_versions_v2" in tables
+    assert "fields_v3" not in tables
+
+    WorkbenchStoreV3(database)
+    assert backup.read_bytes() == first_backup
+    assert PlanStore(database).load(legacy.id) == legacy
+    assert PlanStoreV2(database).latest() == modern
 
 
 def test_v2_history_rejects_missing_parent(tmp_path: Path) -> None:

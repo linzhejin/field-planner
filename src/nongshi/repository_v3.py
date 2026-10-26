@@ -230,7 +230,17 @@ class WorkbenchStoreV3:
                 row[0]
                 for row in source.execute("SELECT name FROM sqlite_master WHERE type='table'")
             }
-            if "fields_v3" not in existing or "agent_proposals_v3" in existing:
+            project_tables = {"plan_versions", "plan_versions_v2", "fields_v3"}
+            current_tables = {
+                "fields_v3",
+                "agent_proposals_v3",
+                "task_series_v4",
+                "task_instances_v4",
+                "task_execution_groups_v4",
+                "field_issues_v4",
+                "field_issue_events_v4",
+            }
+            if not existing.intersection(project_tables) or current_tables.issubset(existing):
                 return
             with sqlite3.connect(backup_path, timeout=1.0) as target:
                 source.backup(target)
