@@ -16,7 +16,6 @@ import re
 from pathlib import Path
 
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 VIEWPORTS = [(1440, 900), (1158, 714), (900, 844), (390, 844), (360, 800)]
@@ -43,38 +42,18 @@ def main() -> int:
             if width < 1000:
                 page.get_by_role("tab", name="计划结果").click()
             page.get_by_text("今日执行台", exact=False).first.wait_for()
-            page.wait_for_timeout(600)
             body = page.locator("body").inner_text()
             has_workbench = "今日执行台" in body
-            ui_retries = 0
             day_heading = page.get_by_role(
                 "heading", name=re.compile(r"^(今日|\d{2}月\d{2}日)安排$")
             )
             day_heading.wait_for(state="visible", timeout=15000)
-            for attempt in range(2):
-                try:
-                    page.get_by_role("button", name="整周清单").click(timeout=10000)
-                    day_heading.wait_for(state="hidden", timeout=10000)
-                    page.get_by_role("button", name="今日执行台").click(timeout=10000)
-                    day_heading.wait_for(state="visible", timeout=10000)
-                    break
-                except PlaywrightTimeoutError:
-                    if attempt:
-                        raise
-                    # A Streamlit rerender can replace the button tree between clicks.
-                    # Record the first failed attempt and retry in a new browser session.
-                    ui_retries = 1
-                    page.reload(wait_until="networkidle")
-                    if width < 1000:
-                        page.get_by_role("tab", name="计划结果").click()
-                    day_heading.wait_for(state="visible", timeout=15000)
-            has_week = True
-            page.wait_for_timeout(600)
             dates = page.locator('[class*="st-key-date_strip"] [data-testid="stButton"] button')
             date_count = dates.count()
             if date_count >= 2:
                 dates.nth(1).click()
                 page.wait_for_timeout(800)
+                day_heading.wait_for(state="visible", timeout=15000)
             page.screenshot(path=str(args.output_dir / f"workbench_{width}x{height}.png"))
             geometry = page.evaluate(
                 """() => ({
@@ -88,25 +67,49 @@ def main() -> int:
                     .map(el => (el.innerText || el.ariaLabel || '').slice(0, 40))
                 })"""
             )
+            page.close()
+
+            # A fresh browser session avoids relying on Streamlit's one-pass
+            # button labels while switching back and forth between the views.
+            week_page = browser.new_page(viewport={"width": width, "height": height})
+            week_page.goto(args.url, wait_until="networkidle")
+            if width < 1000:
+                week_page.get_by_role("tab", name="计划结果").click()
+            week_heading = week_page.get_by_role(
+                "heading", name=re.compile(r"^(今日|\d{2}月\d{2}日)安排$")
+            )
+            week_heading.wait_for(state="visible", timeout=15000)
+            week_page.get_by_role("button", name="整周清单").click()
+            week_heading.wait_for(state="hidden", timeout=15000)
+            week_page.wait_for_timeout(600)
+            has_week = not week_heading.is_visible()
+            week_page.close()
             rows.append(
                 {
                     "viewport": f"{width}x{height}",
                     "workbench_visible": has_workbench,
                     "week_view_visible": has_week,
                     "date_buttons": date_count,
-                    "ui_retries": ui_retries,
+                    "ui_retries": 0,
                     "horizontal_overflow": geometry["content"] > geometry["viewport"] + 1,
                     "small_button_labels": geometry["smallButtons"],
                 }
             )
-            page.close()
         browser.close()
 
     (args.output_dir / "viewport_results.json").write_text(
         json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(json.dumps(rows, ensure_ascii=False, indent=2))
-    return int(any(not row["workbench_visible"] or row["horizontal_overflow"] for row in rows))
+    return int(
+        any(
+            not row["workbench_visible"]
+            or not row["week_view_visible"]
+            or row["date_buttons"] != 7
+            or row["horizontal_overflow"]
+            for row in rows
+        )
+    )
 
 
 if __name__ == "__main__":

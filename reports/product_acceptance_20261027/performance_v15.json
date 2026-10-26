@@ -1,0 +1,24 @@
+{
+  "code_commit": "7593b477ee5191587af56716871f3dd383bfb3c4",
+  "scope": "sequential independent evaluate_field with SQLite reads; no model or weather network",
+  "measurements": {
+    "1": {
+      "samples": 30,
+      "median_ms": 36.32,
+      "p95_ms": 40.44,
+      "max_ms": 43.8
+    },
+    "3": {
+      "samples": 30,
+      "median_ms": 48.64,
+      "p95_ms": 73.24,
+      "max_ms": 76.89
+    },
+    "10": {
+      "samples": 30,
+      "median_ms": 102.53,
+      "p95_ms": 120.91,
+      "max_ms": 128.65
+    }
+  }
+}

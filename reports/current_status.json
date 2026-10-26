@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T01:12:52.204318+08:00",
+  "updated_at": "2026-10-27T01:42:47.950038+08:00",
   "evaluation": {
-    "run_id": "sealed-internal-regression-v14-20261027",
-    "sealed_at": "2026-10-26T16:37:56.332438+00:00",
-    "code_commit": "5a65b592e3047d29357bdbd80bc5a942f47653c1",
+    "run_id": "sealed-internal-regression-v15-20261027",
+    "sealed_at": "2026-10-26T17:24:36.251821+00:00",
+    "code_commit": "7593b477ee5191587af56716871f3dd383bfb3c4",
     "classification": "internal_regression_after_v1",
-    "report": "reports/internal_regression_v14_20261027.md",
+    "report": "reports/internal_regression_v15_20261027.md",
     "expected": {
       "conclusion": "passed",
       "main": {
@@ -14,15 +14,16 @@
           "trials": 30,
           "verdicts": {
             "failed": 20,
-            "passed": 1,
-            "insufficient_evidence": 9
+            "insufficient_evidence": 9,
+            "passed": 1
           }
         },
         "g2": {
           "trials": 30,
           "verdicts": {
-            "failed": 21,
-            "passed": 9
+            "failed": 20,
+            "passed": 8,
+            "insufficient_evidence": 2
           }
         },
         "g3": {
@@ -41,12 +42,12 @@
       "hard_violations": 0
     },
     "artifacts": {
-      "seal.json": "ca8acd3062e9888d3cb87de0828cd7070d854dd9b45a97d9d8b389b7fe88e000",
-      "first_attempts.json": "e58b72090e5b670a33393cd025b00890568eb6ed96207c094523c92c9f636277",
-      "first_scores.json": "515baea382a5e3e4b4ddaccff77d42bad09d9a96fd6ce836340cfccf77ad9272",
-      "private_group_map.json": "aa783b94fc489978a2272fcf6f7b67409fca470f0cc4d4663a16b27573ea14d1",
-      "run_integrity.json": "0abe399211e0c1283467a5d8f8c5363b005f9907e24841e011ed22fc9ce8b96c",
-      "semantic_reviews.json": "de4495b51aa014b2b357147adf5924a23786db90b5a8497a8ae0483079d787eb"
+      "seal.json": "ff46747fac01544decac589728a520601aa1da22d592fd57870fe38b5c978f01",
+      "first_attempts.json": "f8a2a1c381fc0d1ffe0d52b395fc0a310eb4cc89eae031bf5e3703a3660732d5",
+      "first_scores.json": "2547f36005f1ed4a5887f2355e9d23a8d9e05a03f9546f42a23b8b394bc3730d",
+      "private_group_map.json": "4ae9254f710f32fbc8493137f60229669a4f2fc19414ea0fd15a9597d6d086c3",
+      "run_integrity.json": "bd1955d4659e1dff7b4dbbcf249b4ef78608189635b8280ad8651425f00ce04c",
+      "semantic_reviews.json": "812b8971a0d1d0798822c5c2e44718001d278dfb9ec643ca790ae4bdd6cd480d"
     }
   },
   "public_artifacts": {
@@ -54,16 +55,20 @@
     "reports/ui_interaction_review_20261024.md": "4215756927d9a5086bbb6c492d1f3b5d33190f509a14827e7a6cfa981f96edcf",
     "reports/internal_regression_v13_20261027.md": "84fc24bff824219bf9bedca8168296cb1a8c1e367aec3c5c0651d14fa44bef05",
     "reports/internal_regression_v14_20261027.md": "a149eeae2452cf7572ed047112459f4f6059a7a94f92fbbb4c5007a525ced597",
-    "reports/product_acceptance_20261027.md": "08bba09ee00e721452f6b68de60b91bf8c7c0ce8cce4639065349f4492478a51",
+    "reports/product_acceptance_20261027.md": "889a10b585fc71b3b13976df2f8e654ba6ad6018c373196a64e78f4521adf3dc",
     "reports/product_acceptance_20261027/acceptance_cases.json": "03cf12f40e09aec4de09fadf5691ff725b0fcb60dc23d36262a8aa28cf3557a9",
-    "reports/product_acceptance_20261027/viewport_results.json": "d6eee4ce2d629f09912200345396a73b44bc0a9d428a5b32fd9d78061af44f16"
+    "reports/product_acceptance_20261027/viewport_results.json": "b6c09f276baafaaec9088d117caa28019a3f7160ef6af8c00f1283004798f581",
+    "reports/internal_regression_v15_20261027.md": "7895948ba387e34059b1b2da2fe02e0b582db90dc05c8b40e3a7a9f2a0c56d77",
+    "reports/product_acceptance_20261027/migration_twice_result.json": "aeb67aaca55f842ce4bc8ac65006942ea893b7e2094f44f5d419fb3df2e047e1",
+    "reports/product_acceptance_20261027/no_key_v15_result.json": "4016e3e59be94055bb22c14b056d031eed6d9d693c662fc3b527f00412172044",
+    "reports/product_acceptance_20261027/performance_v15.json": "50ab34edb2677b58ccbbb37be474050851770d8cf1e50f4caaee9091639a4ef1"
   },
   "source_tests": {
-    "passed": 644,
-    "code_commit": "5a65b592e3047d29357bdbd80bc5a942f47653c1",
+    "passed": 645,
+    "code_commit": "7593b477ee5191587af56716871f3dd383bfb3c4",
     "date": "2026-10-27",
     "report": "reports/product_acceptance_20261027.md",
-    "verification": "full pytest rerun on frozen runtime; docs and read-only browser script changed afterward"
+    "verification": "full pytest on frozen runtime; later edits only to reports and read-only viewport script"
   },
   "scope": {
     "independent_holdout": false,
@@ -87,6 +92,11 @@
       "date": "2026-10-27",
       "report": "reports/product_acceptance_20261027.md",
       "scope": "public synthetic browser and live-service acceptance; product-wide evidence incomplete"
+    },
+    {
+      "date": "2026-10-27",
+      "report": "reports/internal_regression_v15_20261027.md",
+      "scope": "legacy SQLite backup fix and preserved 108 first-run internal regression records"
     }
   ]
 }

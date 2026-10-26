@@ -4,7 +4,7 @@
     "workbench_visible": true,
     "week_view_visible": true,
     "date_buttons": 7,
-    "ui_retries": 1,
+    "ui_retries": 0,
     "horizontal_overflow": false,
     "small_button_labels": [
       "真实地块\n\nexpand_more",
@@ -87,7 +87,7 @@
     "workbench_visible": true,
     "week_view_visible": true,
     "date_buttons": 7,
-    "ui_retries": 1,
+    "ui_retries": 0,
     "horizontal_overflow": false,
     "small_button_labels": [
       "真实地块\n\nexpand_more",
