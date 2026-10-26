@@ -31,6 +31,12 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def public_digest(path: Path) -> str:
+    """Hash published text consistently across LF and CRLF checkouts."""
+    content = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()
+
+
 def render_summary(manifest: dict) -> str:
     evaluation = manifest["evaluation"]
     expected = evaluation["expected"]
@@ -158,7 +164,7 @@ def check_progress(
             errors.append("SUMMARY_DRIFT: STATUS.md 核心摘要与 current_status.json 不一致")
         for relative, expected_hash in manifest["public_artifacts"].items():
             path = root / relative
-            if not path.is_file() or digest(path) != expected_hash:
+            if not path.is_file() or public_digest(path) != expected_hash:
                 errors.append(f"PUBLIC_HASH_MISMATCH: {relative}")
         if evaluation["report"] not in manifest["public_artifacts"]:
             errors.append("REPORT_UNPINNED: 当前报告未登记文件指纹")
@@ -187,7 +193,7 @@ def check_progress(
                 errors.append(f"WORKTREE_SUMMARY_DRIFT: {other} 的进度文字与登记摘要不一致")
             for relative, expected_hash in manifest["public_artifacts"].items():
                 path = other / relative
-                if not path.is_file() or digest(path) != expected_hash:
+                if not path.is_file() or public_digest(path) != expected_hash:
                     errors.append(f"WORKTREE_PUBLIC_HASH_MISMATCH: {path}")
         except (OSError, ValueError):
             errors.append(f"WORKTREE_INVALID: {other} 的当前进度记录无法读取")

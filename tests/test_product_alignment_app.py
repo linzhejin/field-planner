@@ -151,31 +151,6 @@ def test_edit_buffer_survives_leaving_and_marks_unsaved(tmp_path, monkeypatch): 
     assert service.get_field("audit-field").draft.profile.name == "尚未保存的名字"
 
 
-def test_explicit_discard_is_available_when_editor_becomes_dirty(tmp_path, monkeypatch):
-    app, _ = ready_app(tmp_path, monkeypatch)
-    app.button(key="edit_field:audit-field").click().run()
-    app.text_input(key="field_name:audit-field:1").set_value("放弃前的名字").run()
-
-    discard = app.button(key="discard:field:audit-field")
-
-    assert discard.label == "放弃未保存修改，重新载入"
-
-
-def test_explicit_discard_resets_field_widgets_to_saved_profile(tmp_path, monkeypatch):
-    app, service = ready_app(tmp_path, monkeypatch)
-    app.button(key="edit_field:audit-field").click().run()
-    app.text_input(key="field_name:audit-field:1").set_value("放弃前的名字").run()
-
-    app.button(key="discard:field:audit-field").click().run()
-
-    assert not app.exception
-    assert service.get_field("audit-field").draft.profile.name == "审查田"
-    assert app.session_state["editor_generation:field:audit-field"] == 1
-    assert app.text_input(key="field_name:audit-field:1:reset1").value == "审查田"
-    header_text = "\n".join(element.value for element in [*app.markdown, *app.caption])
-    assert "有未保存修改" not in header_text
-
-
 def test_plan_lists_seven_dates_and_readable_missing_information(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
     app, service = ready_app(tmp_path, monkeypatch)
     app.button(key="preview_plan:audit-field").click().run()
@@ -271,39 +246,6 @@ def test_observation_question_opens_matching_fact_editor(tmp_path, monkeypatch):
     app.button(key="quick_save_observation:audit-field:0").click().run()
     assert not app.exception
     assert service.get_field("audit-field").fact_version == 1
-
-
-def test_quick_observation_can_be_cancelled_without_saving(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
-    app, service = ready_app(tmp_path, monkeypatch)
-    app.button(key="quick_observe:audit-field").click().run()
-    assert app.button(key="quick_cancel_feedback:audit-field")
-
-    app.selectbox(key="quick_observation_field:audit-field").set_value("积水情况").run()
-    app.button(key="quick_cancel_feedback:audit-field").click().run()
-
-    assert not app.exception
-    assert app.session_state.get("quick_feedback_kind:audit-field") is None
-    assert service.get_field("audit-field").fact_version == 0
-    assert not any(
-        select.key and select.key.startswith("quick_observation_field:") for select in app.selectbox
-    )
-
-    app.button(key="quick_observe:audit-field").click().run()
-    assert app.selectbox(key="quick_observation_field:audit-field:reset1").value == "沟渠连通"
-
-
-def test_saved_quick_observation_closes_feedback_form(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
-    app, service = ready_app(tmp_path, monkeypatch)
-    app.button(key="quick_observe:audit-field").click().run()
-    app.selectbox(key="quick_observation_value:audit-field:沟渠连通").set_value("通畅")
-    app.button(key="quick_save_observation:audit-field:0").click().run()
-
-    assert not app.exception
-    assert service.get_field("audit-field").fact_version == 1
-    assert app.session_state.get("quick_feedback_kind:audit-field") is None
-    assert not any(
-        select.key and select.key.startswith("quick_observation_field:") for select in app.selectbox
-    )
 
 
 def test_task_detail_edits_preference_then_requires_preview_adoption(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
@@ -402,7 +344,7 @@ def test_task_edit_preview_failure_reports_saved_change_and_recovery(tmp_path, m
     app.button(key=f"task_edit:{task.task_id}").click().run()
     assert service.get_field("audit-field").draft.profile.inspection_duration_minutes == 45
     assert not app.exception
-    assert any("偏好已保存" in x.value for x in app.toast)
+    assert any("偏好已保存" in item.value for item in app.toast)
     assert app.button(key="preview_plan:audit-field")
 
 
@@ -417,7 +359,6 @@ def test_task_detail_completion_can_be_explicitly_retracted(tmp_path, monkeypatc
     context = f"workbench_context:real:{(tmp_path / 'ui.sqlite3').resolve()}"
     app.session_state[context][0]._now = lambda: completed_at
     app.button(key=f"detail:adopted-{current.id}:{item.task_id}").click().run()
-    assert app.button(key="quick_complete:audit-field")
     app.button(key=f"task_complete:{item.task_id}").click().run()
     assert not app.exception
     event = next(
@@ -463,3 +404,61 @@ def test_history_restore_creates_reviewable_preview_without_overwriting_plan(tmp
     assert not app.exception
     assert service.get_current_plan("audit-field").id != first.id
     assert service.latest_actionable_preview("audit-field") is not None
+
+
+def test_explicit_discard_is_available_when_editor_becomes_dirty(tmp_path, monkeypatch):
+    app, _ = ready_app(tmp_path, monkeypatch)
+    app.button(key="edit_field:audit-field").click().run()
+    app.text_input(key="field_name:audit-field:1").set_value("放弃前的名字").run()
+
+    discard = app.button(key="discard:field:audit-field")
+
+    assert discard.label == "放弃未保存修改，重新载入"
+
+
+def test_explicit_discard_resets_field_widgets_to_saved_profile(tmp_path, monkeypatch):
+    app, service = ready_app(tmp_path, monkeypatch)
+    app.button(key="edit_field:audit-field").click().run()
+    app.text_input(key="field_name:audit-field:1").set_value("放弃前的名字").run()
+
+    app.button(key="discard:field:audit-field").click().run()
+
+    assert not app.exception
+    assert service.get_field("audit-field").draft.profile.name == "审查田"
+    assert app.session_state["editor_generation:field:audit-field"] == 1
+    assert app.text_input(key="field_name:audit-field:1:reset1").value == "审查田"
+    header_text = "\n".join(element.value for element in [*app.markdown, *app.caption])
+    assert "有未保存修改" not in header_text
+
+
+def test_quick_observation_can_be_cancelled_without_saving(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    app, service = ready_app(tmp_path, monkeypatch)
+    app.button(key="quick_observe:audit-field").click().run()
+    assert app.button(key="quick_cancel_feedback:audit-field")
+
+    app.selectbox(key="quick_observation_field:audit-field").set_value("积水情况").run()
+    app.button(key="quick_cancel_feedback:audit-field").click().run()
+
+    assert not app.exception
+    assert app.session_state.get("quick_feedback_kind:audit-field") is None
+    assert service.get_field("audit-field").fact_version == 0
+    assert not any(
+        select.key and select.key.startswith("quick_observation_field:") for select in app.selectbox
+    )
+
+    app.button(key="quick_observe:audit-field").click().run()
+    assert app.selectbox(key="quick_observation_field:audit-field:reset1").value == "沟渠连通"
+
+
+def test_saved_quick_observation_closes_feedback_form(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    app, service = ready_app(tmp_path, monkeypatch)
+    app.button(key="quick_observe:audit-field").click().run()
+    app.selectbox(key="quick_observation_value:audit-field:沟渠连通").set_value("通畅")
+    app.button(key="quick_save_observation:audit-field:0").click().run()
+
+    assert not app.exception
+    assert service.get_field("audit-field").fact_version == 1
+    assert app.session_state.get("quick_feedback_kind:audit-field") is None
+    assert not any(
+        select.key and select.key.startswith("quick_observation_field:") for select in app.selectbox
+    )

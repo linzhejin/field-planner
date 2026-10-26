@@ -44,7 +44,6 @@ from nongshi.service_v3 import WorkbenchServiceV3, align_draft_dates
 from nongshi.weather import WeatherServiceError
 
 ZONE = ZoneInfo("Asia/Shanghai")
-LOGGER = logging.getLogger(__name__)
 NEW_FIELD = "__new_field__"
 FIELD_TYPES = {
     "未填写": None,
@@ -339,11 +338,6 @@ def _has_unsaved_edits(field_id: str) -> bool:
 
 def _clear_editor(kind: str, field_id: str) -> None:
     st.session_state.pop(f"edit_buffer:{kind}:{field_id}", None)
-
-
-def _editor_reset_suffix(kind: str, field_id: str) -> str:
-    generation = st.session_state.get(f"editor_generation:{kind}:{field_id}", 0)
-    return f":reset{generation}" if generation else ""
 
 
 def _discard_editor(kind: str, field_id: str) -> None:
@@ -1265,7 +1259,8 @@ def _weather_summary(service: WorkbenchServiceV3, field_id: str) -> str:
 
 def _render_count_strip(items: list) -> None:  # type: ignore[type-arg]
     """Compact, text-labelled counts for the currently displayed result source."""
-    scheduled = sum(1 for item in items if item.schedule_status in {"scheduled", "completed"})
+    scheduled = sum(1 for item in items if item.schedule_status == "scheduled")
+    completed = sum(1 for item in items if item.schedule_status == "completed")
     pending = sum(1 for item in items if item.schedule_status == "pending")
     unscheduled = sum(1 for item in items if item.schedule_status == "unscheduled")
     cards = [
@@ -1284,6 +1279,8 @@ def _render_count_strip(items: list) -> None:  # type: ignore[type-arg]
         + "</div>",
         unsafe_allow_html=True,
     )
+    if completed:
+        st.caption(f"已完成 {completed} 项，原安排保留在计划记录中。")
 
 
 @st.dialog("历史版本", width="large", on_dismiss=_dismiss_dialog)
@@ -2253,6 +2250,16 @@ def _show_preview(
         st.info(f"预览状态：{preview.status}")
 
 
+def _preview_matches_state(preview: PlanPreviewV3, state: FieldStateV3) -> bool:
+    """Only show a preview that still targets the current field revision."""
+    return (
+        preview.status == "preview"
+        and preview.expected_draft_version == state.draft_version
+        and preview.expected_fact_version == state.fact_version
+        and preview.expected_plan_id == state.latest_plan_id
+    )
+
+
 def _render_plans(
     service: WorkbenchServiceV3,
     field_id: str,
@@ -2509,12 +2516,6 @@ def _proposal_event_description(
     return f"{detail}（{at}）"
 
 
-def _reset_quick_feedback(field_id: str) -> None:
-    st.session_state.pop(f"quick_feedback_kind:{field_id}", None)
-    generation_key = f"quick_feedback_generation:{field_id}"
-    st.session_state[generation_key] = st.session_state.get(generation_key, 0) + 1
-
-
 def _quick_feedback_dialog(service: WorkbenchServiceV3, field_id: str, kind: str) -> None:
     """在窄屏助手页签直接呈现可操作的反馈表单。"""
     state = _field_state(service, field_id)
@@ -2715,81 +2716,10 @@ def _start_agent_job(agent: AgentServiceV3, field_id: str, message: str, history
 
     st.session_state[f"agent_last_message:{field_id}"] = message
     st.session_state["active_agent_job"] = AgentJob(
-        factory, field_id, message, conversation=history
+        factory, field_id, message, conversation=history, received_at=_now()
     )
     st.session_state["active_agent_database"] = str(database)
     st.session_state.pop(f"agent_job_error:{field_id}", None)
-
-
-@st.fragment(run_every=0.5)
-def _render_agent_job_progress(field_id: str) -> None:
-    job = st.session_state.get("active_agent_job")
-    if not job or job.field_id != field_id:
-        return
-
-    snapshot = job.snapshot()
-    if snapshot.done:
-        st.session_state.pop("active_agent_job", None)
-        if snapshot.cancelled:
-            st.session_state[f"agent_job_error:{field_id}"] = "已停止等待。已保存的内容还在。"
-        elif snapshot.response:
-            response = snapshot.response
-            history = st.session_state.setdefault(f"chat:{field_id}", [])
-            history.extend(
-                [
-                    {"role": "user", "content": job.user_message},
-                    {
-                        "role": "assistant",
-                        "content": response.text
-                        or response.error_message
-                        or "这次没有完成，请重试。",
-                    },
-                ]
-            )
-            st.session_state[f"agent_result:{field_id}"] = response
-        else:
-            st.session_state[f"agent_job_error:{field_id}"] = snapshot.error
-        st.rerun()
-
-    tool_labels = {
-        "read_field": "读取地块档案",
-        "evaluate_field": "核对条件与缺项",
-        "search_rules": "查找规则依据",
-        "query_weather": "获取天气",
-        "query_current_weather": "获取天气",
-        "preview_plan": "计算安排预览",
-        "search_locations": "查找地点",
-        "propose_location": "整理地点候选",
-        "propose_feedback": "整理待确认反馈",
-        "propose_field_update": "整理档案修改",
-        "declare_request": "确认本轮请求",
-    }
-    label = "正在处理，请稍候"
-    if snapshot.events:
-        latest = snapshot.events[-1]
-        label = (
-            "正在处理，请稍候"
-            if latest.stage == "model"
-            else tool_labels.get(latest.tool_name, "正在整理结果")
-        )
-    with st.status(label, expanded=False):
-        for event in snapshot.events[-4:]:
-            stage = (
-                "模型请求"
-                if event.stage == "model"
-                else tool_labels.get(event.tool_name, "整理结果")
-            )
-            status = (
-                "开始"
-                if event.status == "started"
-                else "完成"
-                if event.status == "success"
-                else "结束"
-            )
-            st.caption(f"{stage} · {status}")
-    if st.button("退出等待", key=f"cancel_agent:{field_id}"):
-        job.cancel()
-        st.rerun()
 
 
 def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[str, str]]) -> None:
@@ -3438,6 +3368,91 @@ def main() -> None:
             st.caption(f"数据文件：`{database.name}`")
             _render_rule_reviews(service, initial_id, selected)
     _render_open_dialog(service, mode)
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _editor_reset_suffix(kind: str, field_id: str) -> str:
+    generation = st.session_state.get(f"editor_generation:{kind}:{field_id}", 0)
+    return f":reset{generation}" if generation else ""
+
+
+def _reset_quick_feedback(field_id: str) -> None:
+    st.session_state.pop(f"quick_feedback_kind:{field_id}", None)
+    generation_key = f"quick_feedback_generation:{field_id}"
+    st.session_state[generation_key] = st.session_state.get(generation_key, 0) + 1
+
+
+@st.fragment(run_every=0.5)
+def _render_agent_job_progress(field_id: str) -> None:
+    job = st.session_state.get("active_agent_job")
+    if not job or job.field_id != field_id:
+        return
+
+    snapshot = job.snapshot()
+    if snapshot.done:
+        st.session_state.pop("active_agent_job", None)
+        if snapshot.cancelled:
+            st.session_state[f"agent_job_error:{field_id}"] = "已停止等待。已保存的内容还在。"
+        elif snapshot.response:
+            response = snapshot.response
+            history = st.session_state.setdefault(f"chat:{field_id}", [])
+            history.extend(
+                [
+                    {"role": "user", "content": job.user_message},
+                    {
+                        "role": "assistant",
+                        "content": response.text
+                        or response.error_message
+                        or "这次没有完成，请重试。",
+                    },
+                ]
+            )
+            st.session_state[f"agent_result:{field_id}"] = response
+        else:
+            st.session_state[f"agent_job_error:{field_id}"] = snapshot.error
+        st.rerun()
+
+    tool_labels = {
+        "read_field": "读取地块档案",
+        "evaluate_field": "核对条件与缺项",
+        "search_rules": "查找规则依据",
+        "query_weather": "获取天气",
+        "query_current_weather": "获取天气",
+        "preview_plan": "计算安排预览",
+        "search_locations": "查找地点",
+        "propose_location": "整理地点候选",
+        "propose_feedback": "整理待确认反馈",
+        "propose_field_update": "整理档案修改",
+        "declare_request": "确认本轮请求",
+    }
+    label = "正在处理，请稍候"
+    if snapshot.events:
+        latest = snapshot.events[-1]
+        label = (
+            "正在处理，请稍候"
+            if latest.stage == "model"
+            else tool_labels.get(latest.tool_name, "正在整理结果")
+        )
+    with st.status(label, expanded=False):
+        for event in snapshot.events[-4:]:
+            stage = (
+                "模型请求"
+                if event.stage == "model"
+                else tool_labels.get(event.tool_name, "整理结果")
+            )
+            status = (
+                "开始"
+                if event.status == "started"
+                else "完成"
+                if event.status == "success"
+                else "结束"
+            )
+            st.caption(f"{stage} · {status}")
+    if st.button("退出等待", key=f"cancel_agent:{field_id}"):
+        job.cancel()
+        st.rerun()
 
 
 if __name__ == "__main__":

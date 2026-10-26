@@ -68,7 +68,7 @@ def evidence(tmp_path: Path):
     )
     report = repo / "reports" / "v12.md"
     report.parent.mkdir(parents=True)
-    report.write_text("Frozen v12 report", encoding="utf-8")
+    report.write_text("Frozen v12 report\n", encoding="utf-8")
     manifest = {
         "schema_version": 1,
         "updated_at": "2026-10-24T10:00:00+08:00",
@@ -89,7 +89,7 @@ def evidence(tmp_path: Path):
             },
             "artifacts": {p.name: digest(p) for p in run.iterdir()},
         },
-        "public_artifacts": {"reports/v12.md": digest(report)},
+        "public_artifacts": {"reports/v12.md": checker.public_digest(report)},
         "source_tests": {"passed": 444, "code_commit": seal["code_commit"]},
     }
     write_json(repo / "reports/current_status.json", manifest)
@@ -162,6 +162,16 @@ def test_other_worktree_human_summary_drift_is_rejected(evidence, tmp_path):
     (other / "STATUS.md").write_text("Old v3 failed result", encoding="utf-8")
     result = checker.check_progress(repo, root, worktrees=[other])
     assert any("WORKTREE_SUMMARY_DRIFT" in error for error in result["errors"])
+
+
+def test_public_report_hash_accepts_windows_line_endings(evidence):
+    checker, repo, root, _, _ = evidence
+    report = repo / "reports/v12.md"
+    report.write_bytes(report.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+
+    result = checker.check_progress(repo, root, worktrees=[])
+
+    assert result["errors"] == []
 
 
 def test_other_worktree_public_report_change_is_rejected(evidence, tmp_path):

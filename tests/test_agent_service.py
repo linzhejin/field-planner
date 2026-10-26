@@ -36,7 +36,7 @@ def make_agent(tmp_path: Path, handler, *, configured: bool = True):
         store,
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
-        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
+        now=lambda: datetime(2026, 10, 18, 2, tzinfo=UTC),
     )
     profile = FieldProfile(
         id="field-1",
@@ -205,10 +205,10 @@ def test_model_update_is_only_a_proposal_until_the_user_confirms_it(tmp_path: Pa
                     '{"field_id":"field-1","changes":{"maintenance_need_confirmed":true}}',
                 ),
             )
-        return httpx.Response(200, json=final_response("我准备把巡田需求设为需要，请确认。"))
+        return httpx.Response(200, json=final_response("我准备把沟渠清理需求设为需要，请确认。"))
 
     agent, service, _ = make_agent(tmp_path, respond)
-    result = agent.run("field-1", "我想巡田")
+    result = agent.run("field-1", "仍需清理既有沟渠")
     state = service.get_field("field-1")
 
     assert result.status == "success"
@@ -409,6 +409,36 @@ def test_nonexistent_task_id_is_rejected_before_a_feedback_proposal_is_shown(
     agent.close()
 
 
+def test_future_completion_clarification_explains_time_has_not_arrived(tmp_path: Path) -> None:
+    agent, service, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=final_response()))
+    preview = service.preview_plan("field-1")
+    adopted = service.adopt_plan(
+        preview.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-first",
+    ).version
+    inspection = next(item for item in adopted.items if item.task_type == "inspection")
+    message = "明天（2026年10月20日）09:30巡田检查已完成"
+
+    event, clarification = agent._ground_declared_event(
+        {
+            "kind": "completed",
+            "task_id": inspection.task_id,
+            "at": "2026-10-20T09:30:00+08:00",
+            "source_quote": message,
+        },
+        field_id="field-1",
+        user_message=message,
+        received_at=datetime(2026, 10, 19, 4, tzinfo=UTC),
+    )
+
+    assert event is None
+    assert clarification is not None and "尚未到来" in clarification
+    assert service.list_events("field-1") == []
+    agent.close()
+
+
 def test_resource_interval_cannot_be_disguised_as_workability() -> None:
     with pytest.raises(ValueError, match="作业条件反馈不能包含可用时段"):
         ProposeFeedbackArgs.model_validate(
@@ -582,10 +612,7 @@ def test_declared_resource_flow_does_not_call_weather(tmp_path: Path) -> None:
     result = agent.run("field-1", "请修改人员时间")
 
     assert result.workflow_actions == ["resource"]
-    assert any(
-        trace.name == "query_current_weather" and trace.status == "invalid_arguments"
-        for trace in result.tools
-    )
+    assert all(trace.name != "query_current_weather" for trace in result.tools)
     assert result.business_outcome == "needs_information"
     agent.close()
 
@@ -696,6 +723,7 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         tmp_path,
         lambda _: httpx.Response(200, json=tool_call_response("propose_feedback", arguments)),
     )
+    service._now = lambda: datetime(2026, 10, 18, 2, 0, tzinfo=UTC)
     first = service.preview_plan("field-1")
     service.adopt_plan(
         first.id,
@@ -703,7 +731,11 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         expected_plan_id=None,
         operation_id="adopt-first",
     )
-    response = agent.run("field-1", "把明天有空时间改成下午两点到四点")
+    response = agent.run(
+        "field-1",
+        "把明天有空时间改成下午两点到四点",
+        received_at=datetime(2026, 10, 18, 2, 0, tzinfo=UTC),
+    )
     assert len(response.proposals) == 1
     agent.close()
 
@@ -711,7 +743,7 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         WorkbenchStoreV3(database),
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
-        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
+        now=lambda: datetime(2026, 10, 18, 2, 0, tzinfo=UTC),
     )
     proposal = reopened.pending_agent_proposals("field-1")[0]
     assert proposal.id == response.proposals[0].id
@@ -758,11 +790,7 @@ def test_saved_fact_remains_when_automatic_preview_fails_and_retry_does_not_reco
     )
     response = agent.run("field-1", "记录地里有积水")
     agent.close()
-    reopened = WorkbenchServiceV3(
-        WorkbenchStoreV3(database),
-        today=lambda: date(2026, 10, 18),
-        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
-    )
+    reopened = WorkbenchServiceV3(WorkbenchStoreV3(database), today=lambda: date(2026, 10, 18))
     original = reopened.preview_plan
 
     def broken(*args, **kwargs):
@@ -833,4 +861,4 @@ def test_agent_explanation_filters_unverified_dates_and_rule_citations() -> None
     unsupported = AgentServiceV3._safe_explanation("安排在 2026-10-20 09:00，依据 C11。")
 
     assert safe == "我已核对现有地块资料。"
-    assert "计划区" in unsupported
+    assert "结构化内容" in unsupported

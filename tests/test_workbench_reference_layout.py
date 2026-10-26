@@ -74,8 +74,52 @@ def test_demo_assistant_keeps_recent_activity_and_explicit_send_visible(
     assert not app.exception
     assert app.button(key=f"assistant_send:{field_id}").label == "发送"
     assert app.text_area(key=f"assistant_draft:{field_id}")
-    assert not any(button.key == f"quick_complete:{field_id}" for button in app.button)
     assert "最近操作" in "\n".join(item.value for item in app.markdown)
+
+
+def test_returning_real_user_opens_real_workspace(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.delenv("NONGSHI_DEFAULT_MODE", raising=False)
+    service = WorkbenchServiceV3(WorkbenchStoreV3(database))
+    service.save_field_draft(
+        FieldDraftV3(field_id="saved-real", profile=FieldProfile(id="saved-real", name="我的田")),
+        expected_version=None,
+        operation_id="saved-real",
+    )
+
+    app = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert not app.exception
+    assert app.session_state["workspace_mode"] == "真实地块"
+    assert "我的田" in "\n".join(item.value for item in app.markdown)
+
+
+def test_old_incomplete_demo_is_preserved_when_complete_example_is_added(
+    tmp_path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    demo_database = tmp_path / "plans.demo.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.delenv("NONGSHI_DEFAULT_MODE", raising=False)
+    demo = WorkbenchServiceV3(WorkbenchStoreV3(demo_database))
+    demo.save_field_draft(
+        FieldDraftV3(
+            field_id="old-demo",
+            mode="demo",
+            profile=FieldProfile(id="old-demo", name="旧模拟田"),
+            input_source="demo",
+        ),
+        expected_version=None,
+        operation_id="old-demo",
+    )
+
+    app = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert not app.exception
+    assert len(demo.list_fields(mode="demo")) == 2
+    assert demo.get_field("old-demo").draft.profile.name == "旧模拟田"
+    assert any(demo.get_current_plan(field.id) for field in demo.list_fields(mode="demo"))
 
 
 def test_cross_tab_success_notice_is_announced_as_a_toast(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -163,48 +207,3 @@ def test_compact_assistant_empty_message_uses_natural_height() -> None:
         workbench.PALETTE
     )
     assert '[data-testid="stMarkdownContainer"]:has(.workbench-empty)' in workbench.PALETTE
-
-
-def test_returning_real_user_opens_real_workspace(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    database = tmp_path / "plans.sqlite3"
-    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
-    monkeypatch.delenv("NONGSHI_DEFAULT_MODE", raising=False)
-    service = WorkbenchServiceV3(WorkbenchStoreV3(database))
-    service.save_field_draft(
-        FieldDraftV3(field_id="saved-real", profile=FieldProfile(id="saved-real", name="我的田")),
-        expected_version=None,
-        operation_id="saved-real",
-    )
-
-    app = AppTest.from_file(APP, default_timeout=30).run()
-
-    assert not app.exception
-    assert app.session_state["workspace_mode"] == "真实地块"
-    assert "我的田" in "\n".join(item.value for item in app.markdown)
-
-
-def test_old_incomplete_demo_is_preserved_when_complete_example_is_added(
-    tmp_path, monkeypatch
-) -> None:  # type: ignore[no-untyped-def]
-    database = tmp_path / "plans.sqlite3"
-    demo_database = tmp_path / "plans.demo.sqlite3"
-    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
-    monkeypatch.delenv("NONGSHI_DEFAULT_MODE", raising=False)
-    demo = WorkbenchServiceV3(WorkbenchStoreV3(demo_database))
-    demo.save_field_draft(
-        FieldDraftV3(
-            field_id="old-demo",
-            mode="demo",
-            profile=FieldProfile(id="old-demo", name="旧模拟田"),
-            input_source="demo",
-        ),
-        expected_version=None,
-        operation_id="old-demo",
-    )
-
-    app = AppTest.from_file(APP, default_timeout=30).run()
-
-    assert not app.exception
-    assert len(demo.list_fields(mode="demo")) == 2
-    assert demo.get_field("old-demo").draft.profile.name == "旧模拟田"
-    assert any(demo.get_current_plan(field.id) for field in demo.list_fields(mode="demo"))

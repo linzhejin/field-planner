@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from nongshi.presentation import field_value_label, proposal_change_rows
@@ -127,6 +128,55 @@ def test_confirmed_ditch_problem_survives_reopening_editor(tmp_path: Path, monke
     app.button(key=f"edit_field:{field_id}").click().run()
     assert not app.exception
     assert app.selectbox(key=f"maintenance_problem:{field_id}:1").value == "有"
+
+
+@pytest.mark.parametrize(
+    ("need_label", "need_value"),
+    [("暂不确定", None), ("需要", True), ("不需要", False)],
+)
+@pytest.mark.parametrize(
+    ("problem_label", "problem_value"),
+    [("暂不确定", None), ("有", True), ("没有", False)],
+)
+def test_ditch_questions_save_independent_three_state_values(
+    tmp_path: Path,
+    monkeypatch,
+    need_label: str,
+    need_value: bool | None,
+    problem_label: str,
+    problem_value: bool | None,
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "ditch-combinations.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.selectbox(key=f"maintenance_need:{field_id}:0").set_value(need_label)
+    app.selectbox(key=f"maintenance_problem:{field_id}:0").set_value(problem_label)
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
+    profile = WorkbenchStoreV3(database).get_field(field_id).draft.profile
+    assert profile is not None
+    assert profile.maintenance_need_confirmed is need_value
+    assert profile.maintenance_problem_confirmed is problem_value
+
+
+def test_water_and_blockage_do_not_infer_maintenance_need(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "no-inference.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    app = AppTest.from_file(APP, default_timeout=30).run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.selectbox(key=f"field_water:{field_id}:0").set_value("是")
+    app.selectbox(key=f"field_ditch:{field_id}:0").set_value("受阻")
+    app.button(key=f"save_field:{field_id}:0").click().run()
+    assert not app.exception
+    profile = WorkbenchStoreV3(database).get_field(field_id).draft.profile
+    assert profile is not None
+    assert profile.standing_water is True
+    assert profile.ditch_connectivity == "impaired"
+    assert profile.maintenance_need_confirmed is None
+    assert profile.maintenance_problem_confirmed is None
 
 
 def test_assistant_change_is_readable_and_saves_only_after_confirmation(

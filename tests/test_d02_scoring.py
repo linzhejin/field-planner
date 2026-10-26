@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from nongshi.d02_scoring import _effective_inputs, _expected_feedback, score_case, summarize_scores
+from nongshi.d02_scoring import (
+    _effective_inputs,
+    _expected_feedback,
+    _feedback_consistency,
+    score_case,
+    summarize_scores,
+)
 
 
 def test_confirmed_script_feedback_changes_scoring_facts() -> None:
@@ -26,6 +32,24 @@ def test_confirmed_script_feedback_changes_scoring_facts() -> None:
     _profile, days = _effective_inputs(case)
     assert days["2026-10-20"]["resource_minutes"] == 20
     assert days["2026-10-20"]["intervals"][0]["end"] == "09:20"
+
+
+def test_matching_completed_task_is_not_replaced_by_redundant_day() -> None:
+    expected = {
+        "kind": "completed",
+        "task_id": "inspect-1",
+        "at": "2026-10-20T09:30:00+08:00",
+    }
+    case = _case()
+    case["interaction_script"] = [
+        {"operation": "confirm_feedback", "payload": {"events": [{"feedback": expected}]}}
+    ]
+    actual = {**expected, "day": "2026-10-20"}
+    record = _record()
+    record["result"]["events"] = [{"feedback": actual}]
+    assert _feedback_consistency(case, record)[0]["status"] == "pass"
+    record["result"]["events"][0]["feedback"]["task_id"] = "another-task"
+    assert _feedback_consistency(case, record)[0]["status"] == "fail"
 
 
 def test_any_successful_agent_tool_is_a_valid_process_evidence() -> None:
@@ -213,6 +237,36 @@ def test_expected_interface_failure_can_be_scored_without_semantic_claims() -> N
     }
     scored = score_case(_case(), contract, record)
     assert scored["verdict"] == "passed"
+
+
+def test_no_active_agricultural_claim_has_no_semantic_review_denominator() -> None:
+    record = _record()
+    record["result"]["tasks"] = [
+        {"task_id": "inspect-1", "task_type": "inspection", "schedule_status": "completed"},
+        {"task_id": "maint-1", "task_type": "maintenance", "schedule_status": "not_generated"},
+    ]
+    contract = {
+        **_contract(),
+        "required_tasks": [{"task_type": "inspection", "allowed_statuses": ["completed"]}],
+        "forbidden_task_types": [],
+        "semantic_required": True,
+    }
+    scored = score_case(
+        _case(), contract, record, semantic={"status": "not_applicable", "judgments": []}
+    )
+    assert scored["verdict"] == "passed"
+    assert any(
+        check["check"] == "semantic_support" and check["status"] == "not_applicable"
+        for check in scored["checks"]
+    )
+
+
+def test_active_agricultural_claim_without_judgment_remains_pending() -> None:
+    contract = {**_contract(), "semantic_required": True}
+    scored = score_case(
+        _case(), contract, _record(), semantic={"status": "not_applicable", "judgments": []}
+    )
+    assert scored["verdict"] == "insufficient_evidence"
 
 
 def test_forbidden_scheduled_type_and_capacity_are_independent_checks() -> None:

@@ -39,7 +39,7 @@ def _scope(plot: FieldProfile) -> tuple[str, list[str], str]:
         missing.append("stage_confirmation")
     if missing:
         return "pending", missing, "待确认地区、作物和生育期"
-    if plot.province != "湖北" or plot.crop != "油菜" or plot.stage != "苗期":
+    if plot.province not in {"湖北", "湖北省"} or plot.crop != "油菜" or plot.stage != "苗期":
         return "out_of_scope", [], "不在首版湖北油菜苗期范围内"
     return "matched", [], ""
 

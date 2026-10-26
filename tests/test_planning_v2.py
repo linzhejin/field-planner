@@ -89,6 +89,13 @@ def test_unknown_observations_do_not_block_requested_inspection() -> None:
     assert "maintenance_need_confirmed" in maintenance.missing_fields
 
 
+def test_confirmed_hubei_province_with_suffix_remains_in_scope() -> None:
+    plan = build_plan_v2(request_v2(province="湖北省"))
+    inspection = items(plan)["A-I"]
+    assert inspection.applicability == "matched"
+    assert inspection.schedule_status == "scheduled"
+
+
 def test_no_maintenance_need_is_not_generated_and_not_a_window_failure() -> None:
     plan = build_plan_v2(request_v2(maintenance_need_confirmed=False))
     maintenance = items(plan)["A-M"]

@@ -191,7 +191,7 @@ class RuleRetrieverV3:
 
     @staticmethod
     def _scope_reason(query: RuleSearchQueryV3) -> str:
-        if query.province and query.province != "湖北":
+        if query.province and query.province not in {"湖北", "湖北省"}:
             return "超出湖北地区范围。"
         if query.crop and query.crop != "油菜":
             return "超出油菜作物范围。"

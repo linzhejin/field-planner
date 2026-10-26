@@ -200,7 +200,16 @@ def test_cancel_after_proposal_calculation_prevents_run_and_proposal_persistence
         lambda _: httpx.Response(
             200,
             json=tool_call_response(
-                "propose_field_update", '{"field_id":"field-1","changes":{"name":"新名字"}}'
+                "declare_request",
+                json.dumps(
+                    {
+                        "field_id": "field-1",
+                        "actions": ["field_update"],
+                        "field_changes": {"name": "新名字"},
+                        "field_change_quotes": {"name": "把名字改为新名字"},
+                    },
+                    ensure_ascii=False,
+                ),
             ),
         ),
     )
@@ -212,7 +221,10 @@ def test_cancel_after_proposal_calculation_prevents_run_and_proposal_persistence
     try:
         with pytest.raises(AgentCancelled):
             agent.run(
-                "field-1", "修改名字", progress=cancel_when_proposal_ready, cancellation=token
+                "field-1",
+                "把名字改为新名字",
+                progress=cancel_when_proposal_ready,
+                cancellation=token,
             )
     finally:
         agent.close()

@@ -200,6 +200,36 @@ def test_unchanged_recalculation_does_not_create_an_empty_plan_version(tmp_path:
     assert service.plan_history("field-1") == [first]
 
 
+def test_unchanged_adoption_clears_waiting_for_update_state(tmp_path: Path) -> None:
+    service = make_service(tmp_path / "workbench.sqlite3")
+    created = service.save_field_draft(draft(), expected_version=None, operation_id="create-field")
+    first_preview = service.preview_plan("field-1")
+    first = service.adopt_plan(
+        first_preview.id,
+        expected_fact_version=0,
+        expected_plan_id=None,
+        operation_id="adopt-v1",
+    ).version
+    service.save_field_draft(
+        created.draft.model_copy(update={"notes": "已核对天气查询点"}),
+        expected_version=created.draft_version,
+        operation_id="update-note",
+    )
+    assert service.get_field("field-1").plan_stale is True
+
+    second_preview = service.preview_plan("field-1")
+    adopted = service.adopt_plan(
+        second_preview.id,
+        expected_fact_version=0,
+        expected_plan_id=first.id,
+        operation_id="adopt-no-change",
+    )
+
+    assert adopted.created_new_version is False
+    assert service.get_field("field-1").plan_stale is False
+    assert service.plan_history("field-1") == [first]
+
+
 def test_adoption_is_append_only_and_repeated_operation_returns_same_version(
     tmp_path: Path,
 ) -> None:

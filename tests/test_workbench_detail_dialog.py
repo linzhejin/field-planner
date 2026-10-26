@@ -7,6 +7,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from nongshi import workbench
 from nongshi.schema_v2 import PlanItemV2
 from nongshi.workbench import PALETTE, ZONE, _item_detail_rows, _primary_action
 
@@ -88,6 +89,20 @@ def test_item_detail_rows_marks_unscheduled_and_missing_fields() -> None:
     assert rows["待确认项"] == "沟渠问题"
 
 
+def test_completed_task_is_not_counted_as_remaining_scheduled_work(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    markup: list[str] = []
+    captions: list[str] = []
+    monkeypatch.setattr(workbench.st, "markdown", lambda value, **_: markup.append(value))
+    monkeypatch.setattr(workbench.st, "caption", captions.append)
+
+    workbench._render_count_strip(
+        [_scheduled_item().model_copy(update={"schedule_status": "completed", "completed": True})]
+    )
+
+    assert 'count-number count-green">0' in markup[0]
+    assert "已完成 1 项" in captions[0]
+
+
 def test_primary_action_priority() -> None:
     # 采用预览 > 生成/重算计划 > 保存档案。
     assert _primary_action(True, True) == "adopt"
@@ -148,10 +163,10 @@ def test_result_area_marks_single_primary_action(tmp_path: Path, monkeypatch) ->
     # 已有档案：档案表单改由「编辑当前地块」对话框承载，先打开它。
     app.button(key=f"edit_field:{field_id}").click().run()
     assert not app.exception
-    # 缺少会影响判断的事实时，先突出补充信息；部分预览仍可作为次级操作。
-    next_step = app.button(key=f"next_question:{field_id}")
+    # 仍有待确认信息时，补充该信息是唯一主操作。
     generate = app.button(key=f"preview_plan:{field_id}")
     save = app.button(key=f"save_field:{field_id}:1")
-    assert next_step.proto.type == "primary"
+    clarify = app.button(key=f"next_question:{field_id}")
     assert generate.proto.type == "secondary"
+    assert clarify.proto.type == "primary"
     assert save.proto.type == "secondary"

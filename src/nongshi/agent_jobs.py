@@ -110,7 +110,7 @@ class AgentJob:
                 pass
             except Exception:
                 with self._lock:
-                    self._error = "助手没能完成处理。请重试，或手动填写。"
+                    self._error = "助手这次没能完成。请重试，或手动填写。"
             finally:
                 try:
                     if agent is not None:
