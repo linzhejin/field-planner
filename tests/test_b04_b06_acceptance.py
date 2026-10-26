@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -19,6 +19,7 @@ def _service(path) -> WorkbenchServiceV3:  # type: ignore[no-untyped-def]
         WorkbenchStoreV3(path),
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 19),
+        now=lambda: datetime(2026, 10, 18, 16, tzinfo=UTC),
     )
 
 

@@ -36,6 +36,7 @@ def make_agent(tmp_path: Path, handler, *, configured: bool = True):
         store,
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
+        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
     )
     profile = FieldProfile(
         id="field-1",
@@ -710,6 +711,7 @@ def test_confirmed_agent_resource_proposal_survives_restart_and_auto_previews(
         WorkbenchStoreV3(database),
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
+        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
     )
     proposal = reopened.pending_agent_proposals("field-1")[0]
     assert proposal.id == response.proposals[0].id
@@ -756,7 +758,11 @@ def test_saved_fact_remains_when_automatic_preview_fails_and_retry_does_not_reco
     )
     response = agent.run("field-1", "记录地里有积水")
     agent.close()
-    reopened = WorkbenchServiceV3(WorkbenchStoreV3(database), today=lambda: date(2026, 10, 18))
+    reopened = WorkbenchServiceV3(
+        WorkbenchStoreV3(database),
+        today=lambda: date(2026, 10, 18),
+        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
+    )
     original = reopened.preview_plan
 
     def broken(*args, **kwargs):
@@ -827,4 +833,4 @@ def test_agent_explanation_filters_unverified_dates_and_rule_citations() -> None
     unsupported = AgentServiceV3._safe_explanation("安排在 2026-10-20 09:00，依据 C11。")
 
     assert safe == "我已核对现有地块资料。"
-    assert "结构化内容" in unsupported
+    assert "计划区" in unsupported

@@ -1,5 +1,18 @@
 # Repository Guidelines
 
+## Current Progress and Evidence (Required)
+
+Before answering any current-status, acceptance, completion, test-count or report-update question:
+
+1. Read root `STATUS.md` and `reports/current_status.json` first. Dated reports and memory summaries are historical evidence, not the current-status authority.
+2. Run `git worktree list --porcelain` and `uv run --no-sync python scripts/check_progress.py --require-private`. Inspect every diagnostic. Without private run files, omit the flag and explicitly report the verification limit.
+3. Compare the registered run, sealed code commit, original-score hashes and all active worktree manifests. A newer seal or conflicting status must be resolved before claiming the latest result; do not rely on the invoking checkout, filename date, mtime or the protocol's `version` field alone.
+4. State separately: frozen evaluation outcome, current checkout implementation, local test evidence, live-service evidence and independent/field acceptance. Do not transfer a passing result to untested or unmerged code.
+5. After a new scored batch, update the manifest and STATUS summary together, index the public report and synchronize these entries across relevant active worktrees. Keep prior runs and failures; add an explicit correction rather than rewriting first scores. README and the task plan link to STATUS instead of duplicating current results.
+
+The progress checker is read-only. This requirement does not authorize model calls, merging branches, publishing, accessing secrets or changing private evidence. Do not run it to claim tests were rerun.
+
+
 ## Project Scope & Structure
 
 This repository develops **农时窗口**, a rapeseed seedling-stage farm-task planner. The primary Streamlit workbench supports blank-first field setup, a versioned SQLite draft and event history, condition-aware rule evidence, Open-Meteo weather snapshots, seven-day minute scheduling, a DeepSeek tool-calling assistant, and preview-and-adopt plan revisions. Model and weather integrations must degrade cleanly to structured inputs when unavailable.

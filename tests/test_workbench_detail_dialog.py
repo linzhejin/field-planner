@@ -85,7 +85,7 @@ def test_item_detail_rows_marks_unscheduled_and_missing_fields() -> None:
     assert rows["窗口"] == "未提供"
     assert rows["适用性"] == "待确认"
     assert rows["执行状态"] == "待确认"
-    assert rows["待确认项"] == "maintenance_problem_confirmed"
+    assert rows["待确认项"] == "沟渠问题"
 
 
 def test_primary_action_priority() -> None:
@@ -148,8 +148,10 @@ def test_result_area_marks_single_primary_action(tmp_path: Path, monkeypatch) ->
     # 已有档案：档案表单改由「编辑当前地块」对话框承载，先打开它。
     app.button(key=f"edit_field:{field_id}").click().run()
     assert not app.exception
-    # 已保存档案但尚无预览：主按钮为生成计划，保存档案降为次级。
+    # 缺少会影响判断的事实时，先突出补充信息；部分预览仍可作为次级操作。
+    next_step = app.button(key=f"next_question:{field_id}")
     generate = app.button(key=f"preview_plan:{field_id}")
     save = app.button(key=f"save_field:{field_id}:1")
-    assert generate.proto.type == "primary"
+    assert next_step.proto.type == "primary"
+    assert generate.proto.type == "secondary"
     assert save.proto.type == "secondary"

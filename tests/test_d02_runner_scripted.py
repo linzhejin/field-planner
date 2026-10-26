@@ -79,7 +79,7 @@ def _script() -> list[dict[str, Any]]:
         },
         {
             "step": 4,
-            "at": "2026-10-20T10:00:00+08:00",
+            "at": "2026-10-21T09:30:00+08:00",
             "operation": "commit_feedback",
             "payload": {
                 "events": [
@@ -89,7 +89,7 @@ def _script() -> list[dict[str, Any]]:
                             "kind": "completed",
                             "task_id": "sim-t01-I",
                             "plot_id": "sim-t01",
-                            "at": "2026-10-20T10:00:00+08:00",
+                            "at": "2026-10-21T09:30:00+08:00",
                         },
                         "source": "user",
                         "correction_of": None,
@@ -314,7 +314,7 @@ def test_explicit_new_demand_links_completed_task_and_preserves_it() -> None:
                 }
             },
         },
-        {"step": 6, "at": "2026-10-21T10:01:00+08:00", "operation": "preview"},
+        {"step": 6, "at": "2026-10-21T10:01:01+08:00", "operation": "preview"},
         {
             "step": 7,
             "at": "2026-10-21T10:02:00+08:00",

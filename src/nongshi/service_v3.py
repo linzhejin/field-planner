@@ -14,7 +14,9 @@ from nongshi.rules import RuleCatalog, load_rule_catalog
 from nongshi.schema_v2 import (
     LOCAL_ZONE,
     DayWindow,
+    FeedbackV2,
     FieldProfile,
+    PlanItemV2,
     PlanRequestV2,
     PlanVersionV2,
     RuleEvidenceV2,
@@ -33,8 +35,40 @@ from nongshi.schema_v3 import (
     PlanPreviewV3,
     PlanVersionV3,
     RuleAdoptionRecordV3,
+    TaskActionV3,
     WeatherSnapshotV3,
 )
+
+
+def align_draft_dates(draft: FieldDraftV3, *, start_date: date | None = None) -> FieldDraftV3:
+    """Retain confirmations by absolute date, leaving newly added dates unknown."""
+    start = start_date or draft.start_date
+    if start is None:
+        return FieldDraftV3.model_validate(draft.model_dump(mode="python"))
+    supplied = {day.day: day for day in draft.days}
+    dates = [start + timedelta(days=offset) for offset in range(7)]
+    days = (
+        [
+            supplied[day].model_copy(deep=True)
+            if day in supplied
+            else DayWindow(day=day, site_workable=None, weather_workable=None)
+            for day in dates
+        ]
+        if draft.days
+        else []
+    )
+    profile = draft.profile.model_copy(deep=True) if draft.profile else None
+    if profile:
+        profile.workability_by_date = {
+            day: confirmation
+            for day, confirmation in profile.workability_by_date.items()
+            if day in dates
+        }
+    return FieldDraftV3.model_validate(
+        draft.model_copy(update={"start_date": start, "days": days, "profile": profile}).model_dump(
+            mode="python"
+        )
+    )
 
 
 class WorkbenchServiceV3:
@@ -50,8 +84,8 @@ class WorkbenchServiceV3:
     ) -> None:
         self.store = store
         self.catalog = catalog or load_rule_catalog()
-        self._today = today or (lambda: datetime.now(LOCAL_ZONE).date())
         self._now = now or (lambda: datetime.now(UTC))
+        self._today = today or (lambda: self._now().astimezone(LOCAL_ZONE).date())
 
     def save_field_draft(
         self,
@@ -62,7 +96,7 @@ class WorkbenchServiceV3:
         proposal_id: str | None = None,
     ) -> FieldStateV3:
         return self.store.save_field_draft(
-            draft,
+            align_draft_dates(draft),
             expected_version=expected_version,
             operation_id=operation_id,
             proposal_id=proposal_id,
@@ -85,6 +119,7 @@ class WorkbenchServiceV3:
         operation_id: str,
         expected_fact_version: int,
         proposal_id: str | None = None,
+        expected_draft_version: int | None = None,
     ) -> EventCommitResultV3:
         for event in events:
             feedback = event.feedback
@@ -100,9 +135,16 @@ class WorkbenchServiceV3:
                 and (feedback.site_workable is not None or feedback.weather_workable is not None)
             ):
                 raise ValueError("人员时间反馈不能包含田间作业条件")
-        existing_ids = {event.event_id for event in self.store.list_events(field_id)}
+        recorded_events = self.store.list_events(field_id)
+        existing_ids = {event.event_id for event in recorded_events}
         replayed_event_ids = all(event.event_id in existing_ids for event in events)
         state = self.get_field(field_id)
+        if (
+            not replayed_event_ids
+            and expected_draft_version is not None
+            and state.draft_version != expected_draft_version
+        ):
+            raise ValueError("版本冲突：地块档案已变化，请刷新任务详情后重试")
         if not replayed_event_ids and state.fact_version != expected_fact_version:
             raise ValueError(
                 f"版本冲突：现场事实为 v{state.fact_version}，提交依据为 v{expected_fact_version}"
@@ -110,15 +152,65 @@ class WorkbenchServiceV3:
         if not replayed_event_ids:
             current = self.store.get_current_plan(field_id)
             current_items = list(current.items) if current else []
-            recorded_completions = {
+            recorded_completions = set(
+                self._completion_facts(field_id, current.plan if current else None)
+            )
+            cancelled_ids = {
                 event.feedback.task_id
-                for event in self.store.list_events(field_id)
-                if event.feedback and event.feedback.kind == "completed"
+                for event in self._active_events(field_id)
+                if event.feedback and event.feedback.kind == "cancelled"
             }
+            by_id = {event.event_id: event for event in recorded_events}
+            superseded = {event.correction_of for event in recorded_events if event.correction_of}
             for event in events:
                 feedback = event.feedback
+                target_feedback = None
+                if event.correction_of:
+                    target = by_id.get(event.correction_of)
+                    if target is None:
+                        raise ValueError("更正引用的原事件不存在")
+                    if target.event_id in superseded:
+                        raise ValueError("只能更正当前有效的最新事件，请刷新后重试")
+                    ancestor = target
+                    while ancestor.feedback is None and ancestor.correction_of:
+                        ancestor = by_id[ancestor.correction_of]
+                    target_feedback = ancestor.feedback
+                    if (
+                        feedback
+                        and target_feedback
+                        and (
+                            feedback.kind,
+                            feedback.task_id,
+                            feedback.plot_id or field_id,
+                            feedback.field,
+                            feedback.day,
+                        )
+                        != (
+                            target_feedback.kind,
+                            target_feedback.task_id,
+                            target_feedback.plot_id or field_id,
+                            target_feedback.field,
+                            target_feedback.day,
+                        )
+                    ):
+                        raise ValueError("更正必须对应原事件的同一任务或现场事实")
+                    # A tombstone has no active completion to release. Reviving it
+                    # must still respect a completion recorded on another chain.
+                    if target.feedback and target.feedback.kind == "completed":
+                        recorded_completions.discard(target.feedback.task_id)
+                    superseded.add(event.correction_of)
+                by_id[event.event_id] = event
+                if feedback and feedback.kind == "cancelled":
+                    if feedback.task_id in recorded_completions:
+                        raise ValueError("已完成任务不能取消")
+                    if not any(item.task_id == feedback.task_id for item in current_items):
+                        raise ValueError("找不到当前地块要取消的任务")
+                    cancelled_ids.add(feedback.task_id)
+                    continue
                 if not feedback or feedback.kind != "completed":
                     continue
+                if feedback.task_id in cancelled_ids:
+                    raise ValueError("任务已取消，不能直接记录完成")
                 if feedback.task_id in recorded_completions:
                     raise ValueError("任务已记录完成；同一任务不能重复提交完成事件")
                 item = next(
@@ -129,17 +221,192 @@ class WorkbenchServiceV3:
                     ),
                     None,
                 )
-                if item is None or item.completed or item.start_at is None:
+                if item is None or item.start_at is None:
                     raise ValueError("只能记录当前已安排且尚未完成的任务")
                 if feedback.at.astimezone(LOCAL_ZONE) < item.start_at.astimezone(LOCAL_ZONE):
                     raise ValueError("完成时间早于任务计划开始时间")
+                recorded_completions.add(feedback.task_id)
         return self.store.commit_events(
             field_id,
             events,
             expected_fact_version=expected_fact_version,
             operation_id=operation_id,
             proposal_id=proposal_id,
+            expected_draft_version=expected_draft_version,
         )
+
+    def _editable_task(
+        self,
+        field_id: str,
+        task_id: str,
+        *,
+        expected_draft_version: int,
+        expected_fact_version: int,
+    ) -> tuple[FieldStateV3, PlanItemV2]:
+        state = self.get_field(field_id)
+        if (state.draft_version, state.fact_version) != (
+            expected_draft_version,
+            expected_fact_version,
+        ):
+            raise ValueError("版本冲突：地块档案或现场事实已变化，请刷新任务详情后重试")
+        current = self.get_current_plan(field_id)
+        if current is None or state.draft.profile is None:
+            raise ValueError("请先采用当前地块的计划，再修改任务")
+        item = next((item for item in current.items if item.task_id == task_id), None)
+        if item is None:
+            raise ValueError("找不到当前地块的任务")
+        if task_id in self._completion_facts(field_id, current.plan):
+            raise ValueError("已完成任务不可修改或取消；请使用显式更正完成记录")
+        if any(
+            event.feedback
+            and event.feedback.kind == "cancelled"
+            and event.feedback.task_id == task_id
+            for event in self._active_events(field_id)
+        ):
+            raise ValueError("任务已取消，不能重复修改或取消")
+        return state, item
+
+    def edit_task(
+        self,
+        field_id: str,
+        task_id: str,
+        *,
+        preferred_date: date,
+        duration_minutes: int,
+        priority: int,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        operation_id: str,
+    ) -> PlanPreviewV3:
+        """Save user-confirmed task preferences, then preview current-fact scheduling."""
+        request = {
+            "field_id": field_id,
+            "task_id": task_id,
+            "preferred_date": preferred_date,
+            "duration_minutes": duration_minutes,
+            "priority": priority,
+            "expected_draft_version": expected_draft_version,
+            "expected_fact_version": expected_fact_version,
+        }
+
+        def prepare() -> TaskActionV3:
+            state, item = self._editable_task(
+                field_id,
+                task_id,
+                expected_draft_version=expected_draft_version,
+                expected_fact_version=expected_fact_version,
+            )
+            start = state.draft.start_date or (self._today() + timedelta(days=1))
+            if not start <= preferred_date <= start + timedelta(days=6):
+                raise ValueError("指定日期必须位于当前七天计划内")
+            if preferred_date < self._today():
+                raise ValueError("不能把未完成任务改到过去日期")
+            prefix = item.task_type
+            profile = state.draft.profile.model_copy(
+                update={
+                    f"{prefix}_earliest_date": preferred_date,
+                    f"{prefix}_due_date": preferred_date,
+                    f"{prefix}_duration_minutes": duration_minutes,
+                    f"{prefix}_priority": priority,
+                }
+            )
+            draft = FieldDraftV3.model_validate(
+                state.draft.model_copy(update={"profile": profile}).model_dump(mode="python")
+            )
+            return TaskActionV3(
+                field_id=field_id,
+                draft=draft,
+                expected_draft_version=expected_draft_version,
+                expected_fact_version=expected_fact_version,
+            )
+
+        intent = self._task_action_intent(operation_id, "edit_task", request, prepare)
+        self.store.save_field_draft(
+            intent.draft,
+            expected_version=expected_draft_version,
+            expected_fact_version=expected_fact_version,
+            operation_id=f"task-action:{intent.id}:draft",
+        )
+        return self.store.task_action_preview(intent) or self.preview_plan(
+            field_id, operation_id=f"task-action:{intent.id}:preview"
+        )
+
+    def cancel_task(
+        self,
+        field_id: str,
+        task_id: str,
+        *,
+        reason: str,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        operation_id: str,
+    ) -> PlanPreviewV3:
+        """Record cancellation as an immutable fact, retaining the task and its reason."""
+        request = {
+            "field_id": field_id,
+            "task_id": task_id,
+            "reason": reason,
+            "expected_draft_version": expected_draft_version,
+            "expected_fact_version": expected_fact_version,
+        }
+
+        def prepare() -> TaskActionV3:
+            self._editable_task(
+                field_id,
+                task_id,
+                expected_draft_version=expected_draft_version,
+                expected_fact_version=expected_fact_version,
+            )
+            event = FactEventInputV3(
+                feedback=FeedbackV2(
+                    kind="cancelled",
+                    task_id=task_id,
+                    plot_id=field_id,
+                    at=self._now(),
+                    reason=reason,
+                )
+            )
+            return TaskActionV3(
+                field_id=field_id,
+                event=event,
+                expected_draft_version=expected_draft_version,
+                expected_fact_version=expected_fact_version,
+            )
+
+        intent = self._task_action_intent(operation_id, "cancel_task", request, prepare)
+        # The frozen intent was validated before registration. The store atomically
+        # checks both versions or replays this exact event, including its original ID/time.
+        self.store.commit_events(
+            field_id,
+            [intent.event],
+            expected_fact_version=expected_fact_version,
+            expected_draft_version=expected_draft_version,
+            operation_id=f"task-action:{intent.id}:fact",
+        )
+        return self.store.task_action_preview(intent) or self.preview_plan(
+            field_id, operation_id=f"task-action:{intent.id}:preview"
+        )
+
+    def _task_action_intent(
+        self,
+        operation_id: str,
+        action: str,
+        request: dict[str, object],
+        prepare: Callable[[], TaskActionV3],
+    ) -> TaskActionV3:
+        cached = self.store.task_action(operation_id, action, request)
+        if cached is not None:
+            return cached
+        try:
+            intent = prepare()
+        except ValueError:
+            # An identical concurrent request may have registered and committed
+            # after our first lookup. Recover its intent before treating guards as stale.
+            cached = self.store.task_action(operation_id, action, request)
+            if cached is not None:
+                return cached
+            raise
+        return self.store.prepare_task_action(operation_id, action, request, intent)
 
     def pending_agent_proposals(self, field_id: str) -> list[AgentProposalV3]:
         return [
@@ -307,6 +574,58 @@ class WorkbenchServiceV3:
             raise ValueError("先保存地块名称和基本情况，再生成计划")
         request, previous = self._build_request(state)
         calculated = self._evaluate_request(state, request, previous)
+        return self._save_plan_preview(state, calculated, operation_id=operation_id, source=source)
+
+    def preview_restore_plan(
+        self,
+        field_id: str,
+        version_id: str,
+        *,
+        operation_id: str | None = None,
+    ) -> PlanPreviewV3:
+        """Recheck old unfinished slots against today's draft, facts, and completion locks."""
+        state = self.get_field(field_id)
+        historic = next(
+            (version for version in self.plan_history(field_id) if version.id == version_id), None
+        )
+        if historic is None:
+            raise ValueError("所选历史版本不存在或不属于当前地块")
+        request, current = self._build_request(state)
+        # Only unfinished historical placements are preferences. Completion facts
+        # and their original slots always come from the current event projection.
+        current_items = {item.task_id: item for item in current.items} if current else {}
+        historic_items = {item.task_id: item for item in historic.items if not item.completed}
+        preferred = (current or historic.plan).model_copy(deep=True)
+        preferred.request = request.model_copy(deep=True)
+        preferred.items = [
+            (
+                current_items[task_id]
+                if task_id in request.completed_at
+                else historic_items[task_id]
+            ).model_copy(deep=True)
+            for task_id in dict.fromkeys([*historic_items, *current_items])
+            if (task_id in request.completed_at and task_id in current_items)
+            or (task_id not in request.completed_at and task_id in historic_items)
+        ]
+        calculated = self._evaluate_request(state, request, preferred)
+        calculated.reference_version = historic.id
+        return self._save_plan_preview(
+            state,
+            calculated,
+            operation_id=operation_id,
+            extra_basis=["恢复历史安排仅作为时段偏好；已按当前档案、现场事实和可用时间重新校验"],
+        )
+
+    def _save_plan_preview(
+        self,
+        state: FieldStateV3,
+        calculated: PlanVersionV2,
+        *,
+        operation_id: str | None = None,
+        source: Literal["manual", "assistant", "demo", "copied_legacy"] | None = None,
+        extra_basis: list[str] | None = None,
+    ) -> PlanPreviewV3:
+        field_id = state.id
         now = self._now()
         current = self.store.get_current_plan(field_id)
         changes = self._diff(current, calculated)
@@ -326,6 +645,7 @@ class WorkbenchServiceV3:
             "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
             "候选规则处于开发验证阶段，适用性待复核",
         ]
+        calculation_basis.extend(extra_basis or [])
         if reviews:
             calculation_basis.append("已采用规则仅限登记用途；暂缓规则不作为计划依据")
         if any(plot.standing_water is True for plot in calculated.request.plots):
@@ -393,6 +713,9 @@ class WorkbenchServiceV3:
             if snapshot.cache_expires_at <= self._now():
                 self.store.mark_preview_stale(preview_id)
                 raise ValueError("预览引用的天气快照已过期，请刷新天气并重新预览")
+        if self._preview_has_elapsed_work(preview):
+            self.store.mark_preview_stale(preview_id)
+            raise ValueError("预览的未完成任务时段已过期，请重新计算")
         return self.store.adopt_plan(
             preview_id,
             expected_fact_version=expected_fact_version,
@@ -402,6 +725,28 @@ class WorkbenchServiceV3:
 
     def cancel_preview(self, preview_id: str) -> PlanPreviewV3:
         return self.store.cancel_preview(preview_id)
+
+    def latest_actionable_preview(self, field_id: str) -> PlanPreviewV3 | None:
+        """Read the latest recoverable preview without creating or changing state."""
+        preview = self.store.latest_actionable_preview(field_id)
+        if preview is None:
+            return None
+        snapshot_id = preview.version.weather_snapshot_id
+        if (
+            snapshot_id
+            and self.store.get_weather_snapshot(snapshot_id).cache_expires_at <= self._now()
+        ):
+            return None
+        if self._preview_has_elapsed_work(preview):
+            return None
+        return preview
+
+    def _preview_has_elapsed_work(self, preview: PlanPreviewV3) -> bool:
+        now = self._now()
+        return any(
+            not item.completed and item.start_at is not None and item.start_at < now
+            for item in preview.version.items
+        )
 
     def get_current_plan(self, field_id: str) -> PlanVersionV3 | None:
         return self.store.get_current_plan(field_id)
@@ -563,7 +908,9 @@ class WorkbenchServiceV3:
             return "\n".join(lines) + "\n"
         lines.extend(["## 七天安排", ""])
         for item in version.items:
-            if item.start_at and item.end_at:
+            if item.schedule_status == "cancelled":
+                when = "已取消"
+            elif item.start_at and item.end_at:
                 when = f"{item.start_at:%Y-%m-%d %H:%M}–{item.end_at:%H:%M}"
             else:
                 when = "未排入"
@@ -609,8 +956,17 @@ class WorkbenchServiceV3:
         ):
             lines.append("- 无")
         lines.extend(["", "## 版本变化", ""])
+        change_labels = {
+            "added": "新增",
+            "moved": "调整时段",
+            "removed": "未排入",
+            "cancelled": "已取消",
+            "unchanged": "保持不变",
+            "completed": "已完成",
+        }
         lines.extend(
-            f"- {change.task_id}：{change.kind}；{change.reason}" for change in version.changes
+            f"- {change.task_id}：{change_labels[change.kind]}；{change.reason}"
+            for change in version.changes
         )
         if not version.changes:
             lines.append("- 首版计划")
@@ -662,7 +1018,12 @@ class WorkbenchServiceV3:
         ]
         profile = draft.profile.model_copy(deep=True)
         previous_version = self.store.get_current_plan(state.id)
-        previous = previous_version.plan if previous_version else None
+        previous = previous_version.plan.model_copy(deep=True) if previous_version else None
+        completed_at = self._completion_facts(state.id, previous)
+        if previous:
+            # Only the event projection may release an adopted completion lock. V2's
+            # normal merge protection still applies to all other callers and edits.
+            previous.request.completed_at = dict(completed_at)
         active_events = self._active_events(state.id)
         if previous_version and previous:
             prior_profile = next(
@@ -671,28 +1032,22 @@ class WorkbenchServiceV3:
             if prior_profile:
                 profile.maintenance_task_id = prior_profile.maintenance_task_id
                 profile.completed_maintenance_task_ids = list(
-                    prior_profile.completed_maintenance_task_ids
+                    task_id
+                    for task_id in prior_profile.completed_maintenance_task_ids
+                    if task_id in completed_at
                 )
                 profile.completed_maintenance_task_ids.extend(
                     item.task_id
                     for item in previous.items
-                    if item.completed
+                    if item.task_id in completed_at
                     and item.task_type == "maintenance"
+                    and item.task_id != (profile.maintenance_task_id or f"{state.id}-M")
                     and item.task_id not in profile.completed_maintenance_task_ids
                 )
             completed_maintenance = [
                 item
                 for item in previous.items
-                if item.task_type == "maintenance"
-                and (
-                    item.completed
-                    or any(
-                        event.feedback
-                        and event.feedback.kind == "completed"
-                        and event.feedback.task_id == item.task_id
-                        for event in active_events
-                    )
-                )
+                if item.task_type == "maintenance" and item.task_id in completed_at
             ]
             new_demand = next(
                 (
@@ -712,16 +1067,6 @@ class WorkbenchServiceV3:
                     dict.fromkeys([*profile.completed_maintenance_task_ids, old_id])
                 )
                 profile.maintenance_task_id = f"{state.id}-M-{new_demand.event_id[:8]}"
-        completed_at = dict(previous.request.completed_at) if previous else {}
-        for event in active_events:
-            feedback = event.feedback
-            if feedback and feedback.kind == "completed" and feedback.task_id:
-                if (
-                    feedback.task_id in completed_at
-                    and completed_at[feedback.task_id] != feedback.at
-                ):
-                    raise ValueError("已完成记录不可更改；请提交明确的更正事件")
-                completed_at[feedback.task_id] = feedback.at
         # 采用/暂缓记录在评估前注入：rejected 卡不再作为任务依据，
         # adopted 卡仅改标注。同卡多条记录时以最新一条为准。
         rule_review_status = {
@@ -743,10 +1088,15 @@ class WorkbenchServiceV3:
             previous=previous,
             catalog=self.catalog,
             created_at=self._now(),
+            not_before=self._now(),
         )
         for event in active_events:
             feedback = event.feedback
             if feedback is None or feedback.kind == "completed":
+                continue
+            if feedback.kind in {"resource", "workability"} and feedback.day not in {
+                day.day for day in request.days
+            }:
                 continue
             initial = apply_feedback_v2(initial, feedback, catalog=self.catalog)
         return initial.request, previous
@@ -772,7 +1122,27 @@ class WorkbenchServiceV3:
             feedback=feedback,
             catalog=self.catalog,
             created_at=self._now(),
+            not_before=self._now(),
         )
+
+    def _completion_facts(
+        self, field_id: str, previous: PlanVersionV2 | None
+    ) -> dict[str, datetime]:
+        events = self.store.list_events(field_id)
+        managed_ids = {
+            event.feedback.task_id
+            for event in events
+            if event.feedback and event.feedback.kind == "completed"
+        }
+        completions = {
+            task_id: at
+            for task_id, at in (previous.request.completed_at.items() if previous else [])
+            if task_id not in managed_ids
+        }
+        for event in self._active_events(field_id):
+            if event.feedback and event.feedback.kind == "completed" and event.feedback.task_id:
+                completions[event.feedback.task_id] = event.feedback.at
+        return completions
 
     def _active_events(self, field_id: str):  # type: ignore[no-untyped-def]
         events = self.store.list_events(field_id)
@@ -798,7 +1168,12 @@ class WorkbenchServiceV3:
         changes: list[PlanChangeV3] = []
         for task_id, item in new_items.items():
             old = old_items.get(task_id)
-            if old is None:
+            if item.schedule_status == "cancelled" and (
+                old is None or old.schedule_status != "cancelled"
+            ):
+                kind = "cancelled"
+                reason = item.reason
+            elif old is None:
                 if item.necessity == "no_need":
                     continue
                 kind = "added"
@@ -806,6 +1181,16 @@ class WorkbenchServiceV3:
             elif item.completed and not old.completed:
                 kind = "completed"
                 reason = "用户确认完成，历史事实保持锁定"
+            elif (
+                item.completed
+                and previous
+                and (
+                    previous.plan.request.completed_at.get(task_id)
+                    != current.request.completed_at.get(task_id)
+                )
+            ):
+                kind = "completed"
+                reason = "用户显式更正完成记录；保留原事件和原时段"
             elif (old.start_at, old.end_at, old.schedule_status) == (
                 item.start_at,
                 item.end_at,
@@ -864,9 +1249,9 @@ class WorkbenchServiceV3:
             "stage_confirmation": "油菜生育期是否已由现场确认",
             "field_type": "田块类型",
             "inspection_requested": "是否需要巡田",
-            "maintenance_need_confirmed": "是否确认需要沟渠维护",
-            "maintenance_problem_confirmed": "是否确认存在需要处理的问题",
-            "maintenance_purpose": "是否为清理既有沟渠、改善已确认的连通问题",
+            "maintenance_need_confirmed": "要安排沟渠维护吗？",
+            "maintenance_problem_confirmed": "沟渠有需要处理的堵塞或排水问题吗？",
+            "maintenance_purpose": "维护沟渠是为了什么？",
             "duration_minutes": "任务预计需要多少分钟",
             "resource_minutes": "每天可用的作业分钟数",
             "site_workability": "当天现场能否进入作业",

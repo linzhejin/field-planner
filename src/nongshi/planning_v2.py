@@ -425,6 +425,7 @@ def build_plan_v2(
     catalog: RuleCatalog | None = None,
     created_at: datetime | None = None,
     reference_version: str | None = None,
+    not_before: datetime | None = None,
 ) -> PlanVersionV2:
     """Recompute a v2 snapshot, preserving completed facts and feasible old times."""
     catalog = catalog or load_rule_catalog()
@@ -459,6 +460,8 @@ def build_plan_v2(
                 items.append(old.model_copy(deep=True))
 
     floor = datetime.combine(request.start_date, time.min, tzinfo=LOCAL_ZONE)
+    if not_before is not None:
+        floor = max(floor, not_before.astimezone(LOCAL_ZONE))
     if previous and previous.not_before:
         floor = max(floor, previous.not_before.astimezone(LOCAL_ZONE))
     if previous and previous.feedback:
@@ -496,10 +499,24 @@ def build_plan_v2(
             item.start_at = None
             item.end_at = None
     by_id = {item.task_id: item for item in items}
+    for item in items:
+        if item.task_id in request.cancelled_tasks and not item.completed:
+            item.schedule_status = "cancelled"
+            item.start_at = None
+            item.end_at = None
+            item.reason_code = "user_cancelled"
+            item.reason = "已取消：" + request.cancelled_tasks[item.task_id]
+            item.missing_fields = []
 
     # Keep feasible assignments, preferring shorter jobs when daily capacity shrinks.
     old_order = sorted(
-        (item for item in items if item.task_id in previous_items and not item.completed),
+        (
+            item
+            for item in items
+            if item.task_id in previous_items
+            and not item.completed
+            and item.schedule_status != "cancelled"
+        ),
         key=lambda item: (
             item.duration_minutes if item.duration_minutes is not None else 10**9,
             previous_items[item.task_id].start_at or datetime.max.replace(tzinfo=LOCAL_ZONE),
@@ -548,7 +565,7 @@ def build_plan_v2(
         item
         for item in sorted(items, key=order_key)
         if not item.completed
-        and item.schedule_status not in {"not_generated", "scheduled"}
+        and item.schedule_status not in {"not_generated", "scheduled", "cancelled"}
         and item.applicability == "matched"
         and item.necessity == "required"
         and item.duration_minutes is not None
@@ -654,6 +671,13 @@ def apply_feedback_v2(
         if feedback.at.astimezone(LOCAL_ZONE) < item.start_at.astimezone(LOCAL_ZONE):
             raise ValueError("完成反馈时间早于任务计划开始时间")
         request.completed_at[feedback.task_id or ""] = feedback.at
+    elif feedback.kind == "cancelled":
+        item = next((item for item in previous.items if item.task_id == feedback.task_id), None)
+        if item is None:
+            raise ValueError("找不到要取消的任务")
+        if item.completed or item.task_id in request.completed_at:
+            raise ValueError("已完成任务不能取消")
+        request.cancelled_tasks[item.task_id] = feedback.reason
     elif feedback.kind == "observation":
         plot = next((plot for plot in request.plots if plot.id == feedback.plot_id), None)
         if plot is None:

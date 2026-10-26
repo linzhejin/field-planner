@@ -26,6 +26,7 @@ def make_service(path: Path) -> WorkbenchServiceV3:
         WorkbenchStoreV3(path),
         catalog=load_rule_catalog(),
         today=lambda: date(2026, 10, 18),
+        now=lambda: datetime(2026, 10, 18, tzinfo=UTC),
     )
 
 

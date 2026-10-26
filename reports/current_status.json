@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-24T20:11:07+08:00",
+  "evaluation": {
+    "run_id": "sealed-internal-regression-v12-20261024",
+    "sealed_at": "2026-10-23T21:47:18.571584+00:00",
+    "code_commit": "fdc2908cd218078e8349c7a8d66dc11caf52acf7",
+    "classification": "internal_regression_after_v1",
+    "report": "reports/internal_regression_v12_20261024.md",
+    "expected": {
+      "conclusion": "passed",
+      "main": {
+        "g1": {
+          "trials": 30,
+          "verdicts": {
+            "insufficient_evidence": 9,
+            "failed": 20,
+            "passed": 1
+          }
+        },
+        "g2": {
+          "trials": 30,
+          "verdicts": {
+            "failed": 23,
+            "passed": 7
+          }
+        },
+        "g3": {
+          "trials": 30,
+          "verdicts": {
+            "passed": 30
+          }
+        }
+      },
+      "boundary": {
+        "passed_trials": 18,
+        "trials": 18,
+        "all_three_passed_cases": 6,
+        "cases": 6
+      },
+      "hard_violations": 0
+    },
+    "artifacts": {
+      "seal.json": "baf463f6c3287bc3862f2088eb7730ebff7d53d26059358bb4c665b50544e888",
+      "first_attempts.json": "2bcacc390b1e6455c01600590b805b2f1a5bb1cc201bcc14f1b1f3ba57fa66c3",
+      "first_scores.json": "60801b2fa9e1a3dea6eb8491f50460b9e2cc2969e525e2f7006dbc19f41ee3c7",
+      "private_group_map.json": "8cc705b4ab04d29405c14c33a39daefcc153be905c1aec15b080b624e12b46d9",
+      "run_integrity.json": "ec117b24ba7479109c98cd6be41b5035906a4b5757c1c3eed74eba5b3d757044",
+      "semantic_reviews.json": "f60ed89c3fb5237974c34ad81385d3683d461a738ba9fd1ed66ba49a64c543ac"
+    }
+  },
+  "public_artifacts": {
+    "reports/internal_regression_v12_20261024.md": "ace204b8172284491505a8953f7e3350feb813b5d34504e7654508be644fa5bc",
+    "reports/ui_interaction_review_20261024.md": "4215756927d9a5086bbb6c492d1f3b5d33190f509a14827e7a6cfa981f96edcf"
+  },
+  "source_tests": {
+    "passed": 444,
+    "code_commit": "fdc2908cd218078e8349c7a8d66dc11caf52acf7",
+    "date": "2026-10-24",
+    "report": "reports/internal_regression_v12_20261024.md",
+    "verification": "historical recorded run; not rerun by progress check"
+  },
+  "scope": {
+    "independent_holdout": false,
+    "human_agronomic_signoff": false,
+    "field_validation": false,
+    "known_synthetic_substitutes": 8,
+    "semantic_review": "same-provider AI assisted"
+  },
+  "supplemental_evidence": [
+    {
+      "date": "2026-10-24",
+      "report": "reports/ui_interaction_review_20261024.md",
+      "scope": "local UI interaction review on a modified worktree; does not supersede frozen v12 evaluation"
+    }
+  ]
+}

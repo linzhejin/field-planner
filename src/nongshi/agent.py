@@ -7,6 +7,7 @@ import re
 import sqlite3
 import time
 from collections.abc import Callable
+from copy import copy
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import uuid4
@@ -14,6 +15,7 @@ from uuid import uuid4
 import httpx
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from nongshi.agent_jobs import AgentCancellation, AgentCancelled, AgentProgress
 from nongshi.config import Settings
 from nongshi.model_http import ModelBudgetExceeded, post_model_json
 from nongshi.rule_retrieval import RuleRetrieverV3
@@ -40,6 +42,28 @@ from nongshi.workflows import (
 
 MAX_MODEL_REQUESTS = 3
 MAX_TOOL_EXECUTIONS = 6
+
+
+class _GuardedAgentStore:
+    """Guard only the assistant's preview, run/proposal and weather writes."""
+
+    def __init__(self, store: Any, cancellation: AgentCancellation) -> None:
+        self._store = store
+        self._cancellation = cancellation
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._store, name)
+
+    def save_preview(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(lambda: self._store.save_preview(*args, **kwargs))
+
+    def save_agent_run(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(lambda: self._store.save_agent_run(*args, **kwargs))
+
+    def save_weather_snapshot(self, *args: Any, **kwargs: Any) -> Any:
+        return self._cancellation.persist(
+            lambda: self._store.save_weather_snapshot(*args, **kwargs)
+        )
 
 
 class ToolArgs(BaseModel):
@@ -278,6 +302,47 @@ class AgentServiceV3:
         *,
         conversation: list[dict[str, str]] | None = None,
         received_at: datetime | None = None,
+        progress: Callable[[AgentProgress], None] | None = None,
+        cancellation: AgentCancellation | None = None,
+    ) -> AgentResponseV3:
+        """Run synchronously; an optional token rejects results after cancellation.
+
+        Per-run shallow copies install narrowly guarded stores without changing
+        the caller's shared workbench/weather objects or the SQLite schema.
+        """
+        execution = self
+        if cancellation is not None:
+            cancellation.check()
+            execution = copy(self)
+            execution.workbench = copy(self.workbench)
+            execution.workbench.store = _GuardedAgentStore(self.workbench.store, cancellation)
+            execution.weather = copy(self.weather)
+            if getattr(self.weather, "store", None) is not None:
+                execution.weather.store = _GuardedAgentStore(self.weather.store, cancellation)
+            execution._geocoding_candidates = dict(self._geocoding_candidates)
+        response = execution._run(
+            field_id,
+            user_message,
+            conversation=conversation,
+            received_at=received_at,
+            progress=progress,
+            cancellation=cancellation,
+        )
+        if cancellation is not None and response.status == "success":
+            cancellation.persist(
+                lambda: self._geocoding_candidates.update(execution._geocoding_candidates)
+            )
+        return response
+
+    def _run(
+        self,
+        field_id: str,
+        user_message: str,
+        *,
+        conversation: list[dict[str, str]] | None = None,
+        received_at: datetime | None = None,
+        progress: Callable[[AgentProgress], None] | None = None,
+        cancellation: AgentCancellation | None = None,
     ) -> AgentResponseV3:
         started = self._monotonic()
         with self.workbench.store.connection_budget(min(1.0, self.settings.llm_timeout_seconds)):
@@ -301,6 +366,14 @@ class AgentServiceV3:
         steps: list[AgentWorkflowStepV3] = []
         request_ids: list[str] = []
 
+        def report(stage: str, status: str, tool_name: str = "") -> None:
+            if cancellation is not None:
+                cancellation.check()
+            if progress is not None:
+                progress(AgentProgress(stage, status, request_count, tool_name))
+            if cancellation is not None:
+                cancellation.check()
+
         def finish(
             status: str,
             *,
@@ -309,6 +382,8 @@ class AgentServiceV3:
             business_outcome: str | None = None,
             error_category: str | None = None,
         ) -> AgentResponseV3:
+            if cancellation is not None:
+                cancellation.check()
             elapsed = max(0, int((self._monotonic() - started) * 1000))
             run = AgentRunV3(
                 id=run_id,
@@ -351,6 +426,7 @@ class AgentServiceV3:
                 business_outcome = "failed"
                 proposals.clear()
                 previews.clear()
+            report("finished", status)
             return AgentResponseV3(
                 run_id=run_id,
                 status=status,  # type: ignore[arg-type]
@@ -376,7 +452,7 @@ class AgentServiceV3:
         if not api_key:
             return finish(
                 "missing_credentials",
-                error_message="模型密钥尚未配置；可以继续使用下方的结构化表单。",
+                error_message="助手暂时不可用：还没配置模型密钥。你可以手动填写。",
             )
         if not user_message.strip():
             return finish("invalid_response", error_message="请输入要处理的内容。")
@@ -406,14 +482,17 @@ class AgentServiceV3:
         url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
 
         for _ in range(MAX_MODEL_REQUESTS):
+            if cancellation is not None:
+                cancellation.check()
             remaining = deadline - self._monotonic()
             if remaining <= 0:
                 return finish(
                     "timeout",
                     text=last_tool_summary,
-                    error_message="本轮交互超过 20 秒；已保留工具结果和待确认草稿，可重试。",
+                    error_message="处理超时。已保存的内容和待确认修改还在，请重试。",
                 )
             request_count += 1
+            report("model", "started")
             steps.append(AgentWorkflowStepV3(stage="understanding", status="started"))
             try:
                 model_result = post_model_json(
@@ -437,6 +516,8 @@ class AgentServiceV3:
                     transport=self._transport,
                     monotonic=self._monotonic,
                 )
+                if cancellation is not None:
+                    cancellation.check()
                 response = model_result.response
                 if model_result.request_id:
                     request_ids.append(model_result.request_id)
@@ -455,7 +536,7 @@ class AgentServiceV3:
                 return finish(
                     "timeout",
                     text=last_tool_summary,
-                    error_message="模型请求超时；已保留已保存事实和待确认草稿。",
+                    error_message="助手响应超时。已保存的现场记录和待确认修改还在，请重试。",
                 )
             except httpx.RequestError as error:
                 category = (
@@ -464,14 +545,14 @@ class AgentServiceV3:
                 return finish(
                     "error",
                     text=last_tool_summary,
-                    error_message="模型连接失败；请稍后重试或使用结构化表单。",
+                    error_message="暂时连不上助手。请稍后重试，或手动填写。",
                     error_category=category,
                 )
             except (ValueError, ValidationError):
                 return finish(
                     "invalid_response",
                     text=last_tool_summary,
-                    error_message="模型响应格式无效；可改用结构化表单继续。",
+                    error_message="助手没有返回可用结果。请重试，或手动填写。",
                 )
 
             if completion.usage:
@@ -482,6 +563,7 @@ class AgentServiceV3:
             steps[-1] = AgentWorkflowStepV3(
                 stage="understanding", status="success", elapsed_ms=model_result.elapsed_ms
             )
+            report("model", "success")
             if not message.tool_calls:
                 if not message.content:
                     return finish(
@@ -496,7 +578,7 @@ class AgentServiceV3:
                 ):
                     return finish(
                         "success",
-                        text="部分事项已形成待确认修改，其余事项仍需补充或重新提出。",
+                        text="有些修改已整理好，请先核对；其他事项还需要补充情况。",
                         business_outcome="partial",
                     )
                 if (
@@ -520,7 +602,7 @@ class AgentServiceV3:
                     return finish(
                         "invalid_response",
                         text=last_tool_summary,
-                        error_message="未生成待确认修改；请补充事实或使用结构化表单。",
+                        error_message="还没整理出可保存的修改。请补充具体情况，或手动填写。",
                     )
                 if change_requested and not proposals:
                     return finish(
@@ -554,6 +636,8 @@ class AgentServiceV3:
                 }
             )
             for call in message.tool_calls:
+                if cancellation is not None:
+                    cancellation.check()
                 if self._monotonic() >= deadline:
                     return finish(
                         "timeout",
@@ -602,6 +686,7 @@ class AgentServiceV3:
                     )
                 else:
                     tool_count += 1
+                    report("tool", "started", call.function.name)
                     tool_names.append(call.function.name)
                     tool_started = self._monotonic()
                     try:
@@ -690,6 +775,7 @@ class AgentServiceV3:
                             elapsed_ms=elapsed_ms,
                         )
                     )
+                    report("tool", trace_status, call.function.name)
                 messages.append(
                     {
                         "role": "tool",
@@ -719,7 +805,7 @@ class AgentServiceV3:
                     continue
                 return finish(
                     "success",
-                    text="已生成待确认内容，请逐项核对后再保存或采用。",
+                    text="修改已整理好，请核对后保存。安排预览需要另行采用。",
                     business_outcome="partial"
                     if workflow_actions
                     and not self._actions_satisfied(workflow_actions, proposals, previews)
@@ -731,7 +817,7 @@ class AgentServiceV3:
         if (proposals or previews) and traces and traces[-1].status == "success":
             return finish(
                 "success",
-                text="已生成待确认内容，请逐项核对后再保存或采用。",
+                text="修改已整理好，请核对后保存。安排预览需要另行采用。",
                 business_outcome="awaiting_confirmation" if proposals else "preview_ready",
             )
         return finish(
@@ -801,6 +887,9 @@ class AgentServiceV3:
             "不能声称草稿已保存、事实已记录或计划已采用。不能编造任务、工时、天气、来源和农艺结论。"
             "未知保留为未知。天气预报不代表现场可作业。候选规则标记为开发验证、适用性待复核。"
             "最终只做简短解释，不另写一份任务列表；任务、日期、时段、状态和来源都由本地工具结果展示。"
+            "用种植户听得懂的自然中文：先说结果，再说还需做什么；一个问题只问一次。"
+            "少说“结构化表单”“本轮交互”“事实提案”等内部术语；空值只说暂不确定，"
+            "不要推断用户尚未检查。错误说明原因和可采取的下一步。"
             "不要输出私有推理过程。"
         )
 
@@ -819,7 +908,7 @@ class AgentServiceV3:
     @staticmethod
     def _safe_explanation(text: str) -> str:
         if len(text) > 400:
-            return "已完成本轮查询；请以计划结果和依据面板中的结构化内容为准。"
+            return "已查到结果。具体安排和依据请看计划区。"
         unsupported_detail = re.search(
             r"(?:\b20\d{2}[-/年]|\b\d{1,2}:\d{2}\b|\bC\d{2}\b|\b[A-Z]-[IM]\b|"
             r"\d+(?:\.\d+)?\s*(?:mm|毫米|°?C|℃|km/h)|建议.*(?:施肥|喷药|排水|清沟|浇水|巡田|维护))",
@@ -827,7 +916,7 @@ class AgentServiceV3:
             flags=re.IGNORECASE,
         )
         if unsupported_detail:
-            return "已完成本轮查询；请以计划结果和依据面板中的结构化内容为准。"
+            return "已查到结果。具体安排和依据请看计划区。"
         return text
 
     def _execute_tool(
@@ -1004,6 +1093,8 @@ class AgentServiceV3:
             else:
                 raise ValueError("工具未注册")
             return result, proposal, None, "success"
+        except AgentCancelled:
+            raise
         except WeatherServiceError as error:
             return (
                 {"error": f"weather_{error.code}", "message": str(error)},
@@ -1097,7 +1188,7 @@ class AgentServiceV3:
             field_id=field_id,
             expected_draft_version=state.draft_version,
             draft=new_draft,
-            summary="助手提出地块档案修改，确认后才保存。",
+            summary="请核对地块信息的修改，确认后才会保存。",
             changes=differences,
         )
 
@@ -1132,7 +1223,7 @@ class AgentServiceV3:
             field_id=field_id,
             expected_fact_version=state.fact_version,
             events=events,
-            summary="助手拆分出现场事实，确认后才记录。",
+            summary="请核对现场记录，确认后才会保存。",
             changes={"event_count": len(events)},
         )
 

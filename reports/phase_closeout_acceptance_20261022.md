@@ -1,5 +1,9 @@
 # 当前阶段验收记录（2026-10-22）
 
+<!-- SNAPSHOT_NOTICE:START -->
+> 历史记录：本页“当前”“本轮”仅指标题所列批次或日期，不代表项目最新进度。先看 [STATUS.md](../STATUS.md)，历轮关系见 [报告索引](README.md)。原结论与失败证据保留。
+<!-- SNAPSHOT_NOTICE:END -->
+
 ## 结论与证据边界
 
 公开模拟农情的完整业务脚本已使用真实 DeepSeek 与 Open-Meteo 接口通过；这验证了工具接通、持久化和计划流转，不证明农艺适用性、田间效果或独立留出成绩。机器记录见 `phase_closeout_live_20261022.json`，第一次模型请求预算失败保留在 `phase_closeout_live_20261022_first_attempt.json`。API 密钥、个人数据库及未公开评测答案未写入报告。

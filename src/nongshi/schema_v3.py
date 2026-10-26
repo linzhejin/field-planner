@@ -128,6 +128,23 @@ class FactEventV3(FactEventInputV3):
     created_at: AwareDatetime
 
 
+class TaskActionV3(BaseModel):
+    """Frozen mutation intent for durable task-action retries."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    field_id: str
+    expected_draft_version: int
+    expected_fact_version: int
+    draft: FieldDraftV3 | None = None
+    event: FactEventInputV3 | None = None
+
+    @model_validator(mode="after")
+    def validate_mutation(self) -> TaskActionV3:
+        if (self.draft is None) == (self.event is None):
+            raise ValueError("任务操作必须且只能包含一项已确认修改")
+        return self
+
+
 class EventCommitResultV3(BaseModel):
     field_id: str
     fact_version: int = Field(ge=1)

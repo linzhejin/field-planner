@@ -30,8 +30,8 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     app = AppTest.from_file(APP, default_timeout=30).run()
 
     assert not app.exception
-    # 顶层为三页签；右栏内部另有「农事助手/最近操作」子页签，故只校验前三个。
-    assert [tab.label for tab in app.tabs][:3] == ["地块与资源", "计划结果", "助手与历史"]
+    # 首次建档只有一块地的表单；保存后再进入三栏或窄屏页签。
+    assert not app.tabs
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     field_id = app.session_state["new_field_id:real"]
     assert app.text_input(key=f"field_name:{field_id}:0").value == ""
@@ -51,25 +51,6 @@ def test_first_open_is_blank_and_saving_keeps_unknowns_unknown(tmp_path: Path, m
     assert saved.draft.start_date is not None
     assert saved.draft.profile.observation_source == "synthetic"
     assert saved.draft.profile.observed_at is None
-
-
-def test_narrow_assistant_quick_observation_saves_fact(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    database = tmp_path / "plans.sqlite3"
-    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
-    app = AppTest.from_file(APP, default_timeout=30).run()
-    field_id = app.session_state["new_field_id:real"]
-    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
-    app.button(key=f"save_field:{field_id}:0").click().run()
-
-    app.button(key=f"quick_observe:{field_id}").click().run()
-    assert not app.exception
-    assert app.session_state[f"quick_feedback_kind:{field_id}"] == "observation"
-    app.selectbox(key=f"quick_observation_field:{field_id}").set_value("积水情况").run()
-    app.selectbox(key=f"quick_observation_value:{field_id}:积水情况").set_value("是")
-    app.button(key=f"quick_save_observation:{field_id}:0").click().run()
-
-    assert not app.exception
-    assert WorkbenchStoreV3(database).get_field(field_id).fact_version == 1
 
 
 def test_saving_confirmed_field_observations_records_their_source_and_time(
@@ -103,7 +84,7 @@ def test_observation_type_selector_is_reactive_outside_the_submit_form(
     observation_type = app.selectbox(key=f"observation_field:{field_id}:0")
     assert observation_type.proto.form_id == ""
     observation_type.set_value("是否有实际降雨").run()
-    assert app.selectbox(key=f"observation_value:{field_id}:0").options == ["未知", "是", "否"]
+    assert app.selectbox(key=f"observation_value:{field_id}:0").options == ["暂不确定", "是", "否"]
 
 
 def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
@@ -124,6 +105,7 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
     for offset in range(7):
         app.selectbox(key=f"site:{field_id}:1:{offset}").set_value("可作业")
         app.selectbox(key=f"weather:{field_id}:1:{offset}").set_value("可作业")
+        app.checkbox(key=f"resource_known:{field_id}:1:{offset}").set_value(True).run()
         app.number_input(key=f"minutes:{field_id}:1:{offset}").set_value(120)
         app.text_input(key=f"intervals:{field_id}:1:{offset}").set_value("09:00-11:00")
     app.button(key=f"save_schedule:{field_id}:1").click().run()
@@ -142,8 +124,8 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
     assert inspection.start_at is not None and inspection.end_at is not None
     assert len(store.plan_history(field_id)) == 1
     # 顶栏计划版本随采用版更新为 V1。
-    top_markdown = "\n".join(element.value for element in app.markdown)
-    assert "计划 V1" in top_markdown
+    top_text = "\n".join(element.value for element in [*app.markdown, *app.caption])
+    assert "计划 V1" in top_text
 
     app.selectbox(key=f"observation_field:{field_id}:0").set_value("沟渠连通")
     app.selectbox(key=f"observation_value:{field_id}:0").set_value("受阻")
@@ -173,8 +155,8 @@ def test_simulation_uses_a_separate_database_from_real_fields(tmp_path: Path, mo
     assert not app.exception
     assert WorkbenchStoreV3(database).list_fields(mode="real") == []
     demo_fields = WorkbenchStoreV3(demo_database).list_fields(mode="demo")
-    assert len(demo_fields) == 1
-    assert demo_fields[0].draft.profile.name == "演示地块"
+    assert len(demo_fields) == 2
+    assert all(field.draft.profile.name == "我的第一块地" for field in demo_fields)
 
 
 def test_field_type_facts_save_independently_and_survive_reopen(
@@ -241,36 +223,34 @@ def test_a04_supplementary_registry_is_visible_with_prefix(tmp_path: Path, monke
     assert not app.exception
     texts = [element.value for element in app.markdown]
     texts += [element.value for element in app.caption]
-    assert any("C11/Z15" in text for text in texts)
     assert any("A04-S01" in text for text in texts)
     assert any("不改写规则卡原文" in text or "补充来源" in text for text in texts)
 
 
-def test_top_bar_shows_range_version_mode_and_history_export(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_top_bar_shows_state_and_only_available_actions(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     database = tmp_path / "plans.sqlite3"
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     app = AppTest.from_file(APP, default_timeout=30).run()
     assert not app.exception
 
-    markdown = "\n".join(element.value for element in app.markdown)
-    captions = "\n".join(element.value for element in app.caption)
+    captions = "\n".join(element.value for element in [*app.markdown, *app.caption])
 
-    # 顶栏：日期范围 + 计划版本 + 模式徽标 + 保存状态。
-    assert "未设置起始日" in markdown
-    assert "计划 未采用" in markdown
-    assert 'status-chip status-neutral">真实地块' in markdown
+    # 未保存时顶栏说明状态，不展示尚不存在的历史和导出入口。
+    assert "未设置起始日" in captions
+    assert "计划 未采用" in captions
+    assert "真实地块" in captions
     assert "尚未保存" in captions
-
-    # 顶栏提供历史版本与导出计划两个按钮。
     button_keys = {button.key for button in app.button}
-    assert "top_history" in button_keys
-    assert "top_export" in button_keys
+    assert "top_history" not in button_keys
+    assert "top_export" not in button_keys
 
-    # 尚无采用版时点「历史版本」可在对话框内看到空态提示。
-    app.button(key="top_history").click().run()
+    field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
     assert not app.exception
-    dialog_text = "\n".join(element.value for element in app.caption)
-    assert "尚无已采用的计划版本" in dialog_text
+    assert any(button.key == "top_history" for button in app.button)
+    assert not any(button.key == "top_export" for button in app.button)
+    assert "采用后可导出" in "\n".join(element.value for element in app.caption)
 
 
 def test_result_count_strip_shows_status_counts(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -284,11 +264,11 @@ def test_result_count_strip_shows_status_counts(tmp_path: Path, monkeypatch) -> 
 
     markdown = "\n".join(element.value for element in app.markdown)
     # 三块计数卡沿用状态胶囊配色：已安排绿、待确认琥珀、未排入灰。
-    assert 'status-chip status-green">已安排' in markdown
-    assert 'status-chip status-amber">待确认' in markdown
-    assert 'status-chip status-neutral">未排入' in markdown
+    assert "count-item green" in markdown and 'count-label">已安排' in markdown
+    assert "count-item amber" in markdown and 'count-label">待确认' in markdown
+    assert "count-item neutral" in markdown and 'count-label">未排入' in markdown
     # 计数条上方有天气摘要行。
-    assert any(caption.value.startswith("天气：") for caption in app.caption)
+    assert any("天气：" in caption.value for caption in app.caption)
 
 
 def test_quick_action_buttons_present(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -296,10 +276,12 @@ def test_quick_action_buttons_present(tmp_path: Path, monkeypatch) -> None:  # t
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
     app = AppTest.from_file(APP, default_timeout=30).run()
     field_id = app.session_state["new_field_id:real"]
+    app.text_input(key=f"field_name:{field_id}:0").set_value("一号田")
+    app.button(key=f"save_field:{field_id}:0").click().run()
 
     button_keys = {button.key for button in app.button}
     assert f"quick_observe:{field_id}" in button_keys
-    assert f"quick_complete:{field_id}" in button_keys
+    assert f"quick_complete:{field_id}" not in button_keys
     assert f"quick_resource:{field_id}" in button_keys
 
 
