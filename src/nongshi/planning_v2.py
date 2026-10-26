@@ -21,6 +21,7 @@ from nongshi.schema_v2 import (
     RuleEvidenceV2,
     WorkabilityConfirmation,
 )
+from nongshi.tasks_v4 import TaskExecutionGroupV4
 
 
 def _scope(plot: FieldProfile) -> tuple[str, list[str], str]:
@@ -267,14 +268,40 @@ def _base_item(
     )
 
 
-def _task_preferences(plot: FieldProfile, task_type: str) -> tuple[int, date | None, date | None]:
+def _task_preferences(
+    plot: FieldProfile,
+    task_type: str,
+    item: PlanItemV2 | None = None,
+) -> tuple[int, date | None, date | None]:
+    if item is not None and item.priority is not None:
+        return item.priority, item.earliest_date, item.due_date
     if task_type == "inspection":
         return plot.inspection_priority, plot.inspection_earliest_date, plot.inspection_due_date
     return plot.maintenance_priority, plot.maintenance_earliest_date, plot.maintenance_due_date
 
 
-def _task_prerequisites(plot: FieldProfile, task_type: str) -> list[str]:
+def _task_prerequisites(
+    plot: FieldProfile,
+    task_type: str,
+    item: PlanItemV2 | None = None,
+    completed_at: dict[str, datetime] | None = None,
+) -> list[str]:
+    if item is not None and item.template_snapshot is not None:
+        prerequisites = list(item.prerequisites)
+        if task_type == "maintenance":
+            prerequisites.extend(plot.maintenance_prerequisites)
+        return [
+            prerequisite
+            for prerequisite in dict.fromkeys(prerequisites)
+            if prerequisite not in (completed_at or {})
+        ]
     return plot.maintenance_prerequisites if task_type == "maintenance" else []
+
+
+def _item_window_status(item: PlanItemV2, plot: FieldProfile, day: DayWindow) -> str:
+    if item.category == "offsite":
+        return "available"
+    return _daily_window(plot, day)
 
 
 def _date_time(day: date, clock: time) -> datetime:
@@ -360,7 +387,7 @@ def _reasons_if_unplaced(
     ]
     if not available_days:
         return "unscheduled", "no_available_window", "七天内没有现场与天气均确认可作业的日期"
-    _, earliest, due = _task_preferences(plot, item.task_type)
+    _, earliest, due = _task_preferences(plot, item.task_type, item)
     first_possible = max(floor.date(), earliest or request.start_date)
     if due is not None and due < first_possible:
         return "unscheduled", "deadline", "用户目标日期早于反馈后的最早可安排日期"
@@ -384,6 +411,130 @@ def _reasons_if_unplaced(
     return "unscheduled", "capacity", "可用人力或时段已被其他任务占用"
 
 
+def _task_instance_item(
+    instance: object, request: PlanRequestV2, catalog: RuleCatalog
+) -> PlanItemV2:
+    from nongshi.tasks_v4 import TaskInstanceV4
+
+    if not isinstance(instance, TaskInstanceV4):
+        raise TypeError("task_instances_v4 must contain TaskInstanceV4 values")
+    plot = next(plot for plot in request.plots if plot.id == instance.field_id)
+    instance_titles = {task.id: task.template.title for task in request.task_instances_v4}
+    snapshot = instance.template.model_dump(mode="json")
+    snapshot["prerequisites"] = [
+        {"id": task_id, "title": instance_titles.get(task_id, task_id)}
+        for task_id in instance.prerequisites
+    ]
+    execution_group = next(
+        (
+            group
+            for group in request.execution_groups_v4
+            if group.status != "cancelled" and instance.id in group.member_task_ids
+        ),
+        None,
+    )
+    if execution_group:
+        snapshot["execution_group"] = {
+            "id": execution_group.id,
+            "member_task_ids": list(execution_group.member_task_ids),
+            "duration_minutes": execution_group.duration_minutes,
+            "version": execution_group.version,
+        }
+    governed = instance.template.task_type in {"inspection", "maintenance"}
+    if governed:
+        applicability, necessity, missing = _task_state(plot, instance.template.task_type)
+    else:
+        applicability, necessity, missing = "matched", "required", []
+    missing.extend(instance.missing_fields)
+    windows: dict[date, str] = {}
+    for day in request.days:
+        if necessity != "required" or applicability != "matched":
+            continue
+        if instance.template.category == "offsite":
+            windows[day.day] = "available"
+        else:
+            windows[day.day] = _daily_window(plot, day)
+            site, weather = _effective_workability(plot, day)
+            if site is None:
+                missing.append(f"{day.day.isoformat()}:site_workability")
+            if weather is None:
+                missing.append(f"{day.day.isoformat()}:weather_workability")
+    if instance.status == "superseded":
+        status, reason_code, reason = (
+            "not_generated",
+            "series_revised",
+            "该次任务已由新的周期设置替代",
+        )
+    elif necessity == "no_need":
+        status, reason_code, reason = "not_generated", "no_need", "已确认不需要，不生成本次任务"
+    elif applicability == "out_of_scope":
+        status, reason_code, reason = (
+            "not_generated",
+            "out_of_scope",
+            "任务超出当前适用范围，不生成",
+        )
+    elif applicability == "pending" or necessity == "unknown":
+        status, reason_code, reason = (
+            "pending",
+            "business_confirmation_pending",
+            "业务条件或需求尚待确认",
+        )
+    elif "duration_minutes" in instance.missing_fields:
+        status, reason_code, reason = "pending", "missing_duration", "待补充预计时长，暂不排入"
+    elif instance.missing_fields:
+        status, reason_code, reason = (
+            "pending",
+            "task_details_pending",
+            "任务内容尚缺必填信息，暂不排入",
+        )
+    elif not instance.duration_minutes:
+        status, reason_code, reason = "pending", "missing_duration", "待补充预计时长，暂不排入"
+    elif instance.due_date < request.start_date and instance.id not in request.completed_at:
+        status, reason_code, reason = "unscheduled", "overdue", "任务已逾期；请确认是否重新安排"
+    elif instance.template.category == "onsite" and all(
+        state == "pending" for state in windows.values()
+    ):
+        status, reason_code, reason = "pending", "workability_pending", "现场和天气作业条件待确认"
+    else:
+        status, reason_code, reason = (
+            "unscheduled",
+            "not_scheduled",
+            "用户确认的任务，正在核对作业条件、时间和前置关系",
+        )
+    return PlanItemV2(
+        task_id=instance.id,
+        plot_id=instance.field_id,
+        title=instance.template.title,
+        task_type=instance.template.task_type,
+        applicability=applicability,  # type: ignore[arg-type]
+        necessity=necessity,  # type: ignore[arg-type]
+        window_by_date=windows,
+        schedule_status=status,  # type: ignore[arg-type]
+        duration_minutes=instance.duration_minutes,
+        reason=reason,
+        reason_code=reason_code,
+        missing_fields=list(dict.fromkeys(missing)),
+        category=instance.template.category,
+        priority=instance.priority,
+        earliest_date=instance.earliest_date,
+        due_date=instance.due_date,
+        prerequisites=list(instance.prerequisites),
+        template_snapshot=snapshot,
+        execution_group_id=execution_group.id if execution_group else None,
+        group_duration_minutes=execution_group.duration_minutes if execution_group else None,
+        evidence=(
+            _make_evidence(
+                catalog,
+                plot,
+                instance.template.task_type,
+                request.rule_review_status,
+            )
+            if governed
+            else []
+        ),
+    )
+
+
 def _change_log(previous: PlanVersionV2 | None, items: list[PlanItemV2]) -> list[str]:
     if previous is None:
         return []
@@ -398,10 +549,18 @@ def _change_log(previous: PlanVersionV2 | None, items: list[PlanItemV2]) -> list
         if not old.completed and item.completed:
             changes.append(f"{item.task_id}：已记录完成，原时段保留")
             continue
-        if (old.start_at, old.end_at, old.schedule_status) != (
+        if (
+            old.start_at,
+            old.end_at,
+            old.schedule_status,
+            old.execution_group_id,
+            old.group_duration_minutes,
+        ) != (
             item.start_at,
             item.end_at,
             item.schedule_status,
+            item.execution_group_id,
+            item.group_duration_minutes,
         ):
             old_text = (
                 f"{old.start_at:%Y-%m-%d %H:%M}–{old.end_at:%H:%M}"
@@ -429,7 +588,9 @@ def build_plan_v2(
 ) -> PlanVersionV2:
     """Recompute a v2 snapshot, preserving completed facts and feasible old times."""
     catalog = catalog or load_rule_catalog()
-    request = PlanRequestV2.model_validate(request.model_dump(mode="python"))
+    request = PlanRequestV2.model_validate(request.model_dump(mode="python")).model_copy(
+        update={"schema_version": 4}
+    )
     if request.ruleset_version != catalog.delivery_version:
         raise ValueError("规则资料版本已变化；请选择并确认当前规则版本后再生成")
     if set(request.selected_rule_ids) != catalog.development_rule_ids:
@@ -446,12 +607,20 @@ def build_plan_v2(
     items: list[PlanItemV2] = []
     plot_by_id = {plot.id: plot for plot in request.plots}
     for plot in request.plots:
-        items.append(
-            _base_item(plot, "inspection", catalog, request.days, request.rule_review_status)
-        )
-        items.append(
-            _base_item(plot, "maintenance", catalog, request.days, request.rule_review_status)
-        )
+        v4_types = {
+            task.template.task_type
+            for task in request.task_instances_v4
+            if task.field_id == plot.id
+        }
+        for task_type in ("inspection", "maintenance"):
+            item = _base_item(plot, task_type, catalog, request.days, request.rule_review_status)
+            if task_type in v4_types and item.task_id not in request.completed_at:
+                item.schedule_status = "not_generated"
+                item.reason_code = "replaced_by_task_series"
+                item.reason = "已建立独立任务实例，不再重复安排旧单次候选"
+                item.missing_fields = []
+            items.append(item)
+    items.extend(_task_instance_item(task, request, catalog) for task in request.task_instances_v4)
     previous_items = {item.task_id: item for item in previous.items} if previous else {}
     current_ids = {item.task_id for item in items}
     if previous:
@@ -473,13 +642,34 @@ def build_plan_v2(
 
     reservations: dict[date, list[tuple[datetime, datetime, str]]] = {}
     used_minutes: dict[date, int] = {}
+    groups_by_id = {
+        group.id: group for group in request.execution_groups_v4 if group.status != "cancelled"
+    }
+    reserved_execution_slots: set[tuple[str, datetime, datetime]] = set()
 
     def reserve(item: PlanItemV2, start: datetime, end: datetime) -> None:
-        reservations.setdefault(start.date(), []).append((start, end, item.task_id))
+        group_id = item.execution_group_id
+        if group_id:
+            reservation_key = (group_id, start, end)
+            if reservation_key not in reserved_execution_slots:
+                group = groups_by_id.get(group_id)
+                shared_minutes = (
+                    item.group_duration_minutes
+                    or (group.duration_minutes if group is not None else None)
+                    or item.duration_minutes
+                    or 0
+                )
+                reservations.setdefault(start.date(), []).append((start, end, group_id))
+                used_minutes[start.date()] = used_minutes.get(start.date(), 0) + shared_minutes
+                reserved_execution_slots.add(reservation_key)
+        else:
+            reservations.setdefault(start.date(), []).append((start, end, item.task_id))
+            if item.duration_minutes:
+                used_minutes[start.date()] = (
+                    used_minutes.get(start.date(), 0) + item.duration_minutes
+                )
         item.start_at = start
         item.end_at = end
-        if item.duration_minutes:
-            used_minutes[start.date()] = used_minutes.get(start.date(), 0) + item.duration_minutes
 
     # Completed work is history: keep its original slot even if today's availability changed.
     for index, item in enumerate(items):
@@ -499,6 +689,10 @@ def build_plan_v2(
             item.start_at = None
             item.end_at = None
     by_id = {item.task_id: item for item in items}
+    group_by_member = {
+        task_id: group for group in groups_by_id.values() for task_id in group.member_task_ids
+    }
+    grouped_task_ids = set(group_by_member)
     for item in items:
         if item.task_id in request.cancelled_tasks and not item.completed:
             item.schedule_status = "cancelled"
@@ -514,6 +708,7 @@ def build_plan_v2(
             item
             for item in items
             if item.task_id in previous_items
+            and item.task_id not in grouped_task_ids
             and not item.completed
             and item.schedule_status != "cancelled"
         ),
@@ -531,8 +726,8 @@ def build_plan_v2(
         end = old.end_at.astimezone(LOCAL_ZONE)
         day = days_by_date.get(start.date())
         plot = plot_by_id[item.plot_id]
-        _, earliest, due = _task_preferences(plot, item.task_type)
-        prereqs = _task_prerequisites(plot, item.task_type)
+        _, earliest, due = _task_preferences(plot, item.task_type, item)
+        prereqs = _task_prerequisites(plot, item.task_type, item, request.completed_at)
         prereqs_ready = all(
             parent in by_id
             and by_id[parent].start_at is not None
@@ -558,8 +753,8 @@ def build_plan_v2(
 
     def order_key(item: PlanItemV2) -> tuple[date, int, str]:
         plot = plot_by_id[item.plot_id]
-        _, earliest, due = _task_preferences(plot, item.task_type)
-        return due or date.max, _task_preferences(plot, item.task_type)[0], item.task_id
+        priority, _, due = _task_preferences(plot, item.task_type, item)
+        return due or date.max, priority, item.task_id
 
     to_place = [
         item
@@ -569,14 +764,239 @@ def build_plan_v2(
         and item.applicability == "matched"
         and item.necessity == "required"
         and item.duration_minutes is not None
+        and item.reason_code != "overdue"
     ]
     while to_place:
         deferred: list[PlanItemV2] = []
         made_progress = False
+        handled_groups: set[str] = set()
         for item in to_place:
+            group = group_by_member.get(item.task_id)
+            if group is not None:
+                if group.id in handled_groups:
+                    continue
+                handled_groups.add(group.id)
+                members = [by_id[task_id] for task_id in group.member_task_ids]
+                member_ids = set(group.member_task_ids)
+                if group.status != "confirmed":
+                    for member in members:
+                        if member.completed or member.schedule_status == "cancelled":
+                            continue
+                        member.schedule_status = "pending"
+                        member.reason_code = "execution_group_needs_reconfirmation"
+                        member.reason = "合并出行成员或内容已变化，请重新确认任务和总时长"
+                    continue
+                active_members = [
+                    member
+                    for member in members
+                    if not member.completed and member.schedule_status != "cancelled"
+                ]
+                if not active_members:
+                    continue
+                prerequisites = list(
+                    dict.fromkeys(
+                        prerequisite
+                        for member in active_members
+                        for prerequisite in _task_prerequisites(
+                            plot_by_id[member.plot_id],
+                            member.task_type,
+                            member,
+                            request.completed_at,
+                        )
+                    )
+                )
+                if member_ids.intersection(prerequisites):
+                    for member in members:
+                        if member.completed or member.schedule_status == "cancelled":
+                            continue
+                        member.schedule_status = "pending"
+                        member.reason_code = "execution_group_prerequisite_conflict"
+                        member.reason = "同一合并出行内存在前置关系；请拆分安排"
+                    continue
+                if any(
+                    by_id.get(parent_id) is None or by_id[parent_id].end_at is None
+                    for parent_id in prerequisites
+                ):
+                    deferred.append(item)
+                    continue
+                prerequisite_ends = [
+                    by_id[parent_id].end_at.astimezone(LOCAL_ZONE)
+                    for parent_id in prerequisites
+                    if by_id[parent_id].end_at is not None
+                ]
+                earliest_start = max([floor, *prerequisite_ends])
+                day = days_by_date.get(group.execution_date)
+                eligible_members = all(
+                    member.schedule_status not in {"not_generated", "cancelled", "pending"}
+                    and member.applicability == "matched"
+                    and member.necessity == "required"
+                    and member.duration_minutes is not None
+                    for member in active_members
+                )
+                if not eligible_members:
+                    blocker = next(
+                        (
+                            member
+                            for member in active_members
+                            if member.schedule_status in {"not_generated", "cancelled", "pending"}
+                            or member.applicability != "matched"
+                            or member.necessity != "required"
+                            or member.duration_minutes is None
+                        ),
+                        members[0],
+                    )
+                    for member in active_members:
+                        if (
+                            member is blocker
+                            or member.completed
+                            or member.schedule_status == "cancelled"
+                        ):
+                            continue
+                        member.schedule_status = "pending"
+                        member.reason_code = "execution_group_member_pending"
+                        member.reason = f"合并出行中的“{blocker.title}”尚未满足安排条件"
+                    continue
+
+                window_states = [
+                    member.window_by_date.get(group.execution_date, "pending")
+                    for member in active_members
+                ]
+                if day is None or any(state != "available" for state in window_states):
+                    pending_window = "pending" in window_states
+                    for member in active_members:
+                        if member.completed or member.schedule_status == "cancelled":
+                            continue
+                        member.schedule_status = "pending" if pending_window else "unscheduled"
+                        member.reason_code = (
+                            "execution_group_workability_pending"
+                            if pending_window
+                            else "execution_group_unworkable"
+                        )
+                        member.reason = (
+                            "合并出行日期的现场与天气条件待确认"
+                            if pending_window
+                            else "合并出行日期不可作业；请重新确认日期或拆分任务"
+                        )
+                    continue
+
+                def reserve_group(
+                    start: datetime,
+                    execution_group: TaskExecutionGroupV4 = group,
+                    group_members: list[PlanItemV2] = members,
+                ) -> None:
+                    end = start + timedelta(minutes=execution_group.duration_minutes)
+                    reservation_key = (execution_group.id, start, end)
+                    if reservation_key not in reserved_execution_slots:
+                        reservations.setdefault(start.date(), []).append(
+                            (start, end, execution_group.id)
+                        )
+                        used_minutes[start.date()] = (
+                            used_minutes.get(start.date(), 0) + execution_group.duration_minutes
+                        )
+                        reserved_execution_slots.add(reservation_key)
+                    for member in group_members:
+                        if member.completed or member.schedule_status == "cancelled":
+                            continue
+                        member.start_at = start
+                        member.end_at = end
+                        member.schedule_status = "scheduled"
+                        member.reason_code = "execution_group_scheduled"
+                        member.reason = (
+                            f"与同地任务合并出行；共享一次{execution_group.duration_minutes}分钟时段，"
+                            "各项结果分别记录"
+                        )
+                        member.execution_group_id = execution_group.id
+                        member.group_duration_minutes = execution_group.duration_minutes
+
+                placed = False
+                old_group = next(
+                    (
+                        old
+                        for old in (previous.request.execution_groups_v4 if previous else [])
+                        if old.id == group.id
+                        and old.execution_date == group.execution_date
+                        and old.status == "confirmed"
+                    ),
+                    None,
+                )
+                current_members_were_grouped = bool(old_group) and set(
+                    group.member_task_ids
+                ).issubset(old_group.member_task_ids)
+                old_members = (
+                    [previous_items.get(task_id) for task_id in old_group.member_task_ids]
+                    if old_group
+                    else []
+                )
+                old_starts = {entry.start_at for entry in old_members if entry and entry.start_at}
+                old_ends = {entry.end_at for entry in old_members if entry and entry.end_at}
+                reserved_slot_matches = any(
+                    reservation_id == group.id
+                    and start.date() == group.execution_date
+                    and end - start == timedelta(minutes=group.duration_minutes)
+                    for start, end, reservation_id in reservations.get(group.execution_date, [])
+                )
+                if (
+                    old_group
+                    and len(old_starts) == len(old_ends) == 1
+                    and all(
+                        entry is not None and entry.start_at and entry.end_at
+                        for entry in old_members
+                    )
+                ):
+                    old_start = next(iter(old_starts)).astimezone(LOCAL_ZONE)
+                    if old_start.date() == group.execution_date and (
+                        (reserved_slot_matches and current_members_were_grouped)
+                        or (
+                            old_start >= earliest_start
+                            and _interval_fits(
+                                old_start,
+                                group.duration_minutes,
+                                day,
+                                reservations,
+                                used_minutes,
+                            )
+                        )
+                    ):
+                        reserve_group(old_start)
+                        for member in active_members:
+                            member.reason = "沿用仍然可行的合并出行时段；各项结果分别记录"
+                        placed = True
+                        made_progress = True
+                if not placed:
+                    for candidate in _candidate_slots(
+                        day,
+                        group.duration_minutes,
+                        earliest_start,
+                        reservations,
+                        used_minutes,
+                    ):
+                        if _interval_fits(
+                            candidate,
+                            group.duration_minutes,
+                            day,
+                            reservations,
+                            used_minutes,
+                        ):
+                            reserve_group(candidate)
+                            placed = True
+                            made_progress = True
+                            break
+                if not placed:
+                    reason = (
+                        "合并出行的确认总时长超过当日可用人力"
+                        if day.resource_minutes is not None
+                        and day.resource_minutes < group.duration_minutes
+                        else "所选日期没有足够长的连续时段；请调整总时长或拆分任务"
+                    )
+                    for member in active_members:
+                        member.schedule_status = "unscheduled"
+                        member.reason_code = "execution_group_time_unavailable"
+                        member.reason = reason
+                continue
+
             plot = plot_by_id[item.plot_id]
-            _, earliest, due = _task_preferences(plot, item.task_type)
-            prerequisites = _task_prerequisites(plot, item.task_type)
+            _, earliest, due = _task_preferences(plot, item.task_type, item)
+            prerequisites = _task_prerequisites(plot, item.task_type, item, request.completed_at)
             prerequisite_ends = []
             if any(
                 by_id.get(parent_id) is None or by_id[parent_id].end_at is None
@@ -590,12 +1010,42 @@ def build_plan_v2(
                     prerequisite_ends.append(parent.end_at.astimezone(LOCAL_ZONE))
             earliest_start = max([floor, *prerequisite_ends])
             placed = False
-            for day in request.days:
+            candidate_days = list(request.days)
+            if request.scheduling_preference == "balanced":
+                candidate_days.sort(
+                    key=lambda day: (
+                        used_minutes.get(day.day, 0)
+                        / max(
+                            day.resource_minutes
+                            or sum(interval.minutes for interval in day.intervals),
+                            1,
+                        ),
+                        used_minutes.get(day.day, 0),
+                        day.day,
+                    )
+                )
+            elif request.scheduling_preference == "concentrated":
+                occupied_days = set(used_minutes)
+                onsite_days = {
+                    reserved_day
+                    for reserved_day, day_reservations in reservations.items()
+                    if any(
+                        by_id.get(task_id) is not None and by_id[task_id].category == "onsite"
+                        for _, _, task_id in day_reservations
+                    )
+                }
+                candidate_days.sort(
+                    key=lambda day: (
+                        0 if day.day in onsite_days else 1 if day.day in occupied_days else 2,
+                        day.day,
+                    )
+                )
+            for day in candidate_days:
                 if earliest and day.day < earliest:
                     continue
                 if due and day.day > due:
                     continue
-                if _daily_window(plot, day) != "available":
+                if _item_window_status(item, plot, day) != "available":
                     continue
                 for candidate in _candidate_slots(
                     day,
@@ -641,6 +1091,7 @@ def build_plan_v2(
         item.reason = "显式前置任务尚未完成或安排"
 
     return PlanVersionV2(
+        schema_version=4,
         parent_id=previous.id if previous else None,
         created_at=created_at or datetime.now(UTC),
         reference_version=reference_version,
@@ -748,7 +1199,7 @@ def apply_feedback_v2(
             else "synthetic",
             weather_snapshot_at=feedback.at if feedback.weather_workable is not None else None,
         )
-    else:
+    elif feedback.kind == "resource":
         if feedback.day is None or feedback.intervals is None:
             raise ValueError("人员变化需要日期和可用时段")
         day = next((day for day in request.days if day.day == feedback.day), None)
@@ -760,6 +1211,10 @@ def apply_feedback_v2(
             if feedback.resource_minutes is not None
             else sum(interval.minutes for interval in feedback.intervals)
         )
+    elif feedback.kind == "task_result":
+        # The detailed result is an immutable event; it does not rewrite the
+        # field profile. Completion is a separate explicit event.
+        pass
 
     request = PlanRequestV2.model_validate(request.model_dump(mode="python"))
     return build_plan_v2(

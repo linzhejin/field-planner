@@ -18,6 +18,7 @@ FIELD_LABELS = {
     "maintenance_problem_confirmed": "沟渠问题",
     "maintenance_purpose": "沟渠维护目的",
     "duration_minutes": "预计耗时",
+    "conditions_confirmation": "必要条件确认",
     "resource_minutes": "可用工时",
     "site_workability": "现场能否作业",
     "weather_workability": "天气是否适合作业",
@@ -51,6 +52,7 @@ CHANGE_LABELS = {
     "cancelled": "取消",
     "unchanged": "保持不变",
     "completed": "已完成",
+    "content_changed": "内容变化",
 }
 
 
@@ -67,7 +69,13 @@ def missing_label(value: str) -> str:
 
 
 def task_title(task_type: str) -> str:
-    return {"inspection": "巡田与沟渠检查", "maintenance": "沟渠维护"}.get(task_type, "农事任务")
+    return {
+        "inspection": "巡田检查",
+        "maintenance": "沟渠维护",
+        "custom": "自定义农事",
+        "follow_up": "问题复查",
+        "management": "农务管理",
+    }.get(task_type, "农事任务")
 
 
 def field_value_label(field: str, value: object) -> str:

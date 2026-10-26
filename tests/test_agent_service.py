@@ -121,6 +121,55 @@ def final_response(text: str = "已读取地块信息。") -> dict[str, object]:
     }
 
 
+def test_agent_custom_task_is_proposed_then_saved_and_previewed_after_confirmation(
+    tmp_path: Path,
+) -> None:
+    user_message = "请安排2026-10-20整理巡田记录，预计30分钟"
+    declaration = {
+        "field_id": "field-1",
+        "actions": ["task_series"],
+        "task_series_quote": user_message,
+        "task_series": {
+            "title": "整理巡田记录",
+            "purpose": "整理巡田记录",
+            "task_type": "custom",
+            "category": "offsite",
+            "recurrence": "once",
+            "anchor_date": "2026-10-20",
+            "due_date": "2026-10-20",
+            "duration_minutes": 30,
+        },
+    }
+    responses = [
+        tool_call_response("declare_request", json.dumps(declaration, ensure_ascii=False)),
+        final_response("已形成待确认待办。"),
+    ]
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=responses.pop(0))
+
+    agent, service, _ = make_agent(tmp_path, respond)
+    result = agent.run("field-1", user_message)
+
+    assert result.status == "success"
+    assert result.business_outcome == "awaiting_confirmation"
+    assert len(result.proposals) == 1
+    proposal = result.proposals[0]
+    assert proposal.kind == "task_series"
+    assert proposal.task_series is not None
+    assert proposal.task_series.template.agronomic_review_status == "not_assessed"
+    assert service.store.list_task_instances("field-1") == []
+
+    outcome = service.confirm_agent_proposal(proposal.id, operation_id="confirm-custom-task")
+
+    assert outcome.preview is not None
+    assert outcome.preview.status == "preview"
+    assert any(item.title == "整理巡田记录" for item in outcome.preview.version.items)
+    assert len(service.store.list_task_instances("field-1")) == 1
+    assert service.store.agent_proposal(proposal.id).status == "confirmed"
+    agent.close()
+
+
 def test_sealed_b_and_c_receive_identical_rule_snapshot(tmp_path: Path) -> None:
     agent, service, _ = make_agent(
         tmp_path, lambda _request: httpx.Response(200, json=final_response())

@@ -11,7 +11,11 @@ from streamlit.testing.v1 import AppTest
 import nongshi.workbench as workbench
 from nongshi.agent import AgentServiceV3
 from nongshi.repository_v3 import WorkbenchStoreV3
-from nongshi.schema_v3 import AgentProposalV3, AgentResponseV3, AgentRunV3
+from nongshi.rules import load_rule_catalog
+from nongshi.schema_v2 import DayWindow, FieldProfile, TimeWindow
+from nongshi.schema_v3 import AgentProposalV3, AgentResponseV3, AgentRunV3, FieldDraftV3
+from nongshi.service_v3 import WorkbenchServiceV3
+from nongshi.tasks_v4 import TaskSeriesV4
 
 APP = Path(__file__).resolve().parents[1] / "src" / "nongshi" / "app.py"
 
@@ -27,6 +31,84 @@ def _create_field(app: AppTest, field_id: str) -> None:
     app.selectbox(key=f"field_type:{field_id}:0").set_value("低洼/稻茬田")
     app.selectbox(key=f"inspection_requested:{field_id}:0").set_value("是")
     app.number_input(key=f"inspection_minutes:{field_id}:0").set_value(30)
+
+
+def test_execution_group_controls_appear_for_two_saved_inspection_instances(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    database = tmp_path / "plans.sqlite3"
+    monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.setenv("NONGSHI_LLM_API_KEY", "")
+    start = workbench._today() + timedelta(days=1)
+    service = WorkbenchServiceV3(
+        WorkbenchStoreV3(database),
+        catalog=load_rule_catalog(),
+        today=lambda: start - timedelta(days=1),
+    )
+    profile = FieldProfile(
+        id="outing-ui",
+        name="合并出行测试田",
+        province="湖北",
+        province_confirmed=True,
+        crop="油菜",
+        crop_confirmed=True,
+        stage="苗期",
+        stage_confirmed=True,
+        field_type="lowland_rice_stubble",
+        inspection_requested=False,
+    )
+    state = service.save_field_draft(
+        FieldDraftV3(
+            field_id=profile.id,
+            profile=profile,
+            start_date=start,
+            days=[
+                DayWindow(
+                    day=start + timedelta(days=offset),
+                    site_workable=True,
+                    weather_workable=True,
+                    resource_minutes=120,
+                    intervals=[TimeWindow(start="09:00", end="11:00")],
+                )
+                for offset in range(7)
+            ],
+        ),
+        expected_version=None,
+        operation_id="setup-outing-ui-field",
+    )
+    for index in range(2):
+        service.save_task_series(
+            TaskSeriesV4(
+                id=f"outing-ui-inspection-{index}",
+                field_id=profile.id,
+                template={
+                    "id": f"outing-ui-template-{index}",
+                    "title": f"巡田 {index + 1}",
+                    "task_type": "inspection",
+                    "category": "onsite",
+                    "purpose": "检查当日情况",
+                    "completion_standard": "保存检查结果",
+                },
+                recurrence="once",
+                anchor_date=start,
+                duration_minutes=20 + index * 10,
+            ),
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            operation_id=f"setup-outing-ui-series-{index}",
+        )
+    preview = service.preview_plan(profile.id, operation_id="setup-outing-ui-preview")
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=None,
+        operation_id="setup-outing-ui-adopt",
+    )
+
+    app = AppTest.from_file(APP, default_timeout=30).run()
+
+    assert not app.exception
+    assert "合并同地巡田与问题复查" in [element.label for element in app.expander]
 
 
 def test_chat_receipt_uses_the_workbench_clock(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -268,8 +350,8 @@ def test_blank_to_adopted_plan_then_fact_feedback_survives_reload(
 def test_simulation_uses_a_separate_database_from_real_fields(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     database = tmp_path / "plans.sqlite3"
     monkeypatch.setenv("NONGSHI_DATABASE_PATH", str(database))
+    monkeypatch.setenv("NONGSHI_DEFAULT_MODE", "demo")
     app = AppTest.from_file(APP, default_timeout=30).run()
-    app.radio(key="workspace_mode").set_value("独立模拟示例").run()
 
     demo_database = database.with_name("plans.demo.sqlite3")
     assert not app.exception

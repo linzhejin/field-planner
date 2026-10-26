@@ -41,6 +41,7 @@ from nongshi.schema_v3 import (
     WeatherSnapshotV3,
 )
 from nongshi.service_v3 import WorkbenchServiceV3, align_draft_dates
+from nongshi.tasks_v4 import TaskSeriesV4
 from nongshi.weather import WeatherServiceError
 
 ZONE = ZoneInfo("Asia/Shanghai")
@@ -126,7 +127,7 @@ _VIEWPORT_LAYOUT = st.components.v2.component(
 
 PALETTE = """
 <style>
-.stApp { background:#f4f5ef; color:#253e35; font-size: 16px;
+.stApp { background:#F3F6F4; color:#203A31; font-size: 16px;
   font-family:"Microsoft YaHei UI","PingFang SC","Noto Sans CJK SC",sans-serif; }
 [data-testid="stHeader"], [data-testid="stDecoration"] { display:none !important; }
 [data-testid="stMainBlockContainer"], .main .block-container {
@@ -199,10 +200,17 @@ h4 { font-size:16px !important; margin:12px 0 5px !important; }
   background:#f1f4ee; border:1px solid #dce3d8; color:#274638; }
 .st-key-result_rail [data-testid="stButton"] button {
   min-height:31px; padding:3px 10px; font-size:14px; border-radius:8px; }
+[class*="st-key-date_strip"] [data-testid="stButton"] button {
+  min-height:58px; height:auto !important; padding:5px 3px; font-size:12px; line-height:1.2;
+  border-radius:8px; white-space:pre-line; }
+[class*="st-key-date_strip"] [data-testid="stMarkdownContainer"],
+[class*="st-key-date_strip"] [data-testid="stMarkdownContainer"] p {
+  white-space:pre-line !important; overflow:visible !important;
+  text-overflow:clip !important; overflow-wrap:anywhere; }
 [data-testid="stButton"] button[kind="primary"],
 button[kind="primary"],button[data-testid="stBaseButton-primary"],
 button[kind="primaryFormSubmit"] {
-  background:#25634b !important; border-color:#25634b !important; color:#fff !important; }
+  background:#24664B !important; border-color:#24664B !important; color:#fff !important; }
 [data-testid="stButton"] button:disabled { color:#758077; background:#f1f3ef; }
 [data-testid="stVerticalBlockBorderWrapper"] {
   background:#fff; border-color:#dce3d8; border-radius:9px; }
@@ -738,6 +746,22 @@ def _render_field_form(
                 help="默认从明天开始；若选择今天，只填写当前时刻之后的时段。",
                 key=f"start_date:{key_suffix}",
             )
+            preference_labels = {
+                "尽早安排": "early",
+                "均衡每天工作量": "balanced",
+                "集中现场作业日期": "concentrated",
+            }
+            preference_current = previous.scheduling_preference
+            preference_default = next(
+                label for label, value in preference_labels.items() if value == preference_current
+            )
+            schedule_preference = st.selectbox(
+                "排程偏好",
+                list(preference_labels),
+                index=list(preference_labels).index(preference_default),
+                help="偏好只调整仍可移动的任务；已完成、紧急、前置和期限约束优先。",
+                key=f"schedule_preference:{key_suffix}",
+            )
             inspection_due_enabled = st.checkbox(
                 "设置巡田目标日期",
                 value=profile.inspection_due_date is not None if profile else False,
@@ -865,6 +889,7 @@ def _render_field_form(
                 update={
                     "profile": updated_profile,
                     "start_date": start_date,
+                    "scheduling_preference": preference_labels[schedule_preference],
                     "notes": notes,
                     "mode": mode,
                 }
@@ -1404,18 +1429,32 @@ def _render_top_bar(
 
     def mode_picker(column) -> None:  # type: ignore[no-untyped-def]
         with column.popover(mode_text, key="top_mode_switch", width="stretch"):
-            st.radio(
-                "数据空间",
-                ["真实地块", "独立模拟示例"],
-                horizontal=False,
-                key="workspace_mode",
-                on_change=_remember_workspace_mode,
-            )
-            st.caption("模拟示例与真实地块分别保存。")
-            if mode == "demo" and st.button("新建模拟示例", key="seed_demo"):
-                new_id = _seed_demo(service)
-                st.session_state["pending_field_selection:demo"] = new_id
-                st.rerun()
+            st.markdown("**数据空间**")
+            if mode == "demo":
+                st.caption("当前为独立模拟示例；示例与真实地块分别保存。")
+                if st.button("切换到真实地块", key="switch_to_real", width="stretch"):
+                    _start_real_use()
+                    st.rerun()
+            else:
+                st.caption("当前为真实地块；真实数据与模拟示例分别保存。")
+                if st.button("查看模拟示例", key="switch_to_demo", width="stretch"):
+                    _start_demo_use()
+                    st.rerun()
+            if mode == "demo":
+                st.caption("示例数据仅用于体验排程和记录流程，不构成农艺建议。")
+                demo_buttons = st.columns(2)
+                for column, scenario, label in (
+                    (demo_buttons[0], "sparse", "新建稀疏示例"),
+                    (demo_buttons[1], "rich", "新建任务丰富示例"),
+                ):
+                    if column.button(
+                        label,
+                        key=f"seed_demo_{scenario}",
+                        width="stretch",
+                    ):
+                        new_id = _seed_demo(service, scenario=scenario)
+                        st.session_state["pending_field_selection:demo"] = new_id
+                        st.rerun()
 
     def version_actions(history_col, export_col) -> None:  # type: ignore[no-untyped-def]
         if not saved:
@@ -1699,7 +1738,7 @@ def _calculate_preview(
     field_id: str,
     preview_id: str | None,
 ) -> None:
-    signature = (state.draft_version, state.fact_version)
+    signature = (state.draft_version, state.fact_version, state.task_version)
     if preview_id and st.session_state.get(f"preview_signature:{field_id}") == signature:
         st.caption("已按当前地块情况生成预览。")
         return
@@ -1737,6 +1776,40 @@ def _item_detail_rows(item) -> list[tuple[str, str]]:  # type: ignore[no-untyped
             "、".join(map(missing_label, item.missing_fields)) if item.missing_fields else "无",
         ),
     ]
+    if item.execution_group_id:
+        rows.append(
+            (
+                "合并出行",
+                f"分组 {item.execution_group_id[:8]} · 总时长 {item.group_duration_minutes} 分钟；"
+                "本项结果单独记录",
+            )
+        )
+    snapshot = item.template_snapshot or {}
+    content_rows = [
+        ("本次目的", snapshot.get("purpose")),
+        ("触发原因", snapshot.get("trigger")),
+        ("关联问题编号", snapshot.get("related_issue_id")),
+        ("必要条件", "、".join(snapshot.get("necessary_conditions", []))),
+        (
+            "执行步骤",
+            "\n".join(
+                f"{index}. {step}" for index, step in enumerate(snapshot.get("steps", []), start=1)
+            ),
+        ),
+        ("结果记录项", "、".join(snapshot.get("result_fields", []))),
+        ("完成标准", snapshot.get("completion_standard")),
+        (
+            "前置任务",
+            "、".join(
+                prerequisite.get("title", prerequisite.get("id", ""))
+                if isinstance(prerequisite, dict)
+                else str(prerequisite)
+                for prerequisite in snapshot.get("prerequisites", [])
+            ),
+        ),
+        ("可能的后续", snapshot.get("follow_up")),
+    ]
+    rows.extend((label, str(value)) for label, value in content_rows if value)
     adjustment = getattr(item, "adjustment_reason", None)
     if adjustment:
         rows.append(("调整原因", str(adjustment)))
@@ -1765,12 +1838,19 @@ def _render_item(item, *, scope: str) -> None:  # type: ignore[no-untyped-def]
             if maintenance_question:
                 st.markdown("**待确认：要安排沟渠维护吗？**")
             else:
-                st.markdown(f"**{task_title(item.task_type)}**")
+                st.markdown(f"**{item.title}**")
+                purpose = str((item.template_snapshot or {}).get("purpose") or "").strip()
+                if purpose:
+                    st.caption(f"目的：{purpose}")
         if item.start_at and item.end_at:
+            shared = (
+                f"合并外出，共{item.group_duration_minutes}分钟；本项预计{item.duration_minutes}分钟"
+                if item.execution_group_id
+                else f"{item.duration_minutes}分钟"
+            )
             st.caption(
                 f"{item.start_at.astimezone(ZONE):%H:%M}—"
-                f"{item.end_at.astimezone(ZONE):%H:%M} · "
-                f"{item.duration_minutes}分钟 · {label}"
+                f"{item.end_at.astimezone(ZONE):%H:%M} · {shared} · {label}"
             )
         else:
             description = (
@@ -1780,7 +1860,15 @@ def _render_item(item, *, scope: str) -> None:  # type: ignore[no-untyped-def]
             )
             st.caption(description)
         # scope 用于区分候选、预览与采用版中重名的任务编号，避免按钮 key 冲突。
-        if detail_col.button("查看详情", key=f"detail:{scope}:{item.task_id}"):
+        action = (
+            "记录结果"
+            if scope.startswith("adopted-")
+            and item.schedule_status == "scheduled"
+            and item.start_at is not None
+            and item.start_at.astimezone(ZONE) <= _now()
+            else "查看详情"
+        )
+        if detail_col.button(action, key=f"detail:{scope}:{item.task_id}"):
             _open_dialog("task", item.plot_id, item=item, scope=scope)
             st.rerun(scope="app")
 
@@ -1812,6 +1900,18 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
     for name, value in _item_detail_rows(item):
         if name != "编号":
             st.markdown(f"**{name}**：{value}")
+    related_issue_id = (item.template_snapshot or {}).get("related_issue_id")
+    if related_issue_id:
+        issue = next(
+            (
+                issue
+                for issue in service.list_field_issues(field_id)
+                if issue.id == related_issue_id
+            ),
+            None,
+        )
+        if issue:
+            st.info(f"关联问题：{issue.title} · {'待处理' if issue.status == 'open' else '已解决'}")
     with st.expander("技术编号"):
         st.markdown(f"**编号**：`{item.task_id}`")
     st.divider()
@@ -1886,20 +1986,99 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
         return
     st.markdown("#### 这项任务的操作")
     eligible = item.start_at is not None and item.start_at.astimezone(ZONE) <= _now()
-    if st.button("记录这项任务已完成", key=f"task_complete:{item.task_id}", disabled=not eligible):
-        try:
-            _commit_feedback(
-                service,
-                state,
-                FeedbackV2(kind="completed", task_id=item.task_id, plot_id=field_id, at=_now()),
+    snapshot = item.template_snapshot or {}
+    default_result_fields = {
+        "inspection": ["沟渠连通", "积水情况", "苗情观察"],
+        "maintenance": ["维护执行情况", "排水变化"],
+    }
+    result_fields = snapshot.get("result_fields") or default_result_fields.get(
+        item.task_type, ["实际执行情况"]
+    )
+    result_labels = {
+        "未检查": "not_checked",
+        "正常": "normal",
+        "发现问题": "issue",
+        "无法判断": "unable",
+        "未知": "unknown",
+    }
+    with st.form(f"task_result_form:{field_id}:{item.task_id}:{state.fact_version}"):
+        st.caption("逐项记录实际情况；‘无法判断’和‘未检查’分别保存。")
+        result_values = {
+            label: result_labels[
+                st.selectbox(
+                    label,
+                    list(result_labels),
+                    key=f"task_result:{field_id}:{item.task_id}:{index}:{state.fact_version}",
+                )
+            ]
+            for index, label in enumerate(result_fields)
+        }
+        result_notes = st.text_area(
+            "补充说明", key=f"task_result_notes:{item.task_id}:{state.fact_version}"
+        )
+        resolve_issue_id = None
+        related_issue_id = snapshot.get("related_issue_id")
+        if related_issue_id:
+            related_issue = next(
+                (
+                    issue
+                    for issue in service.list_field_issues(field_id)
+                    if issue.id == related_issue_id and issue.status == "open"
+                ),
+                None,
             )
-            st.session_state[f"notice:{field_id}"] = "任务完成已记录。请重新计算并核对安排。"
+            if related_issue:
+                close_issue = st.checkbox("本次复查已确认该问题解决")
+                if close_issue:
+                    resolve_issue_id = related_issue.id
+        mark_completed = st.checkbox("这项任务本次已完成")
+        save_result = st.form_submit_button("保存执行结果", disabled=not eligible)
+    if save_result:
+        try:
+            saved = service.record_task_result(
+                field_id,
+                item.task_id,
+                result_values,
+                notes=result_notes,
+                completed=mark_completed,
+                resolve_issue_id=resolve_issue_id,
+                expected_draft_version=state.draft_version,
+                expected_fact_version=state.fact_version,
+                operation_id=f"task-result-{uuid4()}",
+            )
+            task_result = next(
+                (
+                    event.feedback
+                    for event in saved.events
+                    if event.feedback and event.feedback.kind == "task_result"
+                ),
+                None,
+            )
+            new_issues = len(task_result.issue_ids) if task_result else 0
+            try:
+                preview = service.preview_plan(
+                    field_id, operation_id=f"task-result-preview-{uuid4()}"
+                )
+                st.session_state[f"current_preview:{field_id}"] = preview.id
+                st.session_state[f"preview_signature:{field_id}"] = (
+                    state.draft_version,
+                    service.get_field(field_id).fact_version,
+                    state.task_version,
+                )
+                st.session_state[f"notice:{field_id}"] = (
+                    f"执行结果已保存{f'，并记录 {new_issues} 个待处理问题' if new_issues else ''}，"
+                    "调整预览已生成；请核对后采用。"
+                )
+            except (ValueError, KeyError) as error:
+                st.session_state[f"notice:{field_id}"] = (
+                    f"执行结果已保存，但安排尚未更新：{error}。可以重新计算。"
+                )
             _dismiss_dialog()
             st.rerun()
         except ValueError as error:
-            st.error(f"未记录完成：{error}")
+            st.error(f"执行结果未保存：{error}")
     if not eligible:
-        st.caption("到计划开始时间后才可记录完成；实际完成时间不会被预填为过去。")
+        st.caption("到计划开始时间后可以记录结果。")
     with st.expander("修改日期、时长或优先级"):
         start = state.draft.start_date or _today()
         latest = start + timedelta(days=6)
@@ -1908,9 +2087,21 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
             st.warning("这期七天计划已过期；请先在地块档案中调整起始日。")
         else:
             profile = state.draft.profile
-            old_date = item.start_at.astimezone(ZONE).date() if item.start_at else earliest
-            saved_earliest = getattr(profile, f"{item.task_type}_earliest_date")
-            saved_due = getattr(profile, f"{item.task_type}_due_date")
+            old_date = (
+                item.start_at.astimezone(ZONE).date()
+                if item.start_at
+                else item.earliest_date or earliest
+            )
+            if item.template_snapshot is not None:
+                saved_earliest = item.earliest_date
+                saved_due = item.due_date
+                saved_duration = item.duration_minutes
+                current_priority = item.priority or 2
+            else:
+                saved_earliest = getattr(profile, f"{item.task_type}_earliest_date")
+                saved_due = getattr(profile, f"{item.task_type}_due_date")
+                saved_duration = getattr(profile, f"{item.task_type}_duration_minutes")
+                current_priority = getattr(profile, f"{item.task_type}_priority")
             saved_date = saved_due if saved_due == saved_earliest else None
             default_date = max(earliest, min(saved_date or old_date, latest))
             preferred_date = st.date_input(
@@ -1924,12 +2115,9 @@ def _task_detail_dialog(service: WorkbenchServiceV3, field_id: str, item, scope:
                 "预计时长（分钟）",
                 min_value=1,
                 max_value=1440,
-                value=getattr(profile, f"{item.task_type}_duration_minutes")
-                or item.duration_minutes
-                or 30,
+                value=saved_duration or item.duration_minutes or 30,
                 key=f"task_duration:{item.task_id}:{state.draft_version}",
             )
-            current_priority = getattr(profile, f"{item.task_type}_priority")
             priority = st.selectbox(
                 "优先级",
                 [1, 2, 3],
@@ -2100,6 +2288,548 @@ def _render_evaluation(
         st.info("目前没有可显示的安排。需要补充的信息可在上方填写。")
 
 
+def _render_task_series_form(service: WorkbenchServiceV3, state: FieldStateV3) -> None:
+    """Create a user-confirmed task series through the shared task service."""
+    field_id = state.id
+    base_date = state.draft.start_date or (_today() + timedelta(days=1))
+    with st.expander("＋ 新增农事待办或周期巡田", expanded=False):
+        task_kind_labels = {
+            "通用自定义": "custom",
+            "巡田检查": "inspection",
+            "沟渠维护": "maintenance",
+            "问题复查": "follow_up",
+            "农务管理": "management",
+        }
+        task_kind_label = st.selectbox(
+            "任务类型", list(task_kind_labels), key=f"task_kind:{field_id}:{state.task_version}"
+        )
+        task_kind = task_kind_labels[task_kind_label]
+        category_labels = {"现场任务": "onsite", "非现场任务": "offsite"}
+        category_label = st.selectbox(
+            "执行地点",
+            list(category_labels),
+            disabled=task_kind in {"inspection", "maintenance", "follow_up"},
+            key=f"task_category:{field_id}:{state.task_version}",
+        )
+        recurrence_labels = {"单次": "once", "指定多个日期": "dates", "每隔若干天": "interval"}
+        recurrence_label = st.selectbox(
+            "安排频次",
+            list(recurrence_labels),
+            key=f"task_recurrence:{field_id}:{state.task_version}",
+        )
+        recurrence = recurrence_labels[recurrence_label]
+        prerequisite_instances = service.store.list_task_instances(field_id)
+        prerequisite_labels = {
+            instance.id: f"{instance.template.title} · {instance.occurrence_date:%m月%d日}"
+            for instance in prerequisite_instances
+        }
+        open_issues = [
+            issue for issue in service.list_field_issues(field_id) if issue.status == "open"
+        ]
+        issue_labels = {
+            issue.id: f"{issue.title} · {issue.opened_at.astimezone(ZONE):%m月%d日发现}"
+            for issue in open_issues
+        }
+        with st.form(f"task_series_form:{field_id}:{state.task_version}"):
+            title = st.text_input("任务名称", placeholder="例如：整理巡田记录")
+            purpose = st.text_input("本次目的", placeholder="说明要完成什么，未知可先留空")
+            anchor_date = st.date_input("起始／目标日期", value=base_date)
+            selected_dates_text = ""
+            interval_days = None
+            end_date = None
+            due_date = None
+            if recurrence == "dates":
+                selected_dates_text = st.text_input(
+                    "本次要执行的日期",
+                    value=anchor_date.isoformat(),
+                    help="可用逗号分隔多个日期，例如 2026-10-27, 2026-10-29。",
+                )
+            elif recurrence == "interval":
+                interval_days = st.number_input("间隔天数", min_value=1, max_value=60, value=2)
+                end_date = st.date_input(
+                    "重复到哪一天", value=anchor_date + timedelta(days=14), min_value=anchor_date
+                )
+            else:
+                due_date = st.date_input(
+                    "最迟完成日期", value=anchor_date + timedelta(days=6), min_value=anchor_date
+                )
+            duration_known = st.checkbox("预计时长已确认", value=False)
+            duration = (
+                int(st.number_input("预计时长（分钟）", min_value=1, max_value=1440, value=30))
+                if duration_known
+                else None
+            )
+            necessary_conditions_text = st.text_area(
+                "必要条件（每行一项）", height=54, placeholder="例如：现场已确认可进田"
+            )
+            conditions_confirmed = st.checkbox("我已确认上述必要条件", value=False)
+            prerequisites = st.multiselect(
+                "必须先完成的任务",
+                list(prerequisite_labels),
+                format_func=lambda task_id: prerequisite_labels[task_id],
+            )
+            related_issue_id = None
+            if task_kind in {"maintenance", "follow_up"}:
+                if issue_labels:
+                    related_issue_id = st.selectbox(
+                        "关联待处理问题" if task_kind == "maintenance" else "关联待复查问题",
+                        list(issue_labels),
+                        format_func=lambda issue_id: issue_labels[issue_id],
+                    )
+                elif task_kind == "follow_up":
+                    st.warning("当前没有待复查问题。先记录现场发现的问题，再建立复查任务。")
+            priority = st.selectbox(
+                "优先级", [1, 2, 3], index=1, format_func=lambda n: {1: "高", 2: "中", 3: "低"}[n]
+            )
+            steps_text = st.text_area("执行步骤（每行一项）", height=72)
+            result_fields_text = st.text_input(
+                "结果记录项（逗号分隔）", placeholder="例如：完成情况、现场变化"
+            )
+            completion_standard = st.text_input("完成标准", placeholder="什么结果可以记为完成？")
+            follow_up = st.text_input("可能的后续动作", placeholder="可留空；后续仍需用户确认")
+            save_draft = st.form_submit_button("保存草稿")
+            can_emphasize = not service.pending_agent_proposals(field_id) and not (
+                service.latest_actionable_preview(field_id)
+            )
+            save_preview = st.form_submit_button(
+                "保存并预览", type="primary" if can_emphasize else "secondary"
+            )
+        if not (save_draft or save_preview):
+            return
+        try:
+            selected_dates: list[date] = []
+            if recurrence == "dates":
+                raw_dates = selected_dates_text.replace("，", ",").replace(";", ",").split(",")
+                selected_dates = sorted(
+                    {date.fromisoformat(value.strip()) for value in raw_dates if value.strip()}
+                )
+                if not selected_dates:
+                    raise ValueError("至少填写一个有效日期")
+            task = TaskSeriesV4(
+                id=f"series-{uuid4().hex[:16]}",
+                field_id=field_id,
+                template={
+                    "id": f"template-{uuid4().hex[:12]}",
+                    "version": 1,
+                    "title": title,
+                    "task_type": task_kind,
+                    "category": "onsite"
+                    if task_kind in {"inspection", "maintenance"}
+                    else category_labels[category_label],
+                    "related_issue_id": related_issue_id,
+                    "purpose": purpose,
+                    "necessary_conditions": [
+                        line.strip()
+                        for line in necessary_conditions_text.splitlines()
+                        if line.strip()
+                    ],
+                    "steps": [line.strip() for line in steps_text.splitlines() if line.strip()],
+                    "result_fields": [
+                        value.strip()
+                        for value in result_fields_text.replace("，", ",").split(",")
+                        if value.strip()
+                    ],
+                    "completion_standard": completion_standard,
+                    "follow_up": follow_up,
+                    "source_kind": "user_defined",
+                    "agronomic_review_status": "not_assessed",
+                },
+                recurrence=recurrence,
+                anchor_date=anchor_date,
+                end_date=end_date,
+                selected_dates=selected_dates,
+                interval_days=int(interval_days) if interval_days is not None else None,
+                duration_minutes=duration,
+                priority=priority,
+                earliest_date=anchor_date if recurrence == "once" else None,
+                due_date=due_date if recurrence == "once" else None,
+                prerequisites=prerequisites,
+                conditions_confirmed=conditions_confirmed,
+            )
+            service.save_task_series(
+                task,
+                expected_draft_version=state.draft_version,
+                expected_fact_version=state.fact_version,
+                expected_task_version=state.task_version,
+                operation_id=f"save-task-series-{uuid4()}",
+            )
+            if save_preview:
+                try:
+                    preview = service.preview_plan(
+                        field_id, operation_id=f"preview-task-series-{uuid4()}"
+                    )
+                    st.session_state[f"current_preview:{field_id}"] = preview.id
+                    fresh = service.get_field(field_id)
+                    st.session_state[f"preview_signature:{field_id}"] = (
+                        fresh.draft_version,
+                        fresh.fact_version,
+                        fresh.task_version,
+                    )
+                    st.session_state[f"notice:{field_id}"] = (
+                        "任务已保存，调整预览已生成；请核对后采用。"
+                    )
+                except (ValueError, KeyError) as error:
+                    st.session_state[f"notice:{field_id}"] = (
+                        f"任务已保存，但预览未生成：{error}。可重新计算。"
+                    )
+            else:
+                st.session_state[f"notice:{field_id}"] = "任务草稿已保存；缺少的信息会保持待确认。"
+            st.rerun()
+        except (ValueError, KeyError) as error:
+            st.error(f"任务未保存：{error}")
+
+
+def _render_update_task_series_form(service: WorkbenchServiceV3, state: FieldStateV3) -> None:
+    """Edit a whole recurrence after showing which historical instances are protected."""
+    field_id = state.id
+    series_list = service.list_task_series(state.id)
+    if not series_list:
+        return
+    with st.expander("调整后续周期设置", expanded=False):
+        series = st.selectbox(
+            "选择要修改的周期",
+            series_list,
+            format_func=lambda item: f"{item.template.title} · {item.recurrence}",
+            key=f"edit_series_select:{state.id}:{state.task_version}",
+        )
+        recurrence_labels = {
+            "单次": "once",
+            "指定多个日期": "dates",
+            "每隔若干天": "interval",
+        }
+        current_label = next(
+            label for label, value in recurrence_labels.items() if value == series.recurrence
+        )
+        recurrence_label = st.selectbox(
+            "后续频次",
+            list(recurrence_labels),
+            index=list(recurrence_labels).index(current_label),
+            key=f"edit_series_recurrence:{state.id}:{series.id}:{state.task_version}",
+        )
+        recurrence = recurrence_labels[recurrence_label]
+        with st.form(f"edit_series_form:{state.id}:{series.id}:{state.task_version}"):
+            title = st.text_input("任务名称", value=series.template.title)
+            purpose = st.text_input("本次目的", value=series.template.purpose)
+            anchor_date = st.date_input("起始日期", value=series.anchor_date)
+            selected_dates_text = ""
+            interval_days = None
+            end_date = None
+            due_date = None
+            if recurrence == "dates":
+                selected_dates_text = st.text_input(
+                    "后续目标日期（逗号分隔）",
+                    value=", ".join(day.isoformat() for day in series.selected_dates),
+                )
+            elif recurrence == "interval":
+                interval_days = st.number_input(
+                    "间隔天数", min_value=1, max_value=60, value=series.interval_days or 7
+                )
+                end_date = st.date_input(
+                    "重复到哪一天",
+                    value=series.end_date or (anchor_date + timedelta(days=14)),
+                    min_value=anchor_date,
+                )
+            else:
+                due_date = st.date_input(
+                    "最迟完成日期",
+                    value=series.due_date or anchor_date,
+                    min_value=anchor_date,
+                )
+            duration_known = st.checkbox(
+                "预计时长已确认", value=series.duration_minutes is not None
+            )
+            duration_minutes = (
+                int(
+                    st.number_input(
+                        "预计时长（分钟）",
+                        min_value=1,
+                        max_value=1440,
+                        value=series.duration_minutes or 30,
+                    )
+                )
+                if duration_known
+                else None
+            )
+            priority = st.selectbox(
+                "优先级",
+                [1, 2, 3],
+                index=series.priority - 1,
+                format_func=lambda value: {1: "高", 2: "中", 3: "低"}[value],
+            )
+            steps_text = st.text_area(
+                "执行步骤（每行一项）", value="\n".join(series.template.steps)
+            )
+            result_fields_text = st.text_input(
+                "结果记录项（逗号分隔）", value="，".join(series.template.result_fields)
+            )
+            completion_standard = st.text_input(
+                "完成标准", value=series.template.completion_standard
+            )
+            necessary_conditions_text = st.text_area(
+                "必要条件（每行一项）",
+                value="\n".join(series.template.necessary_conditions),
+                height=54,
+            )
+            conditions_confirmed = st.checkbox(
+                "我已确认上述必要条件",
+                value=series.conditions_confirmed is True,
+            )
+            prerequisite_instances = service.store.list_task_instances(state.id)
+            prerequisite_labels = {
+                instance.id: f"{instance.template.title} · {instance.occurrence_date:%m月%d日}"
+                for instance in prerequisite_instances
+                if instance.id != f"{series.id}:000001"
+            }
+            prerequisites = st.multiselect(
+                "必须先完成的任务",
+                list(prerequisite_labels),
+                default=[
+                    task_id for task_id in series.prerequisites if task_id in prerequisite_labels
+                ],
+                format_func=lambda task_id: prerequisite_labels[task_id],
+            )
+            follow_up = st.text_input("可能的后续动作", value=series.template.follow_up)
+            can_emphasize = not service.pending_agent_proposals(field_id) and not (
+                service.latest_actionable_preview(field_id)
+            )
+            submitted = st.form_submit_button(
+                "保存后续设置并预览", type="primary" if can_emphasize else "secondary"
+            )
+        if not submitted:
+            return
+        try:
+            selected_dates = []
+            if recurrence == "dates":
+                selected_dates = sorted(
+                    {
+                        date.fromisoformat(value.strip())
+                        for value in selected_dates_text.replace("，", ",").split(",")
+                        if value.strip()
+                    }
+                )
+                if not selected_dates:
+                    raise ValueError("至少填写一个有效日期")
+            updated = series.model_copy(
+                update={
+                    "template": series.template.model_copy(
+                        update={
+                            "version": series.template.version + 1,
+                            "title": title,
+                            "purpose": purpose,
+                            "necessary_conditions": [
+                                line.strip()
+                                for line in necessary_conditions_text.splitlines()
+                                if line.strip()
+                            ],
+                            "steps": [
+                                line.strip() for line in steps_text.splitlines() if line.strip()
+                            ],
+                            "result_fields": [
+                                value.strip()
+                                for value in result_fields_text.replace("，", ",").split(",")
+                                if value.strip()
+                            ],
+                            "completion_standard": completion_standard,
+                            "follow_up": follow_up,
+                        }
+                    ),
+                    "recurrence": recurrence,
+                    "anchor_date": anchor_date,
+                    "end_date": end_date,
+                    "selected_dates": selected_dates,
+                    "interval_days": int(interval_days) if interval_days is not None else None,
+                    "duration_minutes": duration_minutes,
+                    "priority": priority,
+                    "earliest_date": anchor_date if recurrence == "once" else None,
+                    "due_date": due_date if recurrence == "once" else None,
+                    "prerequisites": prerequisites,
+                    "conditions_confirmed": conditions_confirmed,
+                }
+            )
+            result = service.update_task_series(
+                updated,
+                expected_draft_version=state.draft_version,
+                expected_fact_version=state.fact_version,
+                operation_id=f"update-series-{uuid4()}",
+            )
+            try:
+                preview = service.preview_plan(
+                    state.id, operation_id=f"preview-updated-series-{uuid4()}"
+                )
+                st.session_state[f"current_preview:{state.id}"] = preview.id
+                fresh = service.get_field(state.id)
+                st.session_state[f"preview_signature:{state.id}"] = (
+                    fresh.draft_version,
+                    fresh.fact_version,
+                    fresh.task_version,
+                )
+                st.session_state[f"notice:{state.id}"] = (
+                    f"周期设置已保存：更新 {len(result.updated_instance_ids)} 次、"
+                    f"新增 {len(result.created_instance_ids)} 次、"
+                    f"替代 {len(result.superseded_instance_ids)} 次。"
+                    "已完成、已记录结果或已取消的实例保持原样。"
+                )
+            except (ValueError, KeyError) as error:
+                st.session_state[f"notice:{state.id}"] = (
+                    f"周期设置已保存，但预览未生成：{error}。可以重新计算。"
+                )
+            st.rerun()
+        except (ValueError, KeyError) as error:
+            st.error(f"周期修改未保存：{error}")
+
+
+def _render_execution_group_form(service: WorkbenchServiceV3, state: FieldStateV3) -> None:
+    """Confirm or revise one outing slot while keeping member records independent."""
+    groups = service.list_task_execution_groups(state.id)
+    instances = service.store.list_task_instances(state.id)
+    completed = set(service._completion_facts(state.id, None))
+    cancelled = {
+        event.feedback.task_id
+        for event in service._active_events(state.id)
+        if event.feedback and event.feedback.kind == "cancelled" and event.feedback.task_id
+    }
+    candidates = [
+        item
+        for item in instances
+        if item.id not in completed
+        and item.id not in cancelled
+        and item.status != "superseded"
+        and item.duration_minutes is not None
+        and item.template.category == "onsite"
+        and item.template.task_type in {"inspection", "follow_up"}
+    ]
+    if len(candidates) < 2 and not groups:
+        return
+    with st.expander("合并同地巡田与问题复查", expanded=False):
+        st.caption(
+            "选择同一天的现场任务，确认共用的一次出行总时长；"
+            "单项预计工时不会自动相加，各任务仍分别记录结果。"
+        )
+        group_options = {"": None, **{group.id: group for group in groups}}
+        selected_group_id = st.selectbox(
+            "修改已有分组或新建",
+            list(group_options),
+            format_func=lambda group_id: (
+                "新建合并出行"
+                if not group_id
+                else f"分组 {group_id[:8]} · "
+                + (
+                    "待重新确认"
+                    if group_options[group_id].status == "needs_reconfirmation"
+                    else "已确认"
+                    if group_options[group_id].status == "confirmed"
+                    else "已取消"
+                )
+            ),
+            key=f"execution_group_select:{state.id}:{state.task_version}",
+        )
+        selected_group = group_options[selected_group_id]
+        selectable = candidates
+        default_ids = (
+            [
+                task_id
+                for task_id in selected_group.member_task_ids
+                if task_id in {item.id for item in candidates}
+            ]
+            if selected_group
+            else []
+        )
+        with st.form(f"execution_group_form:{state.id}:{state.task_version}:{selected_group_id}"):
+            member_ids = st.multiselect(
+                "本次一起外出的任务",
+                [item.id for item in selectable],
+                default=default_ids,
+                format_func=lambda task_id: next(
+                    f"{item.template.title} · {item.occurrence_date:%m月%d日} · "
+                    f"{item.duration_minutes}分钟"
+                    for item in selectable
+                    if item.id == task_id
+                ),
+            )
+            start_date = state.draft.start_date or (service._today() + timedelta(days=1))
+            default_date = (
+                selected_group.execution_date
+                if selected_group
+                and start_date <= selected_group.execution_date <= start_date + timedelta(days=6)
+                else start_date
+            )
+            execution_date = st.date_input(
+                "合并出行日期",
+                value=default_date,
+                min_value=start_date,
+                max_value=start_date + timedelta(days=6),
+            )
+            default_duration = selected_group.duration_minutes if selected_group else 30
+            duration_minutes = int(
+                st.number_input(
+                    "确认合并出行总时长（分钟）",
+                    min_value=1,
+                    max_value=1440,
+                    value=default_duration,
+                )
+            )
+            save_group = st.form_submit_button("确认分组并预览", type="primary")
+        if save_group:
+            if len(member_ids) < 2:
+                st.error("至少选择两项现场巡田或复查任务。")
+            else:
+                try:
+                    saved = service.save_task_execution_group(
+                        field_id=state.id,
+                        group_id=selected_group_id or uuid4().hex,
+                        member_task_ids=member_ids,
+                        execution_date=execution_date,
+                        duration_minutes=duration_minutes,
+                        expected_task_version=state.task_version,
+                        operation_id=f"save-execution-group-{uuid4()}",
+                    )
+                except (ValueError, KeyError) as error:
+                    st.error(f"合并出行未保存：{error}")
+                else:
+                    try:
+                        preview = service.preview_plan(
+                            state.id, operation_id=f"preview-execution-group-{uuid4()}"
+                        )
+                    except (ValueError, KeyError, RuntimeError) as error:
+                        st.session_state[f"notice:{state.id}"] = (
+                            f"合并出行已保存（任务版本 v{saved.task_version}），"
+                            f"但调整预览尚未生成：{error}。可以重新计算。"
+                        )
+                    else:
+                        st.session_state[f"current_preview:{state.id}"] = preview.id
+                        st.session_state[f"notice:{state.id}"] = (
+                            f"合并出行已保存（任务版本 v{saved.task_version}），调整预览已生成。"
+                        )
+                    st.rerun()
+        if selected_group and selected_group.status != "cancelled":
+            if st.button(
+                "取消这次合并出行",
+                key=f"cancel_execution_group:{state.id}:{selected_group.id}:{state.task_version}",
+            ):
+                try:
+                    service.cancel_task_execution_group(
+                        state.id,
+                        selected_group.id,
+                        expected_task_version=state.task_version,
+                        operation_id=f"cancel-execution-group-{uuid4()}",
+                    )
+                except (ValueError, KeyError) as error:
+                    st.error(f"合并出行未取消：{error}")
+                else:
+                    try:
+                        preview = service.preview_plan(
+                            state.id, operation_id=f"preview-cancel-execution-group-{uuid4()}"
+                        )
+                    except (ValueError, KeyError, RuntimeError) as error:
+                        st.session_state[f"notice:{state.id}"] = (
+                            f"合并出行已取消，相关事实已保存，但调整预览尚未生成：{error}。"
+                            "可以重新计算。"
+                        )
+                    else:
+                        st.session_state[f"current_preview:{state.id}"] = preview.id
+                    st.rerun()
+
+
 def _render_week(items: list, start: date, *, scope: str, compact_empty: bool = True) -> None:
     """Show every day while keeping unresolved and historical work visible."""
     end = start + timedelta(days=6)
@@ -2146,6 +2876,171 @@ def _render_week(items: list, start: date, *, scope: str, compact_empty: bool = 
     if omitted:
         with st.expander("无需安排的事项"):
             for item in omitted:
+                _render_item(item, scope=scope)
+
+
+def _render_field_issues(service: WorkbenchServiceV3, field_id: str) -> None:
+    issues = service.list_field_issues(field_id)
+    if not issues:
+        return
+    title_by_task = {
+        item.task_id: item.title
+        for item in (
+            service.get_current_plan(field_id).items if service.get_current_plan(field_id) else []
+        )
+    }
+    for series in service.list_task_series(field_id):
+        title_by_task.update(
+            {
+                instance.id: series.template.title
+                for instance in service.store.list_task_instances(field_id)
+                if instance.series_id == series.id
+            }
+        )
+    issues_by_id = {issue.id: issue for issue in issues}
+    with st.expander("问题与复查", expanded=any(issue.status == "open" for issue in issues)):
+        for issue in reversed(issues):
+            status = "待处理" if issue.status == "open" else "已解决"
+            st.markdown(
+                f"**{issue.title}** · {status} · {issue.opened_at.astimezone(ZONE):%Y-%m-%d}"
+            )
+            if issue.description:
+                st.caption(issue.description)
+            sources = "、".join(
+                title_by_task.get(task_id, task_id) for task_id in issue.related_task_ids
+            )
+            if sources:
+                st.caption(f"来源／关联任务：{sources}")
+            if issue.repeat_of and issue.repeat_of in issues_by_id:
+                previous = issues_by_id[issue.repeat_of]
+                st.caption(
+                    f"再次发生，关联此前记录：{previous.opened_at.astimezone(ZONE):%Y-%m-%d}"
+                )
+            if issue.status == "open":
+                st.info("可在上方新增任务中选择「问题复查」，并关联这条待处理问题。")
+            elif issue.resolved_at:
+                st.caption(f"复查确认解决：{issue.resolved_at.astimezone(ZONE):%Y-%m-%d %H:%M}")
+
+
+def _render_plan_contents(
+    items: list,
+    start: date,
+    *,
+    field_id: str,
+    scope: str,
+) -> None:
+    """Render the persistent seven-day selector and either today or the full week."""
+    end = start + timedelta(days=6)
+    selected_key = f"selected_plan_day:{field_id}"
+    selected_day = st.session_state.get(selected_key)
+    if not isinstance(selected_day, date) or not start <= selected_day <= end:
+        today = _today()
+        selected_day = today if start <= today <= end else start
+        st.session_state[selected_key] = selected_day
+    st.caption(
+        f"本期七天：{start:%Y-%m-%d}—{end:%Y-%m-%d} · 点击日期查看安排；"
+        "空白日期不会自动分摊候选事项。"
+    )
+    with st.container(key=f"date_strip_{field_id}_{scope}"):
+        columns = st.columns(7, gap="small")
+        for offset, column in enumerate(columns):
+            day = start + timedelta(days=offset)
+            weekday = "一二三四五六日"[day.weekday()]
+            scheduled = [
+                item
+                for item in items
+                if item.start_at
+                and item.start_at.astimezone(ZONE).date() == day
+                and item.schedule_status == "scheduled"
+            ]
+            grouped_minutes = {
+                item.execution_group_id: item.group_duration_minutes or 0
+                for item in scheduled
+                if item.execution_group_id
+            }
+            individual_minutes = sum(
+                item.duration_minutes or 0 for item in scheduled if not item.execution_group_id
+            )
+            minutes = individual_minutes + sum(grouped_minutes.values())
+            unresolved = [
+                item
+                for item in items
+                if item.start_at is None
+                and item.schedule_status in {"pending", "unscheduled"}
+                and item.earliest_date is not None
+                and item.due_date is not None
+                and item.earliest_date <= day <= item.due_date
+            ]
+            field_windows = {
+                item.window_by_date.get(day)
+                for item in items
+                if item.category == "onsite"
+                and item.applicability == "matched"
+                and item.necessity == "required"
+                and day in item.window_by_date
+            }
+            if "unavailable" in field_windows:
+                condition = "现场不可作业"
+            elif "pending" in field_windows:
+                condition = "作业条件待确认"
+            else:
+                condition = "可作业" if field_windows else "无现场任务"
+            workload = f"{len(scheduled)}项·{minutes}分"
+            status = f"{len(unresolved)}项待核对" if unresolved else condition
+            selected_marker = "✓ " if selected_day == day else ""
+            label = f"{selected_marker}{day.day:02d} 周{weekday}\n{workload}\n{status}"
+            if column.button(
+                label,
+                key=f"plan_day:{field_id}:{scope}:{day.isoformat()}",
+                type="secondary",
+                width="stretch",
+            ):
+                st.session_state[selected_key] = day
+                selected_day = day
+    view_key = f"plan_view:{field_id}"
+    view = st.session_state.get(view_key, "today")
+    today_view, week_view = st.columns(2)
+    if today_view.button(
+        "✓ 今日执行台" if view == "today" else "今日执行台",
+        key=f"view_today:{field_id}:{scope}",
+        type="secondary",
+        width="stretch",
+    ):
+        st.session_state[view_key] = "today"
+        view = "today"
+    if week_view.button(
+        "✓ 整周清单" if view == "week" else "整周清单",
+        key=f"view_week:{field_id}:{scope}",
+        type="secondary",
+        width="stretch",
+    ):
+        st.session_state[view_key] = "week"
+        view = "week"
+    if view == "week":
+        _render_week(items, start, scope=scope, compact_empty=False)
+    else:
+        selected_label = "今日安排" if selected_day == _today() else f"{selected_day:%m月%d日}安排"
+        st.markdown(f"#### {selected_label}")
+        entries = [
+            item
+            for item in items
+            if item.start_at and item.start_at.astimezone(ZONE).date() == selected_day
+        ]
+        if entries:
+            for item in sorted(
+                entries, key=lambda entry: entry.start_at or datetime.max.replace(tzinfo=ZONE)
+            ):
+                _render_item(item, scope=scope)
+        else:
+            st.info("这一天没有已安排事项。待确认和未排入的任务仍保留在下方，不会伪装成已排程。")
+    unresolved = [
+        item
+        for item in items
+        if item.schedule_status in {"pending", "unscheduled"} and item.start_at is None
+    ]
+    if unresolved:
+        with st.expander(f"待确认或未排入 · {len(unresolved)} 项", expanded=False):
+            for item in unresolved:
                 _render_item(item, scope=scope)
 
 
@@ -2198,9 +3093,10 @@ def _show_preview(
             )
     else:
         st.caption("首次预览。")
-    _render_week(
+    _render_plan_contents(
         preview.version.items,
         preview.version.plan.request.start_date,
+        field_id=preview.field_id,
         scope=f"{scope}-preview-{preview.id}",
     )
     if preview.status == "preview":
@@ -2256,6 +3152,7 @@ def _preview_matches_state(preview: PlanPreviewV3, state: FieldStateV3) -> bool:
         preview.status == "preview"
         and preview.expected_draft_version == state.draft_version
         and preview.expected_fact_version == state.fact_version
+        and preview.expected_task_version == state.task_version
         and preview.expected_plan_id == state.latest_plan_id
     )
 
@@ -2295,12 +3192,18 @@ def _render_plans(
     if adopted:
         if preview_id:
             with st.expander("查看当前采用的安排"):
-                _render_week(
-                    adopted.items, adopted.plan.request.start_date, scope=f"adopted-{adopted.id}"
+                _render_plan_contents(
+                    adopted.items,
+                    adopted.plan.request.start_date,
+                    field_id=field_id,
+                    scope=f"adopted-{adopted.id}",
                 )
         else:
-            _render_week(
-                adopted.items, adopted.plan.request.start_date, scope=f"adopted-{adopted.id}"
+            _render_plan_contents(
+                adopted.items,
+                adopted.plan.request.start_date,
+                field_id=field_id,
+                scope=f"adopted-{adopted.id}",
             )
 
 
@@ -2337,7 +3240,10 @@ def _render_feedback(
         eligible = [
             item
             for item in current.items
-            if item.start_at and not item.completed and item.start_at.astimezone(ZONE) <= _now()
+            if item.template_snapshot is None
+            and item.start_at
+            and not item.completed
+            and item.start_at.astimezone(ZONE) <= _now()
         ]
         with st.expander("记录任务完成", expanded=(kind == "completed")):
             if eligible:
@@ -2491,6 +3397,22 @@ def _proposal_event_description(
         label = missing_label(field)
         value = field_value_label(field, feedback.value)
         detail = f"记录{label}：{value}"
+    elif feedback.kind == "task_result":
+        name = (task_names or {}).get(feedback.task_id or "", "任务")
+        labels = {
+            "normal": "正常",
+            "issue": "发现问题",
+            "unable": "无法判断",
+            "unknown": "未知",
+            "not_checked": "未检查",
+        }
+        values = "、".join(
+            f"{field}：{labels.get(value, value)}"
+            for field, value in feedback.result_values.items()
+        )
+        detail = f"记录{name}执行结果：{values}"
+        if feedback.result_notes:
+            detail += f"；{feedback.result_notes}"
     elif feedback.kind == "workability":
 
         def state(value: bool | None) -> str:
@@ -2856,7 +3778,7 @@ def _render_agent(
                 st.json(proposal.changes)
         yes, no = st.columns(2)
         if yes.button(
-            "确认并保存",
+            "保存待办并预览" if proposal.kind == "task_series" else "确认并保存",
             key=f"confirm_proposal:{proposal.id}",
             type="primary" if proposal.id == primary_proposal_id else "secondary",
         ):
@@ -2887,7 +3809,9 @@ def _render_agent(
                 st.rerun()
 
 
-def _seed_demo(service: WorkbenchServiceV3) -> str:
+def _seed_demo(service: WorkbenchServiceV3, *, scenario: str = "sparse") -> str:
+    if scenario not in {"sparse", "rich"}:
+        raise ValueError("模拟场景只支持 sparse 或 rich")
     field_id = f"demo-{uuid4().hex[:8]}"
     start = _today() + timedelta(days=1)
     now = _now()
@@ -2912,7 +3836,7 @@ def _seed_demo(service: WorkbenchServiceV3) -> str:
         longitude=114.30,
         geocoding_source="模拟数据",
     )
-    service.save_field_draft(
+    state = service.save_field_draft(
         FieldDraftV3(
             field_id=field_id,
             mode="demo",
@@ -2935,6 +3859,35 @@ def _seed_demo(service: WorkbenchServiceV3) -> str:
         expected_version=None,
         operation_id=f"demo-{uuid4()}",
     )
+    if scenario == "rich":
+        series = TaskSeriesV4(
+            id=f"demo-week-{uuid4().hex[:8]}",
+            field_id=field_id,
+            template={
+                "id": "demo-record-review-v1",
+                "version": 1,
+                "title": "整理本日模拟记录",
+                "task_type": "management",
+                "category": "offsite",
+                "purpose": "展示一个有多日任务的日程与结果记录入口。",
+                "steps": ["查看模拟记录", "保存整理结果"],
+                "result_fields": ["记录整理情况"],
+                "completion_standard": "记录整理情况已保存",
+                "source_kind": "development_example",
+                "agronomic_review_status": "development_only",
+            },
+            recurrence="dates",
+            anchor_date=start,
+            selected_dates=[start + timedelta(days=offset) for offset in range(7)],
+            duration_minutes=15,
+            priority=3,
+        )
+        service.save_task_series(
+            series,
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            operation_id=f"save-demo-week-{field_id}",
+        )
     service.store_weather(
         WeatherSnapshotV3(
             field_id=field_id,
@@ -2970,18 +3923,14 @@ def _initial_workspace_mode() -> str:
     return "真实地块" if _saved_fields(real_service, "real") else "独立模拟示例"
 
 
-def _remember_workspace_mode() -> None:
-    st.query_params["mode"] = "real" if st.session_state["workspace_mode"] == "真实地块" else "demo"
-
-
 def _start_real_use() -> None:
     st.session_state["workspace_mode"] = "真实地块"
-    _remember_workspace_mode()
+    st.query_params["mode"] = "real"
 
 
 def _start_demo_use() -> None:
     st.session_state["workspace_mode"] = "独立模拟示例"
-    _remember_workspace_mode()
+    st.query_params["mode"] = "demo"
 
 
 def _render_legacy_history(service: WorkbenchServiceV3, database: Path, mode: str) -> None:
@@ -3232,30 +4181,17 @@ def main() -> None:
         source = "待采用预览" if active_preview else "已采用计划" if adopted else "待确认安排"
         st.caption(f"{_weather_summary(service, field_id)} · {source}")
         _render_count_strip(items)
-        st.markdown("#### 今日与后续安排")
-        today_message = "今天还没有已采用的安排。下方可查看预览或待确认事项。"
-        if adopted:
-            today = _today()
-            plan_start = adopted.plan.request.start_date
-            if today < plan_start:
-                today_message = f"今天暂无安排；七天计划从 {plan_start:%m月%d日} 开始。"
-            elif today > plan_start + timedelta(days=6):
-                today_message = "已采用计划未覆盖今天；请重新核对七天安排。"
-            else:
-                today_count = sum(
-                    item.start_at is not None
-                    and item.start_at.astimezone(ZONE).date() == today
-                    and item.schedule_status in {"scheduled", "completed"}
-                    for item in adopted.items
-                )
-                today_message = f"今天的已采用安排：{today_count} 项。"
+        st.markdown("#### 今日执行台 · 七天安排")
+        _render_task_series_form(service, current)
+        _render_update_task_series_form(service, current)
+        _render_execution_group_form(service, current)
         _render_plans(
             service,
             field_id,
             current,
             emphasize_adopt=not pending_proposals,
         )
-        st.caption(today_message)
+        _render_field_issues(service, field_id)
         if adopted:
             st.caption(f"已采用 · {adopted.created_at.astimezone(ZONE):%m月%d日 %H:%M} 保存")
         _render_questions(evaluation, field_id, visible, skipped, skip_key, featured=featured)

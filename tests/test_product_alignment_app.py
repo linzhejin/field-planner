@@ -359,7 +359,14 @@ def test_task_detail_completion_can_be_explicitly_retracted(tmp_path, monkeypatc
     context = f"workbench_context:real:{(tmp_path / 'ui.sqlite3').resolve()}"
     app.session_state[context][0]._now = lambda: completed_at
     app.button(key=f"detail:adopted-{current.id}:{item.task_id}").click().run()
-    app.button(key=f"task_complete:{item.task_id}").click().run()
+    result_key = next(
+        element.key
+        for element in app.selectbox
+        if element.key and element.key.startswith(f"task_result:audit-field:{item.task_id}:")
+    )
+    app.selectbox(key=result_key).set_value("正常")
+    next(box for box in app.checkbox if box.label == "这项任务本次已完成").set_value(True)
+    next(button for button in app.button if button.label == "保存执行结果").click().run()
     assert not app.exception
     event = next(
         event

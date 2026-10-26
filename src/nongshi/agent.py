@@ -34,6 +34,7 @@ from nongshi.schema_v3 import (
     RuleSearchQueryV3,
 )
 from nongshi.service_v3 import WorkbenchServiceV3
+from nongshi.tasks_v4 import RecurrenceV4, TaskCategoryV4, TaskKindV4, TaskSeriesV4
 from nongshi.weather import OpenMeteoService, WeatherServiceError
 from nongshi.workflows import (
     CAPABILITIES,
@@ -210,6 +211,31 @@ class ProposeFeedbackArgs(ToolArgs):
         ]
 
 
+class ProposeTaskSeriesArgs(ToolArgs):
+    field_id: str
+    source_quote: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=120)
+    purpose: str = ""
+    task_type: TaskKindV4 = "custom"
+    category: TaskCategoryV4 = "onsite"
+    recurrence: RecurrenceV4 = "once"
+    anchor_date: date
+    end_date: date | None = None
+    selected_dates: list[date] = Field(default_factory=list, max_length=3660)
+    interval_days: int | None = Field(default=None, gt=0, le=365)
+    duration_minutes: int | None = Field(default=None, gt=0, le=1440)
+    priority: int = Field(default=2, ge=1, le=3)
+    earliest_date: date | None = None
+    due_date: date | None = None
+    prerequisites: list[str] = Field(default_factory=list)
+    necessary_conditions: list[str] = Field(default_factory=list)
+    conditions_confirmed: bool | None = None
+    steps: list[str] = Field(default_factory=list)
+    result_fields: list[str] = Field(default_factory=list)
+    completion_standard: str = ""
+    follow_up: str = ""
+
+
 class DeclaredEvent(ProposedEvent):
     source_quote: str = Field(
         min_length=1,
@@ -276,6 +302,7 @@ ARGUMENT_MODELS: dict[str, type[BaseModel]] = {
     "preview_plan": PreviewPlanArgs,
     "propose_field_update": ProposeFieldUpdateArgs,
     "propose_feedback": ProposeFeedbackArgs,
+    "propose_task_series": ProposeTaskSeriesArgs,
 }
 TOOL_DEFINITIONS: list[dict[str, object]] = [
     _tool(name, capability.description, ARGUMENT_MODELS[name])
@@ -580,6 +607,10 @@ class AgentServiceV3:
                     proposal.kind == "field_update" for proposal in proposals
                 ):
                     missing.append("请确认天气查询位置")
+                if "task_series" in workflow_actions and not any(
+                    proposal.kind == "task_series" for proposal in proposals
+                ):
+                    missing.append("请确认待办名称、日期范围和预计时长")
             proposed_resource_days = {
                 event.feedback.day
                 for proposal in proposals
@@ -1052,6 +1083,7 @@ class AgentServiceV3:
                                     effective_arguments,
                                     field_id=field_id,
                                     run_id=run_id,
+                                    user_message=user_message,
                                     timeout_seconds=tool_budget,
                                 )
                             if cancellation is not None:
@@ -1174,8 +1206,31 @@ class AgentServiceV3:
                                     {"field_id": field_id, "changes": grounded_changes},
                                 )
                             )
+                        if not read_only_preview and "task_series" in workflow_actions:
+                            quote = declaration.task_series_quote
+                            if not declaration.task_series:
+                                runtime_missing["task_series"] = (
+                                    "请补充待办名称和日期；耗时未知时可以保留待确认"
+                                )
+                            elif not quote or quote not in user_message:
+                                runtime_missing["task_series"] = (
+                                    "请核对任务提案是否对应你刚才提出的内容"
+                                )
+                            else:
+                                generated.append(
+                                    (
+                                        "propose_task_series",
+                                        {
+                                            "field_id": field_id,
+                                            "source_quote": quote,
+                                            **declaration.task_series,
+                                        },
+                                    )
+                                )
+                                runtime_missing.pop("task_series", None)
                         pending_changes = workflow_actions & {
                             "field_update",
+                            "task_series",
                             "location",
                             "completed",
                             "observation",
@@ -1405,6 +1460,8 @@ class AgentServiceV3:
         for proposal in proposals:
             if proposal.kind == "field_update":
                 covered.update({"field_update", "location"})
+            elif proposal.kind == "task_series":
+                covered.add("task_series")
             for event in proposal.events:
                 if event.feedback is not None:
                     covered.add(event.feedback.kind)
@@ -2055,6 +2112,8 @@ class AgentServiceV3:
             "相对日期只按本轮接收时的北京时间换算，并在待确认修改里写出完整日期；"
             "不能猜测缺失的日期。"
             "涉及档案或现场事实的修改只能调用 propose_* 工具，必须向用户逐项说明并等待确认；"
+            "新增自定义农事须先由 declare_request 提取任务描述，再提出 propose_task_series；"
+            "只使用用户明确给出的名称、日期、工时和步骤；未知内容留空，不推导农艺处方；"
             "不能声称草稿已保存、事实已记录或计划已采用。不能编造任务、工时、天气、来源和农艺结论。"
             "未知保留为未知。天气预报不代表现场可作业。候选规则标记为开发验证、适用性待复核。"
             "面向用户先说结果，再给一个必要操作或具体问题。用简短自然的中文，"
@@ -2097,6 +2156,7 @@ class AgentServiceV3:
         *,
         field_id: str,
         run_id: str,
+        user_message: str = "",
         timeout_seconds: float | None = None,
     ) -> tuple[dict[str, object], AgentProposalV3 | None, PlanPreviewV3 | None, str]:
         started = self._monotonic()
@@ -2258,6 +2318,69 @@ class AgentServiceV3:
                 args = ProposeFeedbackArgs.model_validate(raw_arguments)
                 self._check_field(field_id, args.field_id)
                 proposal = self._feedback_proposal(field_id, args.validated_events())
+                result = {
+                    "requires_user_confirmation": True,
+                    "proposal": proposal.model_dump(mode="json"),
+                }
+            elif name == "propose_task_series":
+                args = ProposeTaskSeriesArgs.model_validate(raw_arguments)
+                self._check_field(field_id, args.field_id)
+                if args.source_quote not in user_message:
+                    raise ValueError("任务提案必须对应本轮用户原话")
+                state = self.workbench.get_field(field_id)
+                if state.draft.profile is None:
+                    raise ValueError("先保存地块档案，再添加农事待办")
+                if args.conditions_confirmed and not re.search(
+                    r"已确认.*(?:条件|要求)|我确认.*(?:条件|要求)", args.source_quote
+                ):
+                    raise ValueError("任务条件只能在用户明确确认后标记为已确认")
+                series = TaskSeriesV4(
+                    id=f"agent-series-{uuid4().hex[:16]}",
+                    field_id=field_id,
+                    template={
+                        "id": f"agent-template-{uuid4().hex[:12]}",
+                        "version": 1,
+                        "title": args.title,
+                        "task_type": args.task_type,
+                        "category": args.category,
+                        "purpose": args.purpose,
+                        "necessary_conditions": args.necessary_conditions,
+                        "steps": args.steps,
+                        "result_fields": args.result_fields,
+                        "completion_standard": args.completion_standard,
+                        "follow_up": args.follow_up,
+                        "source_kind": "user_defined",
+                        "agronomic_review_status": "not_assessed",
+                    },
+                    recurrence=args.recurrence,
+                    anchor_date=args.anchor_date,
+                    end_date=args.end_date,
+                    selected_dates=args.selected_dates,
+                    interval_days=args.interval_days,
+                    duration_minutes=args.duration_minutes,
+                    priority=args.priority,
+                    earliest_date=args.earliest_date,
+                    due_date=args.due_date,
+                    prerequisites=args.prerequisites,
+                    conditions_confirmed=args.conditions_confirmed,
+                )
+                proposal = AgentProposalV3(
+                    kind="task_series",
+                    field_id=field_id,
+                    expected_draft_version=state.draft_version,
+                    expected_fact_version=state.fact_version,
+                    expected_task_version=state.task_version,
+                    task_series=series,
+                    summary="助手提出了一个自定义农事待办；确认后保存并生成计划预览。",
+                    changes={
+                        "任务名称": series.template.title,
+                        "本次目的": series.template.purpose or "暂未填写",
+                        "安排频次": series.recurrence,
+                        "起始日期": series.anchor_date.isoformat(),
+                        "预计时长（分钟）": series.duration_minutes,
+                        "农艺状态": "用户自定，农艺适用性未评估",
+                    },
+                )
                 result = {
                     "requires_user_confirmation": True,
                     "proposal": proposal.model_dump(mode="json"),

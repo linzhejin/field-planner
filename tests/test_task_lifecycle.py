@@ -128,6 +128,7 @@ def test_requested_date_obeys_current_fact_conditions(tmp_path, condition):
         expected_fact_version=0,
         operation_id="condition",
     )
+    adopt(service)
     preview = edit(service, preferred_date=requested)
     assert task(preview).start_at is None
     assert task(preview).schedule_status in {"pending", "unscheduled"}
@@ -297,6 +298,7 @@ def test_pending_completion_fact_locks_task_before_adoption(tmp_path):
         expected_fact_version=0,
         operation_id="complete",
     )
+    adopt(service)
     with pytest.raises(ValueError, match="完成"):
         edit(service)
     with pytest.raises(ValueError, match="完成"):
@@ -362,6 +364,7 @@ def test_history_restore_keeps_current_cancellation_and_revalidates_current_dura
     preview = service.preview_restore_plan(FIELD, historic.id)
     assert task(preview).duration_minutes == 150
     assert task(preview).start_at is None
+    preview = adopt(service, preview)
     cancelled = service.cancel_task(
         FIELD,
         TASK,

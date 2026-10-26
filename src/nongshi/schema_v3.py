@@ -16,6 +16,7 @@ from nongshi.schema_v2 import (
     PlanVersionV2,
     RuleEvidenceV2,
 )
+from nongshi.tasks_v4 import TaskInstanceV4, TaskSeriesV4
 
 FieldMode = Literal["real", "demo"]
 EventSource = Literal["user", "assistant", "import"]
@@ -39,6 +40,7 @@ class FieldDraftV3(BaseModel):
     profile: FieldProfile | None = None
     location: WeatherLocationV3 | None = None
     start_date: date | None = None
+    scheduling_preference: Literal["early", "balanced", "concentrated"] = "early"
     days: list[DayWindow] = Field(default_factory=list)
     notes: str = ""
     input_source: Literal["user", "copied_legacy", "demo"] = "user"
@@ -62,6 +64,7 @@ class FieldStateV3(BaseModel):
     mode: FieldMode
     draft_version: int = Field(ge=1)
     fact_version: int = Field(ge=0)
+    task_version: int = Field(default=0, ge=0)
     draft: FieldDraftV3
     latest_plan_id: str | None = None
     plan_stale: bool = False
@@ -135,13 +138,18 @@ class TaskActionV3(BaseModel):
     field_id: str
     expected_draft_version: int
     expected_fact_version: int
+    expected_task_version: int | None = None
     draft: FieldDraftV3 | None = None
     event: FactEventInputV3 | None = None
+    instance: TaskInstanceV4 | None = None
 
     @model_validator(mode="after")
     def validate_mutation(self) -> TaskActionV3:
-        if (self.draft is None) == (self.event is None):
+        mutations = [self.draft is not None, self.event is not None, self.instance is not None]
+        if sum(mutations) != 1:
             raise ValueError("任务操作必须且只能包含一项已确认修改")
+        if self.instance is not None and self.expected_task_version is None:
+            raise ValueError("修改任务实例需要任务版本")
         return self
 
 
@@ -167,7 +175,9 @@ class RuleAdoptionRecordV3(BaseModel):
 
 class PlanChangeV3(BaseModel):
     task_id: str
-    kind: Literal["added", "moved", "removed", "cancelled", "unchanged", "completed"]
+    kind: Literal[
+        "added", "moved", "removed", "cancelled", "unchanged", "completed", "content_changed"
+    ]
     old_start_at: AwareDatetime | None = None
     old_end_at: AwareDatetime | None = None
     new_start_at: AwareDatetime | None = None
@@ -183,6 +193,7 @@ class PlanVersionV3(BaseModel):
     created_at: AwareDatetime
     draft_version: int = Field(ge=1)
     fact_version: int = Field(ge=0)
+    task_version: int = Field(default=0, ge=0)
     plan: PlanVersionV2
     weather_snapshot_id: str | None = None
     ruleset_version: str
@@ -201,6 +212,7 @@ class PlanPreviewV3(BaseModel):
     field_id: str
     expected_draft_version: int = Field(ge=1)
     expected_fact_version: int = Field(ge=0)
+    expected_task_version: int = Field(default=0, ge=0)
     expected_plan_id: str | None = None
     created_at: AwareDatetime
     version: PlanVersionV3
@@ -217,6 +229,7 @@ class FieldEvaluationV3(BaseModel):
     field_id: str
     draft_version: int
     fact_version: int
+    task_version: int = Field(default=0, ge=0)
     evaluated_at: AwareDatetime
     profile_ready: bool
     items: list[PlanItemV2] = Field(default_factory=list)
@@ -392,12 +405,14 @@ class AgentRunV3(BaseModel):
 
 class AgentProposalV3(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
-    kind: Literal["field_update", "facts"]
+    kind: Literal["field_update", "facts", "task_series"]
     field_id: str
     expected_draft_version: int | None = None
     expected_fact_version: int | None = None
+    expected_task_version: int | None = None
     draft: FieldDraftV3 | None = None
     events: list[FactEventInputV3] = Field(default_factory=list)
+    task_series: TaskSeriesV4 | None = None
     summary: str
     changes: dict[str, object] = Field(default_factory=dict)
 

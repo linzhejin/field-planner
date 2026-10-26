@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
+from nongshi.tasks_v4 import TaskExecutionGroupV4, TaskInstanceV4
+
 Applicability = Literal["matched", "out_of_scope", "pending"]
 Necessity = Literal["required", "no_need", "unknown"]
 DailyWindowStatus = Literal["available", "unavailable", "pending"]
@@ -16,7 +18,7 @@ WeatherSource = Literal["synthetic", "user_estimate", "official"]
 ScheduleStatus = Literal[
     "scheduled", "unscheduled", "pending", "not_generated", "completed", "cancelled"
 ]
-TaskType = Literal["inspection", "maintenance"]
+TaskType = Literal["inspection", "maintenance", "custom", "follow_up", "management"]
 LOCAL_ZONE = ZoneInfo("Asia/Shanghai")
 
 
@@ -143,7 +145,8 @@ class FieldProfile(BaseModel):
 
 
 class PlanRequestV2(BaseModel):
-    schema_version: Literal[2] = 2
+    # V2 remains the compatibility model; newly calculated snapshots explicitly use v4.
+    schema_version: Literal[2, 4] = 2
     id: str = Field(default_factory=lambda: str(uuid4()))
     start_date: date
     plots: list[FieldProfile]
@@ -159,12 +162,16 @@ class PlanRequestV2(BaseModel):
     selected_rule_ids: list[str] = Field(
         default_factory=lambda: ["C11", "C18", "C19", "C20", "C23", "C24", "C31"]
     )
+    scheduling_preference: Literal["early", "balanced", "concentrated"] = "early"
     synthetic: bool = True
     completed_at: dict[str, AwareDatetime] = Field(default_factory=dict)
     cancelled_tasks: dict[str, str] = Field(default_factory=dict)
     # 地块级规则复核状态（rule_id -> pending_review/adopted/rejected）；
     # 缺省为空表示全部待复核，保持现状。由服务层在评估前注入。
     rule_review_status: dict[str, str] = Field(default_factory=dict)
+    # Versioned task instances are additive; old v2 plans load with an empty list.
+    task_instances_v4: list[TaskInstanceV4] = Field(default_factory=list)
+    execution_groups_v4: list[TaskExecutionGroupV4] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_plan_input(self) -> PlanRequestV2:
@@ -182,9 +189,47 @@ class PlanRequestV2(BaseModel):
             task_ids.add(f"{plot.id}-I")
             task_ids.add(plot.maintenance_task_id or f"{plot.id}-M")
             task_ids.update(plot.completed_maintenance_task_ids)
+        for task in self.task_instances_v4:
+            if task.field_id not in {plot.id for plot in self.plots}:
+                raise ValueError("任务实例引用了不存在的地块")
+            if task.id in task_ids:
+                raise ValueError("任务实例编号与已有任务编号重复")
+            task_ids.add(task.id)
+        instances_by_id = {task.id: task for task in self.task_instances_v4}
+        group_ids: set[str] = set()
+        grouped_task_ids: set[str] = set()
+        for group in self.execution_groups_v4:
+            member_ids = set(group.member_task_ids)
+            if group.id in group_ids:
+                raise ValueError("合并出行编号不能重复")
+            group_ids.add(group.id)
+            if group.field_id not in {plot.id for plot in self.plots}:
+                raise ValueError("合并出行引用了不存在的地块")
+            for task_id in group.member_task_ids:
+                task = instances_by_id.get(task_id)
+                if task is None or task.field_id != group.field_id:
+                    raise ValueError("合并出行任务必须属于同一地块的当前任务实例")
+                if task_id in grouped_task_ids:
+                    raise ValueError("一个任务不能加入多个合并出行组")
+                grouped_task_ids.add(task_id)
+                if task.template.category != "onsite" or task.template.task_type not in {
+                    "inspection",
+                    "follow_up",
+                }:
+                    raise ValueError("仅可合并现场巡田与问题复查任务")
+                if task_id in task.prerequisites:
+                    raise ValueError("任务不能以前置关系指向自身")
+                if not task.earliest_date <= group.execution_date <= task.due_date:
+                    raise ValueError("合并出行日期必须在每项任务的日期窗口内")
+            if any(
+                prerequisite in member_ids
+                for task_id in group.member_task_ids
+                for prerequisite in instances_by_id[task_id].prerequisites
+            ):
+                raise ValueError("合并出行成员之间存在前置关系，必须分开安排")
         if len(task_ids) != sum(
             2 + len(plot.completed_maintenance_task_ids) for plot in self.plots
-        ):
+        ) + len(self.task_instances_v4):
             raise ValueError("当前和已完成任务编号不能重复")
         if any(
             task_id not in task_ids
@@ -192,6 +237,12 @@ class PlanRequestV2(BaseModel):
             for task_id in plot.maintenance_prerequisites
         ):
             raise ValueError("维护任务引用了不存在的前置任务")
+        if any(
+            prerequisite not in task_ids and prerequisite not in self.completed_at
+            for task in self.task_instances_v4
+            for prerequisite in task.prerequisites
+        ):
+            raise ValueError("任务实例引用了不存在的前置任务")
         if any(task_id not in task_ids for task_id in self.completed_at):
             raise ValueError("完成记录引用了不存在的任务")
         dependencies = {
@@ -202,6 +253,7 @@ class PlanRequestV2(BaseModel):
                 (f"{plot.id}-M", plot.maintenance_prerequisites),
             )
         }
+        dependencies.update({task.id: task.prerequisites for task in self.task_instances_v4})
         visited: set[str] = set()
         visiting: set[str] = set()
 
@@ -277,10 +329,18 @@ class PlanItemV2(BaseModel):
     reason_code: str = ""
     missing_fields: list[str] = Field(default_factory=list)
     evidence: list[RuleEvidenceV2] = Field(default_factory=list)
+    category: Literal["onsite", "offsite"] = "onsite"
+    priority: int | None = Field(default=None, ge=1, le=3)
+    earliest_date: date | None = None
+    due_date: date | None = None
+    prerequisites: list[str] = Field(default_factory=list)
+    template_snapshot: dict[str, Any] | None = None
+    execution_group_id: str | None = None
+    group_duration_minutes: int | None = Field(default=None, gt=0)
 
 
 class FeedbackV2(BaseModel):
-    kind: Literal["completed", "observation", "workability", "resource", "cancelled"]
+    kind: Literal["completed", "observation", "workability", "resource", "cancelled", "task_result"]
     at: AwareDatetime
     task_id: str | None = None
     plot_id: str | None = None
@@ -308,6 +368,12 @@ class FeedbackV2(BaseModel):
     intervals: list[TimeWindow] | None = None
     resource_minutes: int | None = Field(default=None, ge=0)
     reason: str = ""
+    result_values: dict[str, Literal["normal", "issue", "unable", "unknown", "not_checked"]] = (
+        Field(default_factory=dict)
+    )
+    result_notes: str = ""
+    issue_ids: list[str] = Field(default_factory=list)
+    resolved_issue_id: str | None = None
 
     @model_validator(mode="after")
     def validate_feedback_details(self) -> FeedbackV2:
@@ -325,11 +391,21 @@ class FeedbackV2(BaseModel):
             raise ValueError("作业条件反馈需要地块和日期")
         if self.kind == "resource" and (self.day is None or self.intervals is None):
             raise ValueError("人员反馈需要日期和可用时段")
+        if self.kind == "task_result":
+            if not self.task_id or not self.plot_id:
+                raise ValueError("执行结果需要地块和任务编号")
+            if not self.result_values:
+                raise ValueError("至少记录一个执行项目")
+            if all(value == "not_checked" for value in self.result_values.values()):
+                raise ValueError("全部项目都未检查，不能保存为空的执行结果")
+        elif self.issue_ids or self.resolved_issue_id:
+            raise ValueError("问题关联只能附在任务执行结果上")
         return self
 
 
 class PlanVersionV2(BaseModel):
-    schema_version: Literal[2] = 2
+    # Stored v2 records stay readable; build_plan_v2 tags all new snapshots as v4.
+    schema_version: Literal[2, 4] = 2
     id: str = Field(default_factory=lambda: str(uuid4()))
     parent_id: str | None = None
     created_at: AwareDatetime

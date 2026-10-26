@@ -149,8 +149,9 @@ def test_adopted_plan_starting_tomorrow_explicitly_explains_today(tmp_path, monk
     app.run()
 
     captions = "\n".join(item.value for item in app.caption)
-    assert "今天暂无安排；七天计划从" in captions
-    assert "今日与后续安排" in "\n".join(item.value for item in app.markdown)
+    start = preview.version.plan.request.start_date
+    assert f"本期七天：{start.isoformat()}" in captions
+    assert "今日执行台 · 七天安排" in "\n".join(item.value for item in app.markdown)
 
 
 def test_saved_field_first_screen_explains_missing_plan_and_next_step(
@@ -162,7 +163,7 @@ def test_saved_field_first_screen_explains_missing_plan_and_next_step(
     text = "\n".join(item.value for item in [*app.markdown, *app.caption, *app.info])
     keys = {button.key for button in app.button}
     assert "当前没有已采用计划" in text
-    assert "今日与后续安排" in text
+    assert "今日执行台 · 七天安排" in text
     assert "还没有已采用的日程" in text
     assert f"next_question:{field_id}" in keys
     assert f"preview_plan:{field_id}" in keys

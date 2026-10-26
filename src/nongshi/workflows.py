@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Action = Literal[
     "field_update",
+    "task_series",
     "location",
     "completed",
     "observation",
@@ -26,6 +27,8 @@ class DeclareRequestArgs(BaseModel):
     missing: list[str] = Field(default_factory=list, max_length=3)
     field_changes: dict[str, Any] = Field(default_factory=dict)
     field_change_quotes: dict[str, str] = Field(default_factory=dict)
+    task_series: dict[str, Any] = Field(default_factory=dict)
+    task_series_quote: str = ""
     events: list[dict[str, Any]] = Field(default_factory=list, max_length=10)
 
 
@@ -90,6 +93,13 @@ CAPABILITIES: dict[str, Capability] = {
         "propose_feedback",
         "提出待确认完成、观察、作业条件或资源修改。",
         frozenset({"completed", "observation", "workability", "resource"}),
+        "proposal",
+    ),
+    "propose_task_series": Capability(
+        "propose_task_series",
+        "根据用户明确描述提出单次或周期农事待办；不得补造目的、工时、步骤或农艺处置，"
+        "不完整信息保留为空并等待用户确认。",
+        frozenset({"task_series"}),
         "proposal",
     ),
 }

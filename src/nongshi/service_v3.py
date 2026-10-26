@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -37,6 +38,14 @@ from nongshi.schema_v3 import (
     RuleAdoptionRecordV3,
     TaskActionV3,
     WeatherSnapshotV3,
+)
+from nongshi.tasks_v4 import (
+    TaskExecutionGroupSaveResultV4,
+    TaskExecutionGroupV4,
+    TaskSeriesSaveResultV4,
+    TaskSeriesUpdateResultV4,
+    TaskSeriesV4,
+    expand_task_series_all,
 )
 
 
@@ -110,6 +119,307 @@ class WorkbenchServiceV3:
 
     def list_events(self, field_id: str):  # type: ignore[no-untyped-def]
         return self.store.list_events(field_id)
+
+    def save_task_series(
+        self,
+        series: TaskSeriesV4,
+        *,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        expected_task_version: int | None = None,
+        proposal_id: str | None = None,
+        operation_id: str,
+    ) -> TaskSeriesSaveResultV4:
+        """Persist a user-confirmed task pattern; planning remains a separate preview step."""
+        state = self.get_field(series.field_id)
+        if state.draft.profile is None:
+            raise ValueError("先保存地块档案，再建立农事任务")
+        instances = expand_task_series_all(series)
+        self._validate_task_dependencies(series.field_id, instances)
+        return self.store.save_task_series(
+            series,
+            expected_draft_version=expected_draft_version,
+            expected_fact_version=expected_fact_version,
+            expected_task_version=expected_task_version,
+            proposal_id=proposal_id,
+            operation_id=operation_id,
+        )
+
+    def list_task_series(self, field_id: str) -> list[TaskSeriesV4]:
+        return self.store.list_task_series(field_id)
+
+    @staticmethod
+    def _execution_group_signature(instances) -> str:  # type: ignore[no-untyped-def]
+        fingerprint = [
+            {
+                "id": task.id,
+                "field_id": task.field_id,
+                "occurrence_date": task.occurrence_date.isoformat(),
+                "earliest_date": task.earliest_date.isoformat(),
+                "due_date": task.due_date.isoformat(),
+                "duration_minutes": task.duration_minutes,
+                "priority": task.priority,
+                "prerequisites": task.prerequisites,
+                "template_id": task.template.id,
+                "template_version": task.template.version,
+                "task_type": task.template.task_type,
+                "category": task.template.category,
+                "status": task.status,
+            }
+            for task in sorted(instances, key=lambda item: item.id)
+        ]
+        raw = json.dumps(fingerprint, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
+
+    def list_task_execution_groups(self, field_id: str) -> list[TaskExecutionGroupV4]:
+        """Mark a confirmed group stale if its membership or task snapshot has changed."""
+        instances = {item.id: item for item in self.store.list_task_instances(field_id)}
+        cancelled = {
+            event.feedback.task_id
+            for event in self._active_events(field_id)
+            if event.feedback and event.feedback.kind == "cancelled" and event.feedback.task_id
+        }
+        result = []
+        for group in self.store.list_task_execution_groups(field_id):
+            if group.status == "cancelled":
+                result.append(group)
+                continue
+            members = [instances.get(task_id) for task_id in group.member_task_ids]
+            current_signature = self._execution_group_signature(members) if all(members) else ""
+            stale = (
+                not all(members)
+                or current_signature != group.member_signature
+                or bool(cancelled.intersection(group.member_task_ids))
+            )
+            result.append(
+                group.model_copy(
+                    update={"status": "needs_reconfirmation" if stale else "confirmed"}
+                )
+            )
+        return result
+
+    def save_task_execution_group(
+        self,
+        *,
+        field_id: str,
+        group_id: str,
+        member_task_ids: list[str],
+        execution_date: date,
+        duration_minutes: int,
+        expected_task_version: int,
+        operation_id: str,
+    ) -> TaskExecutionGroupSaveResultV4:
+        """Confirm or reconfirm a same-day outing and its shared time estimate."""
+        if not operation_id.strip():
+            raise ValueError("保存合并出行需要操作编号")
+        replay = self.store.replay_task_execution_group_save(
+            field_id=field_id,
+            group_id=group_id,
+            member_task_ids=member_task_ids,
+            execution_date=execution_date,
+            duration_minutes=duration_minutes,
+            expected_task_version=expected_task_version,
+            operation_id=operation_id,
+        )
+        if replay is not None:
+            return replay
+        if len(member_task_ids) < 2 or len(member_task_ids) != len(set(member_task_ids)):
+            raise ValueError("请选择至少两项不同任务")
+        if duration_minutes <= 0:
+            raise ValueError("合并出行总时长必须是正整数分钟")
+        state = self.get_field(field_id)
+        if state.task_version != expected_task_version:
+            raise ValueError("版本冲突：任务已变化，请刷新后重新确认合并出行")
+        all_instances = {item.id: item for item in self.store.list_task_instances(field_id)}
+        members = [all_instances.get(task_id) for task_id in member_task_ids]
+        if not all(members):
+            raise ValueError("所选任务已不存在，请重新选择")
+        active_members = [item for item in members if item is not None]
+        if any(
+            item.field_id != field_id
+            or item.status == "superseded"
+            or item.template.category != "onsite"
+            or item.template.task_type not in {"inspection", "follow_up"}
+            or item.duration_minutes is None
+            for item in active_members
+        ):
+            raise ValueError("仅可合并时长已确认的现场巡田与问题复查任务")
+        if any(
+            not item.earliest_date <= execution_date <= item.due_date for item in active_members
+        ):
+            raise ValueError("合并日期必须落在每项任务的日期窗口内")
+        member_ids = set(member_task_ids)
+        if any(member_ids.intersection(item.prerequisites) for item in active_members):
+            raise ValueError("有前置关系的任务不能安排在同一执行组，请分开安排")
+        completed = set(self._completion_facts(field_id, None))
+        if completed.intersection(member_ids):
+            raise ValueError("已完成任务不能加入新的出行组")
+        cancelled = {
+            event.feedback.task_id
+            for event in self._active_events(field_id)
+            if event.feedback and event.feedback.kind == "cancelled" and event.feedback.task_id
+        }
+        if cancelled.intersection(member_ids):
+            raise ValueError("已取消任务不能加入出行组")
+        old = next(
+            (
+                group
+                for group in self.store.list_task_execution_groups(field_id)
+                if group.id == group_id
+            ),
+            None,
+        )
+        for group in self.list_task_execution_groups(field_id):
+            if group.id != group_id and group.status != "cancelled":
+                if member_ids.intersection(group.member_task_ids):
+                    raise ValueError("有任务已属于另一合并出行组")
+        group = TaskExecutionGroupV4(
+            id=group_id,
+            field_id=field_id,
+            member_task_ids=member_task_ids,
+            execution_date=execution_date,
+            duration_minutes=duration_minutes,
+            version=old.version + 1 if old else 1,
+            member_signature=self._execution_group_signature(active_members),
+            status="confirmed",
+            confirmed_at=self._now(),
+        )
+        return self.store.save_task_execution_group(
+            group,
+            expected_task_version=expected_task_version,
+            operation_id=operation_id,
+        )
+
+    def cancel_task_execution_group(
+        self,
+        field_id: str,
+        group_id: str,
+        *,
+        expected_task_version: int,
+        operation_id: str,
+    ) -> TaskExecutionGroupSaveResultV4:
+        """Release members back to individual scheduling while retaining group history."""
+        group = next(
+            (
+                item
+                for item in self.store.list_task_execution_groups(field_id)
+                if item.id == group_id
+            ),
+            None,
+        )
+        if group is None:
+            raise KeyError("找不到合并出行组")
+        replay = self.store.replay_task_execution_group_save(
+            field_id=field_id,
+            group_id=group_id,
+            member_task_ids=group.member_task_ids,
+            execution_date=group.execution_date,
+            duration_minutes=group.duration_minutes,
+            expected_task_version=expected_task_version,
+            operation_id=operation_id,
+            action="cancel_task_execution_group",
+        )
+        if replay is not None:
+            return replay
+        if group.status == "cancelled":
+            raise ValueError("合并出行已取消")
+        cancelled = group.model_copy(
+            update={
+                "version": group.version + 1,
+                "status": "cancelled",
+                "confirmed_at": self._now(),
+            }
+        )
+        return self.store.save_task_execution_group(
+            cancelled,
+            expected_task_version=expected_task_version,
+            operation_id=operation_id,
+            action="cancel_task_execution_group",
+        )
+
+    def list_field_issues(self, field_id: str):  # type: ignore[no-untyped-def]
+        return self.store.list_field_issues(field_id)
+
+    def update_task_series(
+        self,
+        series: TaskSeriesV4,
+        *,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        operation_id: str,
+    ) -> TaskSeriesUpdateResultV4:
+        """Revise future open occurrences while preserving executed history snapshots."""
+        series = TaskSeriesV4.model_validate(series.model_dump(mode="python"))
+        state = self.get_field(series.field_id)
+        current = self.store.get_task_series(series.field_id, series.id)
+        if (state.draft_version, state.fact_version) != (
+            expected_draft_version,
+            expected_fact_version,
+        ):
+            raise ValueError("版本冲突：地块信息已变化，请刷新后修改周期")
+        if series.template.version < current.template.version or (
+            series.template.version == current.template.version and series != current
+        ):
+            raise ValueError("修改周期内容时请递增模板版本")
+        protected = set(self._completion_facts(series.field_id, None))
+        for event in self._active_events(series.field_id):
+            feedback = event.feedback
+            if feedback and feedback.kind in {"cancelled", "task_result"} and feedback.task_id:
+                protected.add(feedback.task_id)
+        instances = expand_task_series_all(series)
+        self._validate_task_dependencies(series.field_id, instances, replacing_series=series.id)
+        return self.store.update_task_series(
+            series,
+            instances,
+            blocked_instance_ids=protected,
+            expected_draft_version=expected_draft_version,
+            expected_fact_version=expected_fact_version,
+            expected_task_version=state.task_version,
+            operation_id=operation_id,
+        )
+
+    def _validate_task_dependencies(
+        self,
+        field_id: str,
+        proposed_instances,
+        *,
+        replacing_series: str | None = None,
+    ) -> None:  # type: ignore[no-untyped-def]
+        state = self.get_field(field_id)
+        existing = [
+            instance
+            for instance in self.store.list_task_instances(field_id)
+            if instance.series_id != replacing_series
+        ]
+        instances = [*existing, *proposed_instances]
+        task_ids = {instance.id for instance in instances}
+        task_ids.update({f"{field_id}-I", f"{field_id}-M"})
+        if state.draft.profile:
+            task_ids.update(state.draft.profile.completed_maintenance_task_ids)
+        task_ids.update(self._completion_facts(field_id, None))
+        graph: dict[str, list[str]] = {}
+        for instance in instances:
+            unknown = set(instance.prerequisites).difference(task_ids)
+            if unknown:
+                raise ValueError(f"前置任务不属于当前地块或已不存在：{', '.join(sorted(unknown))}")
+            graph[instance.id] = list(instance.prerequisites)
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(task_id: str) -> None:
+            if task_id in visiting:
+                raise ValueError("任务前置关系形成循环")
+            if task_id in visited:
+                return
+            visiting.add(task_id)
+            for prerequisite in graph.get(task_id, []):
+                if prerequisite in graph:
+                    visit(prerequisite)
+            visiting.remove(task_id)
+            visited.add(task_id)
+
+        for task_id in graph:
+            visit(task_id)
 
     def commit_events(
         self,
@@ -208,6 +518,24 @@ class WorkbenchServiceV3:
                     cancelled_ids.add(feedback.task_id)
                     continue
                 if not feedback or feedback.kind != "completed":
+                    if feedback and feedback.kind == "task_result":
+                        item = next(
+                            (
+                                task
+                                for task in current_items
+                                if task.task_id == feedback.task_id and task.plot_id == field_id
+                            ),
+                            None,
+                        )
+                        if item is None or item.start_at is None:
+                            raise ValueError("只能为当前已安排任务记录执行结果")
+                        if feedback.at.astimezone(LOCAL_ZONE) < item.start_at.astimezone(
+                            LOCAL_ZONE
+                        ):
+                            raise ValueError("执行结果时间早于任务计划开始时间")
+                        declared = set((item.template_snapshot or {}).get("result_fields", []))
+                        if declared and set(feedback.result_values).difference(declared):
+                            raise ValueError("执行结果包含任务模板未声明的记录项")
                     continue
                 if feedback.task_id in cancelled_ids:
                     raise ValueError("任务已取消，不能直接记录完成")
@@ -232,6 +560,48 @@ class WorkbenchServiceV3:
             expected_fact_version=expected_fact_version,
             operation_id=operation_id,
             proposal_id=proposal_id,
+            expected_draft_version=expected_draft_version,
+        )
+
+    def record_task_result(
+        self,
+        field_id: str,
+        task_id: str,
+        result_values: dict[str, str],
+        *,
+        notes: str = "",
+        completed: bool = False,
+        resolve_issue_id: str | None = None,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        operation_id: str,
+    ) -> EventCommitResultV3:
+        """Save actual task outcomes and, separately, an optional completion fact."""
+        at = self._now()
+        events = [
+            FactEventInputV3(
+                feedback=FeedbackV2(
+                    kind="task_result",
+                    task_id=task_id,
+                    plot_id=field_id,
+                    at=at,
+                    result_values=result_values,
+                    result_notes=notes,
+                    resolved_issue_id=resolve_issue_id,
+                )
+            )
+        ]
+        if completed:
+            events.append(
+                FactEventInputV3(
+                    feedback=FeedbackV2(kind="completed", task_id=task_id, plot_id=field_id, at=at)
+                )
+            )
+        return self.commit_events(
+            field_id,
+            events,
+            operation_id=operation_id,
+            expected_fact_version=expected_fact_version,
             expected_draft_version=expected_draft_version,
         )
 
@@ -264,6 +634,8 @@ class WorkbenchServiceV3:
             for event in self._active_events(field_id)
         ):
             raise ValueError("任务已取消，不能重复修改或取消")
+        if state.plan_stale or current.task_version != state.task_version:
+            raise ValueError("任务或地块情况已变化，请先生成并采用当前预览")
         return state, item
 
     def edit_task(
@@ -276,6 +648,7 @@ class WorkbenchServiceV3:
         priority: int,
         expected_draft_version: int,
         expected_fact_version: int,
+        expected_task_version: int | None = None,
         operation_id: str,
     ) -> PlanPreviewV3:
         """Save user-confirmed task preferences, then preview current-fact scheduling."""
@@ -287,6 +660,7 @@ class WorkbenchServiceV3:
             "priority": priority,
             "expected_draft_version": expected_draft_version,
             "expected_fact_version": expected_fact_version,
+            "expected_task_version": expected_task_version,
         }
 
         def prepare() -> TaskActionV3:
@@ -296,11 +670,32 @@ class WorkbenchServiceV3:
                 expected_draft_version=expected_draft_version,
                 expected_fact_version=expected_fact_version,
             )
+            if expected_task_version is not None and expected_task_version != state.task_version:
+                raise ValueError("任务版本冲突，请刷新任务详情后重试")
             start = state.draft.start_date or (self._today() + timedelta(days=1))
             if not start <= preferred_date <= start + timedelta(days=6):
                 raise ValueError("指定日期必须位于当前七天计划内")
             if preferred_date < self._today():
                 raise ValueError("不能把未完成任务改到过去日期")
+            if item.template_snapshot is not None:
+                instance = self.store.get_task_instance(field_id, task_id)
+                updated_instance = instance.model_copy(
+                    update={
+                        "occurrence_date": preferred_date,
+                        "earliest_date": preferred_date,
+                        "due_date": preferred_date,
+                        "duration_minutes": duration_minutes,
+                        "priority": priority,
+                        "status": "ready" if not instance.missing_fields else "pending",
+                    }
+                )
+                return TaskActionV3(
+                    field_id=field_id,
+                    instance=updated_instance,
+                    expected_draft_version=expected_draft_version,
+                    expected_fact_version=expected_fact_version,
+                    expected_task_version=state.task_version,
+                )
             prefix = item.task_type
             profile = state.draft.profile.model_copy(
                 update={
@@ -321,6 +716,17 @@ class WorkbenchServiceV3:
             )
 
         intent = self._task_action_intent(operation_id, "edit_task", request, prepare)
+        if intent.instance is not None:
+            self.store.update_task_instance(
+                intent.instance,
+                expected_task_version=intent.expected_task_version or 0,
+                operation_id=f"task-action:{intent.id}:instance",
+            )
+            return self.store.task_action_preview(intent) or self.preview_plan(
+                field_id, operation_id=f"task-action:{intent.id}:preview"
+            )
+        if intent.draft is None:
+            raise ValueError("任务修改提案缺少有效内容")
         self.store.save_field_draft(
             intent.draft,
             expected_version=expected_draft_version,
@@ -444,6 +850,7 @@ class WorkbenchServiceV3:
                 operation_id=operation_id,
                 proposal_id=proposal_id,
             )
+
             return self._preview_confirmed_agent_proposal(
                 proposal_id, draft_version=saved.draft_version
             )
@@ -458,6 +865,16 @@ class WorkbenchServiceV3:
             return self._preview_confirmed_agent_proposal(
                 proposal_id, fact_version=saved.fact_version
             )
+        if proposal.kind == "task_series" and proposal.task_series is not None:
+            self.save_task_series(
+                proposal.task_series,
+                expected_draft_version=proposal.expected_draft_version or 0,
+                expected_fact_version=proposal.expected_fact_version or 0,
+                expected_task_version=proposal.expected_task_version,
+                proposal_id=proposal_id,
+                operation_id=operation_id,
+            )
+            return self._preview_confirmed_agent_proposal(proposal_id)
         raise ValueError("待确认修改内容不完整")
 
     def retry_agent_preview(self, proposal_id: str) -> AgentProposalOutcomeV3:
@@ -554,6 +971,7 @@ class WorkbenchServiceV3:
             field_id=field_id,
             draft_version=state.draft_version,
             fact_version=state.fact_version,
+            task_version=state.task_version,
             evaluated_at=now,
             profile_ready=True,
             items=plan.items,
@@ -659,6 +1077,7 @@ class WorkbenchServiceV3:
             created_at=now,
             draft_version=state.draft_version,
             fact_version=state.fact_version,
+            task_version=state.task_version,
             plan=calculated,
             weather_snapshot_id=weather.id if weather else None,
             ruleset_version=self.catalog.delivery_version,
@@ -671,6 +1090,7 @@ class WorkbenchServiceV3:
             field_id=field_id,
             expected_draft_version=state.draft_version,
             expected_fact_version=state.fact_version,
+            expected_task_version=state.task_version,
             expected_plan_id=current.id if current else None,
             created_at=now,
             version=version,
@@ -861,9 +1281,22 @@ class WorkbenchServiceV3:
         version = self.store.get_current_plan(field_id)
         events = self.store.list_events(field_id)
         payload = {
-            "schema_version": 3,
+            "schema_version": 4,
             "field": state.model_dump(mode="json"),
             "events": [event.model_dump(mode="json") for event in events],
+            "task_series_v4": [
+                series.model_dump(mode="json") for series in self.store.list_task_series(field_id)
+            ],
+            "task_instances_v4": [
+                task.model_dump(mode="json") for task in self.store.list_task_instances(field_id)
+            ],
+            "task_execution_groups_v4": [
+                group.model_dump(mode="json") for group in self.list_task_execution_groups(field_id)
+            ],
+            "issues_v4": [
+                issue.model_dump(mode="json") for issue in self.store.list_field_issues(field_id)
+            ],
+            "issue_events_v4": self.store.list_field_issue_events(field_id),
             "adopted_plan": version.model_dump(mode="json") if version else None,
             "history": [item.model_dump(mode="json") for item in self.store.plan_history(field_id)],
             "weather": (
@@ -887,10 +1320,12 @@ class WorkbenchServiceV3:
     def export_markdown(self, field_id: str) -> str:
         state = self.get_field(field_id)
         version = self.store.get_current_plan(field_id)
+        events = self.store.list_events(field_id)
+        issues = self.store.list_field_issues(field_id)
         lines = [
             f"# {state.draft.profile.name if state.draft.profile else '未命名地块'}计划",
             "",
-            "- 数据结构：v3",
+            "- 导出结构：v4（旧计划仍按原格式只读）",
             f"- 计划版本：{version.id if version else '尚未采用'}",
             f"- 现场事实版本：v{state.fact_version}",
             f"- 规则资料：{version.ruleset_version if version else self.catalog.delivery_version}",
@@ -905,6 +1340,14 @@ class WorkbenchServiceV3:
                 lines.append(f"- {item.title}：{item.reason}（{item.task_id}）")
             if evaluation.missing_fields:
                 lines.extend(["", "缺少信息：" + "、".join(evaluation.missing_fields)])
+            if issues:
+                lines.extend(["", "## 问题与复查", ""])
+                lines.extend(
+                    f"- {issue.title}｜{'待处理' if issue.status == 'open' else '已解决'}｜"
+                    f"首次记录 {issue.opened_at.astimezone(LOCAL_ZONE):%Y-%m-%d}｜"
+                    f"关联任务：{'、'.join(issue.related_task_ids) or '无'}"
+                    for issue in issues
+                )
             return "\n".join(lines) + "\n"
         lines.extend(["## 七天安排", ""])
         for item in version.items:
@@ -914,6 +1357,11 @@ class WorkbenchServiceV3:
                 when = f"{item.start_at:%Y-%m-%d %H:%M}–{item.end_at:%H:%M}"
             else:
                 when = "未排入"
+            if item.execution_group_id:
+                when += (
+                    f" · 合并出行 {item.execution_group_id[:8]}，"
+                    f"共{item.group_duration_minutes}分钟；本项预计{item.duration_minutes}分钟"
+                )
 
             def describe_evidence(evidence: RuleEvidenceV2) -> str:
                 pages = "、".join(f"PDF第{page}页" for page in evidence.pdf_pages)
@@ -955,6 +1403,44 @@ class WorkbenchServiceV3:
             for item in version.items
         ):
             lines.append("- 无")
+        result_events = [
+            event for event in events if event.feedback and event.feedback.kind == "task_result"
+        ]
+        lines.extend(["", "## 执行结果记录", ""])
+        if result_events:
+            task_names = {item.task_id: item.title for item in version.items}
+            result_labels = {
+                "normal": "正常",
+                "issue": "发现问题",
+                "unable": "无法判断",
+                "unknown": "未知",
+                "not_checked": "未检查",
+            }
+            lines.extend(
+                f"- {event.feedback.at.astimezone(LOCAL_ZONE):%Y-%m-%d %H:%M}｜"
+                f"{task_names.get(event.feedback.task_id or '', event.feedback.task_id or '任务')}"
+                "｜"
+                + "、".join(
+                    f"{name}：{result_labels.get(value, value)}"
+                    for name, value in event.feedback.result_values.items()
+                )
+                + (f"｜{event.feedback.result_notes}" if event.feedback.result_notes else "")
+                for event in result_events
+            )
+        else:
+            lines.append("- 暂无执行结果")
+        lines.extend(["", "## 问题与复查", ""])
+        if issues:
+            lines.extend(
+                f"- {issue.title}｜{'待处理' if issue.status == 'open' else '已解决'}｜"
+                f"首次记录 {issue.opened_at.astimezone(LOCAL_ZONE):%Y-%m-%d}｜"
+                f"来源记录 {len(issue.source_event_ids)} 次｜"
+                f"关联任务：{'、'.join(issue.related_task_ids) or '无'}"
+                + (f"｜再次发生关联 {issue.repeat_of}" if issue.repeat_of else "")
+                for issue in issues
+            )
+        else:
+            lines.append("- 暂无问题记录")
         lines.extend(["", "## 版本变化", ""])
         change_labels = {
             "added": "新增",
@@ -963,6 +1449,7 @@ class WorkbenchServiceV3:
             "cancelled": "已取消",
             "unchanged": "保持不变",
             "completed": "已完成",
+            "content_changed": "内容变化",
         }
         lines.extend(
             f"- {change.task_id}：{change_labels[change.kind]}；{change.reason}"
@@ -1025,6 +1512,59 @@ class WorkbenchServiceV3:
             # normal merge protection still applies to all other callers and edits.
             previous.request.completed_at = dict(completed_at)
         active_events = self._active_events(state.id)
+        all_task_instances = self.store.list_task_instances(state.id)
+        instances_by_id = {instance.id: instance for instance in all_task_instances}
+        window_end = start_date + timedelta(days=6)
+        required_instance_ids = {
+            instance.id
+            for instance in all_task_instances
+            if instance.due_date >= start_date and instance.earliest_date <= window_end
+        }
+        execution_groups = [
+            group
+            for group in self.list_task_execution_groups(state.id)
+            if group.status != "cancelled"
+            and any(task_id in required_instance_ids for task_id in group.member_task_ids)
+        ]
+        for group in execution_groups:
+            required_instance_ids.update(group.member_task_ids)
+        required_instance_ids.update(
+            task_id for task_id in completed_at if task_id in instances_by_id
+        )
+        required_instance_ids.update(
+            event.feedback.task_id
+            for event in active_events
+            if event.feedback
+            and event.feedback.kind in {"cancelled", "task_result"}
+            and event.feedback.task_id in instances_by_id
+        )
+        if previous:
+            required_instance_ids.update(
+                item.task_id
+                for item in previous.items
+                if item.task_id in instances_by_id and item.completed
+            )
+        # Keep unresolved historical prerequisites visible as overdue items so a
+        # dependent occurrence cannot become detached when the seven-day window moves.
+        pending = list(required_instance_ids)
+        while pending:
+            task_id = pending.pop()
+            instance = instances_by_id.get(task_id)
+            if instance is None:
+                continue
+            for prerequisite in instance.prerequisites:
+                if prerequisite in completed_at or prerequisite not in instances_by_id:
+                    continue
+                if prerequisite not in required_instance_ids:
+                    required_instance_ids.add(prerequisite)
+                    pending.append(prerequisite)
+        task_instances = [
+            instances_by_id[task_id]
+            for task_id in sorted(
+                required_instance_ids,
+                key=lambda value: (instances_by_id[value].occurrence_date, value),
+            )
+        ]
         if previous_version and previous:
             prior_profile = next(
                 (plot for plot in previous.request.plots if plot.id == state.id), None
@@ -1082,6 +1622,9 @@ class WorkbenchServiceV3:
             synthetic=draft.mode == "demo" or draft.input_source == "demo",
             completed_at=completed_at,
             rule_review_status=rule_review_status,
+            scheduling_preference=draft.scheduling_preference,
+            task_instances_v4=task_instances,
+            execution_groups_v4=execution_groups,
         )
         initial = build_plan_v2(
             request,
@@ -1191,6 +1734,27 @@ class WorkbenchServiceV3:
             ):
                 kind = "completed"
                 reason = "用户显式更正完成记录；保留原事件和原时段"
+            elif old is not None and (
+                old.title,
+                old.duration_minutes,
+                old.category,
+                old.priority,
+                old.earliest_date,
+                old.due_date,
+                old.prerequisites,
+                old.template_snapshot,
+            ) != (
+                item.title,
+                item.duration_minutes,
+                item.category,
+                item.priority,
+                item.earliest_date,
+                item.due_date,
+                item.prerequisites,
+                item.template_snapshot,
+            ):
+                kind = "content_changed"
+                reason = "任务内容或排程条件已更新"
             elif (old.start_at, old.end_at, old.schedule_status) == (
                 item.start_at,
                 item.end_at,

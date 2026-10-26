@@ -16,6 +16,7 @@ from nongshi.schema_v2 import (
     PlanRequestV2,
     TimeWindow,
 )
+from nongshi.tasks_v4 import TaskSeriesV4, expand_task_series
 
 START = date(2026, 10, 19)
 
@@ -68,6 +69,16 @@ def items(plan):  # type: ignore[no-untyped-def]
     return {item.task_id: item for item in plan.items}
 
 
+def test_new_plan_snapshots_are_v4_and_legacy_snapshots_remain_readable() -> None:
+    plan = build_plan_v2(request_v2())
+    legacy = plan.model_copy(update={"schema_version": 2})
+    restored_legacy = type(plan).model_validate(legacy.model_dump(mode="json"))
+
+    assert plan.schema_version == 4
+    assert plan.request.schema_version == 4
+    assert restored_legacy.schema_version == 2
+
+
 def test_unknown_observations_do_not_block_requested_inspection() -> None:
     plan = build_plan_v2(
         request_v2(
@@ -87,6 +98,128 @@ def test_unknown_observations_do_not_block_requested_inspection() -> None:
     assert maintenance.necessity == "unknown"
     assert maintenance.schedule_status == "pending"
     assert "maintenance_need_confirmed" in maintenance.missing_fields
+
+
+def test_custom_offsite_task_uses_time_without_requiring_field_workability() -> None:
+    series = TaskSeriesV4(
+        id="series-office",
+        field_id="A",
+        template={
+            "id": "custom-v1",
+            "title": "整理巡田记录",
+            "task_type": "custom",
+            "category": "offsite",
+            "purpose": "整理已经获得的现场记录",
+            "completion_standard": "保存整理后的记录",
+        },
+        recurrence="once",
+        anchor_date=START,
+        duration_minutes=30,
+        earliest_date=START,
+        due_date=START,
+    )
+    instance = expand_task_series(series, START)[0]
+    request = request_v2(maintenance_need_confirmed=False)
+    request.task_instances_v4 = [instance]
+    for day in request.days:
+        day.site_workable = None
+        day.weather_workable = None
+
+    planned = items(build_plan_v2(request))
+
+    assert planned["A-I"].schedule_status == "pending"
+    assert planned[instance.id].schedule_status == "scheduled"
+    assert planned[instance.id].category == "offsite"
+    assert planned[instance.id].template_snapshot["purpose"] == "整理已经获得的现场记录"
+
+
+def test_custom_task_missing_duration_remains_visible_but_unplanned() -> None:
+    series = TaskSeriesV4(
+        id="series-draft",
+        field_id="A",
+        template={"id": "custom-v1", "title": "用户自定农事", "category": "offsite"},
+        recurrence="once",
+        anchor_date=START,
+        duration_minutes=None,
+    )
+    instance = expand_task_series(series, START)[0]
+
+    request = request_v2()
+    request.task_instances_v4 = [instance]
+    planned = items(build_plan_v2(request))
+
+    assert planned[instance.id].schedule_status == "pending"
+    assert planned[instance.id].reason_code == "missing_duration"
+    assert "duration_minutes" in planned[instance.id].missing_fields
+
+
+@pytest.mark.parametrize(
+    ("preference", "different_days"),
+    [("early", False), ("balanced", True), ("concentrated", False)],
+)
+def test_schedule_preferences_change_distribution_without_losing_feasible_tasks(
+    preference: str, different_days: bool
+) -> None:
+    task_instances = []
+    for index in range(2):
+        series = TaskSeriesV4(
+            id=f"preference-task-{index}",
+            field_id="A",
+            template={
+                "id": "custom-v1",
+                "title": f"现场任务{index + 1}",
+                "category": "onsite",
+                "purpose": "完成用户确认的现场事项",
+                "completion_standard": "保存本次结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=60,
+            earliest_date=START,
+            due_date=START + timedelta(days=6),
+        )
+        task_instances.extend(expand_task_series(series, START))
+
+    request = request_v2(inspection_requested=False, maintenance_need_confirmed=False)
+    request.scheduling_preference = preference  # type: ignore[assignment]
+    request.task_instances_v4 = task_instances
+    planned = items(build_plan_v2(request))
+    scheduled = [
+        item
+        for item in planned.values()
+        if item.task_id.startswith("preference-task-") and item.start_at is not None
+    ]
+
+    assert len(scheduled) == 2
+    assert len({item.start_at.date() for item in scheduled}) == (2 if different_days else 1)
+
+
+def test_recurring_maintenance_keeps_existing_business_confirmation_gates() -> None:
+    series = TaskSeriesV4(
+        id="ditch-maintenance-rounds",
+        field_id="A",
+        template={
+            "id": "maintenance-v1",
+            "title": "沟渠维护",
+            "task_type": "maintenance",
+            "category": "onsite",
+            "purpose": "清理既有沟渠",
+            "completion_standard": "记录实际清理结果",
+        },
+        recurrence="dates",
+        anchor_date=START,
+        selected_dates=[START],
+        duration_minutes=45,
+    )
+    instance = expand_task_series(series, START)[0]
+    request = request_v2(maintenance_need_confirmed=None)
+    request.task_instances_v4 = [instance]
+
+    planned = items(build_plan_v2(request))
+
+    assert planned["A-M"].schedule_status == "not_generated"
+    assert planned[instance.id].schedule_status == "pending"
+    assert "maintenance_need_confirmed" in planned[instance.id].missing_fields
 
 
 def test_confirmed_hubei_province_with_suffix_remains_in_scope() -> None:
@@ -573,3 +706,163 @@ def test_completed_maintenance_never_rewrites_standing_water_fact() -> None:
 
     assert items(completed)["A-M"].completed is True
     assert completed.request.plots[0].standing_water is True
+
+
+def test_confirmed_inspection_and_follow_up_group_uses_one_shared_time_slot() -> None:
+    from nongshi.tasks_v4 import TaskExecutionGroupV4, TaskSeriesV4, expand_task_series
+
+    inspection = expand_task_series(
+        TaskSeriesV4(
+            id="series-inspection",
+            field_id="A",
+            template={
+                "id": "inspection-template",
+                "title": "巡田检查",
+                "task_type": "inspection",
+                "category": "onsite",
+                "purpose": "确认现场情况",
+                "completion_standard": "记录巡田结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=30,
+            earliest_date=START,
+            due_date=START,
+        ),
+        START,
+    )[0]
+    follow_up = expand_task_series(
+        TaskSeriesV4(
+            id="series-follow-up",
+            field_id="A",
+            template={
+                "id": "follow-up-template",
+                "title": "复查已记录的问题",
+                "task_type": "follow_up",
+                "category": "onsite",
+                "related_issue_id": "issue-1",
+                "purpose": "核对问题是否解决",
+                "completion_standard": "记录复查结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=20,
+            earliest_date=START,
+            due_date=START,
+        ),
+        START,
+    )[0]
+    request = request_v2(maintenance_need_confirmed=False)
+    request.task_instances_v4 = [inspection, follow_up]
+    request.days[0].resource_minutes = 40
+    request.days[0].intervals = [TimeWindow(start=time(9), end=time(10))]
+    request.execution_groups_v4 = [
+        TaskExecutionGroupV4(
+            id="outing-1",
+            field_id="A",
+            member_task_ids=[inspection.id, follow_up.id],
+            execution_date=START,
+            duration_minutes=40,
+            member_signature="confirmed-members",
+            confirmed_at=datetime(2026, 10, 18, 12, tzinfo=UTC),
+        )
+    ]
+
+    plan_items = items(build_plan_v2(request))
+    inspection_item = plan_items[inspection.id]
+    follow_up_item = plan_items[follow_up.id]
+
+    assert inspection_item.schedule_status == follow_up_item.schedule_status == "scheduled"
+    assert inspection_item.start_at == follow_up_item.start_at
+    assert inspection_item.end_at == follow_up_item.end_at
+    assert inspection_item.execution_group_id == follow_up_item.execution_group_id == "outing-1"
+    assert inspection_item.group_duration_minutes == follow_up_item.group_duration_minutes == 40
+    assert inspection_item.duration_minutes == 30
+    assert follow_up_item.duration_minutes == 20
+
+
+def test_reconfirmed_group_keeps_its_feasible_old_start_when_total_duration_changes() -> None:
+    from nongshi.tasks_v4 import TaskExecutionGroupV4
+
+    inspection = expand_task_series(
+        TaskSeriesV4(
+            id="b-inspection",
+            field_id="A",
+            template={
+                "id": "inspection-template",
+                "title": "巡田检查",
+                "task_type": "inspection",
+                "category": "onsite",
+                "purpose": "确认现场情况",
+                "completion_standard": "记录巡田结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=20,
+        ),
+        START,
+    )[0]
+    follow_up = expand_task_series(
+        TaskSeriesV4(
+            id="c-follow-up",
+            field_id="A",
+            template={
+                "id": "follow-up-template",
+                "title": "复查已记录的问题",
+                "task_type": "follow_up",
+                "category": "onsite",
+                "related_issue_id": "issue-1",
+                "purpose": "核对问题是否解决",
+                "completion_standard": "记录复查结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=30,
+        ),
+        START,
+    )[0]
+    office_task = expand_task_series(
+        TaskSeriesV4(
+            id="a-office-task",
+            field_id="A",
+            template={
+                "id": "office-template",
+                "title": "整理记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "purpose": "整理已有记录",
+                "completion_standard": "保存整理结果",
+            },
+            recurrence="once",
+            anchor_date=START,
+            duration_minutes=15,
+        ),
+        START,
+    )[0]
+    group = TaskExecutionGroupV4(
+        id="outing-keep-time",
+        field_id="A",
+        member_task_ids=[inspection.id, follow_up.id],
+        execution_date=START,
+        duration_minutes=35,
+        member_signature="members-v1",
+        confirmed_at=datetime(2026, 10, 18, 12, tzinfo=UTC),
+    )
+    request = request_v2(maintenance_need_confirmed=False)
+    request.task_instances_v4 = [office_task, inspection, follow_up]
+    request.execution_groups_v4 = [group]
+    previous = build_plan_v2(request)
+    previous_group_item = items(previous)[inspection.id]
+    assert previous_group_item.start_at == datetime(2026, 10, 19, 9, 15, tzinfo=LOCAL_ZONE)
+
+    revised_request = previous.request.model_copy(deep=True)
+    revised_request.task_instances_v4 = [inspection, follow_up]
+    revised_request.execution_groups_v4 = [
+        group.model_copy(update={"duration_minutes": 45, "version": 2})
+    ]
+    revised = build_plan_v2(revised_request, previous=previous)
+    revised_items = items(revised)
+
+    assert revised_items[inspection.id].start_at == previous_group_item.start_at
+    assert revised_items[inspection.id].end_at == datetime(2026, 10, 19, 10, tzinfo=LOCAL_ZONE)
+    assert revised_items[follow_up.id].start_at == previous_group_item.start_at

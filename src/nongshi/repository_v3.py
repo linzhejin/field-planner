@@ -11,6 +11,7 @@ from contextvars import ContextVar
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import TypeVar
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from pydantic import BaseModel
 
@@ -29,6 +30,17 @@ from nongshi.schema_v3 import (
     RuleAdoptionRecordV3,
     TaskActionV3,
     WeatherSnapshotV3,
+)
+from nongshi.tasks_v4 import (
+    FieldIssueV4,
+    TaskExecutionGroupSaveResultV4,
+    TaskExecutionGroupV4,
+    TaskInstanceUpdateResultV4,
+    TaskInstanceV4,
+    TaskSeriesSaveResultV4,
+    TaskSeriesUpdateResultV4,
+    TaskSeriesV4,
+    expand_task_series_all,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -128,7 +140,83 @@ class WorkbenchStoreV3:
                     result_type TEXT NOT NULL,
                     result_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
-                );"""
+                );
+                CREATE TABLE IF NOT EXISTS task_series_v4 (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    created_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS task_series_v4_field
+                    ON task_series_v4(field_id, created_at);
+                CREATE TABLE IF NOT EXISTS task_series_revisions_v4 (
+                    revision_id TEXT PRIMARY KEY,
+                    series_id TEXT NOT NULL REFERENCES task_series_v4(id),
+                    task_version INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS task_series_revisions_v4_series
+                    ON task_series_revisions_v4(series_id, task_version);
+                CREATE TABLE IF NOT EXISTS task_instances_v4 (
+                    id TEXT PRIMARY KEY,
+                    series_id TEXT NOT NULL REFERENCES task_series_v4(id),
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    occurrence_number INTEGER NOT NULL,
+                    occurrence_date TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    UNIQUE(series_id, occurrence_number)
+                );
+                CREATE INDEX IF NOT EXISTS task_instances_v4_field_date
+                    ON task_instances_v4(field_id, occurrence_date);
+                CREATE TABLE IF NOT EXISTS task_instance_revisions_v4 (
+                    revision_id TEXT PRIMARY KEY,
+                    instance_id TEXT NOT NULL REFERENCES task_instances_v4(id),
+                    task_version INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS task_instance_revisions_v4_instance
+                    ON task_instance_revisions_v4(instance_id, task_version);
+                CREATE TABLE IF NOT EXISTS task_execution_groups_v4 (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS task_execution_groups_v4_field
+                    ON task_execution_groups_v4(field_id, id);
+                CREATE TABLE IF NOT EXISTS task_execution_group_revisions_v4 (
+                    revision_id TEXT PRIMARY KEY,
+                    group_id TEXT NOT NULL REFERENCES task_execution_groups_v4(id),
+                    task_version INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS task_execution_group_revisions_v4_group
+                    ON task_execution_group_revisions_v4(group_id, task_version);"""
+            )
+            connection.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS field_issues_v4 (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    issue_key TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    opened_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS field_issues_v4_field_status
+                    ON field_issues_v4(field_id, status, issue_key, opened_at);
+                CREATE TABLE IF NOT EXISTS field_issue_events_v4 (
+                    event_id TEXT PRIMARY KEY,
+                    issue_id TEXT NOT NULL REFERENCES field_issues_v4(id),
+                    field_id TEXT NOT NULL REFERENCES fields_v3(id),
+                    created_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS field_issue_events_v4_issue
+                    ON field_issue_events_v4(issue_id, created_at);
+                """
             )
 
     def _backup_before_upgrade(self) -> None:
@@ -229,6 +317,44 @@ class WorkbenchStoreV3:
             ),
         )
 
+    def _link_issue_tasks(
+        self,
+        connection: sqlite3.Connection,
+        field_id: str,
+        issue_id: str,
+        task_ids: list[str],
+        at: datetime,
+    ) -> None:
+        row = connection.execute(
+            "SELECT payload FROM field_issues_v4 WHERE id=? AND field_id=?",
+            (issue_id, field_id),
+        ).fetchone()
+        if row is None:
+            raise ValueError("找不到要关联的问题记录")
+        issue = FieldIssueV4.model_validate_json(row["payload"])
+        if issue.status != "open":
+            raise ValueError("已解决的问题不能再添加新的处理任务")
+        added = [task_id for task_id in task_ids if task_id not in issue.related_task_ids]
+        if not added:
+            return
+        issue = issue.model_copy(update={"related_task_ids": [*issue.related_task_ids, *added]})
+        connection.execute(
+            "UPDATE field_issues_v4 SET payload=? WHERE id=?",
+            (self._json(issue), issue.id),
+        )
+        event = {
+            "id": str(uuid4()),
+            "type": "task_linked",
+            "issue_id": issue.id,
+            "task_ids": added,
+            "at": at.isoformat(),
+        }
+        connection.execute(
+            "INSERT INTO field_issue_events_v4 "
+            "(event_id, issue_id, field_id, created_at, payload) VALUES (?, ?, ?, ?, ?)",
+            (event["id"], issue.id, field_id, at.isoformat(), self._json(event)),
+        )
+
     @staticmethod
     def _field_from_row(row: sqlite3.Row) -> FieldStateV3:
         return FieldStateV3.model_validate_json(row["payload"])
@@ -320,7 +446,13 @@ class WorkbenchStoreV3:
             if expected_version is None:
                 if row is not None:
                     raise ValueError("地块已存在；请基于当前版本更新")
-                draft_version, fact_version, latest_plan_id, plan_stale = 1, 0, None, False
+                draft_version, fact_version, latest_plan_id, plan_stale, task_version = (
+                    1,
+                    0,
+                    None,
+                    False,
+                    0,
+                )
             else:
                 if row is None:
                     raise KeyError(f"找不到地块 {draft.field_id}")
@@ -339,12 +471,14 @@ class WorkbenchStoreV3:
                 fact_version = state.fact_version
                 latest_plan_id = state.latest_plan_id
                 plan_stale = bool(state.latest_plan_id)
+                task_version = state.task_version
             now = self._now()
             state = FieldStateV3(
                 id=draft.field_id,
                 mode=draft.mode,
                 draft_version=draft_version,
                 fact_version=fact_version,
+                task_version=task_version,
                 draft=draft,
                 latest_plan_id=latest_plan_id,
                 plan_stale=plan_stale,
@@ -396,6 +530,588 @@ class WorkbenchStoreV3:
                 ).fetchall()
         return [FieldStateV3.model_validate_json(row["payload"]) for row in rows]
 
+    def save_task_series(
+        self,
+        series: TaskSeriesV4,
+        *,
+        expected_draft_version: int,
+        expected_fact_version: int,
+        expected_task_version: int | None = None,
+        proposal_id: str | None = None,
+        operation_id: str,
+    ) -> TaskSeriesSaveResultV4:
+        """Save a confirmed recurrence and its stable occurrence rows atomically."""
+        if not operation_id.strip():
+            raise ValueError("保存周期任务需要操作编号")
+        instances = expand_task_series_all(series)
+        request_payload = {
+            "series": series.model_dump(mode="json"),
+            "expected_draft_version": expected_draft_version,
+            "expected_fact_version": expected_fact_version,
+            "expected_task_version": expected_task_version,
+        }
+        request_hash = self._hash(request_payload)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            replay = self._replay(
+                connection,
+                operation_id,
+                "save_task_series",
+                request_hash,
+                "TaskSeriesSaveResultV4",
+            )
+            if replay is not None:
+                return TaskSeriesSaveResultV4.model_validate_json(replay)
+            row = connection.execute(
+                "SELECT * FROM fields_v3 WHERE id=?", (series.field_id,)
+            ).fetchone()
+            if row is None:
+                raise KeyError("找不到任务所属地块")
+            state = self._field_from_row(row)
+            if (state.draft_version, state.fact_version) != (
+                expected_draft_version,
+                expected_fact_version,
+            ) or (
+                expected_task_version is not None and state.task_version != expected_task_version
+            ):
+                raise ValueError("版本冲突：地块信息已变化，请刷新后重新保存任务")
+            if connection.execute(
+                "SELECT 1 FROM task_series_v4 WHERE id=?", (series.id,)
+            ).fetchone():
+                raise ValueError("周期编号已存在；修改后续任务请使用专门的周期编辑操作")
+            if any(instance.field_id != series.field_id for instance in instances):
+                raise ValueError("任务实例所属地块与周期不一致")
+            created_at = self._now()
+            connection.execute(
+                "INSERT INTO task_series_v4 "
+                "(id, field_id, created_at, payload) VALUES (?, ?, ?, ?)",
+                (series.id, series.field_id, created_at.isoformat(), self._json(series)),
+            )
+            connection.executemany(
+                "INSERT INTO task_instances_v4 "
+                "(id, series_id, field_id, occurrence_number, occurrence_date, payload) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    (
+                        instance.id,
+                        instance.series_id,
+                        instance.field_id,
+                        instance.occurrence_number,
+                        instance.occurrence_date.isoformat(),
+                        self._json(instance),
+                    )
+                    for instance in instances
+                ],
+            )
+            if series.template.related_issue_id:
+                self._link_issue_tasks(
+                    connection,
+                    series.field_id,
+                    series.template.related_issue_id,
+                    [instance.id for instance in instances],
+                    created_at,
+                )
+            if proposal_id is not None:
+                self._confirm_agent_proposal(connection, proposal_id, operation_id)
+            updated_state = state.model_copy(
+                update={
+                    "task_version": state.task_version + 1,
+                    "plan_stale": True,
+                    "updated_at": created_at,
+                }
+            )
+            connection.execute(
+                "UPDATE fields_v3 SET plan_stale=1, updated_at=?, payload=? WHERE id=?",
+                (created_at.isoformat(), self._json(updated_state), state.id),
+            )
+            result = TaskSeriesSaveResultV4(
+                field_id=series.field_id,
+                series_id=series.id,
+                task_version=updated_state.task_version,
+                created_instance_ids=[instance.id for instance in instances],
+                created_at=created_at,
+            )
+            self._save_operation(connection, operation_id, "save_task_series", request_hash, result)
+            return result
+
+    def list_task_instances(
+        self,
+        field_id: str,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[TaskInstanceV4]:
+        if (start_date is None) != (end_date is None):
+            raise ValueError("任务实例查询需要同时提供起止日期")
+        with self._connection() as connection:
+            if start_date is None:
+                rows = connection.execute(
+                    "SELECT payload FROM task_instances_v4 "
+                    "WHERE field_id=? ORDER BY occurrence_date, id",
+                    (field_id,),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT payload FROM task_instances_v4 "
+                    "WHERE field_id=? AND occurrence_date BETWEEN ? AND ? "
+                    "ORDER BY occurrence_date, id",
+                    (field_id, start_date.isoformat(), end_date.isoformat()),
+                ).fetchall()
+        return [TaskInstanceV4.model_validate_json(row["payload"]) for row in rows]
+
+    def list_task_execution_groups(self, field_id: str) -> list[TaskExecutionGroupV4]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM task_execution_groups_v4 WHERE field_id=? ORDER BY id",
+                (field_id,),
+            ).fetchall()
+        return [TaskExecutionGroupV4.model_validate_json(row["payload"]) for row in rows]
+
+    def replay_task_execution_group_save(
+        self,
+        *,
+        field_id: str,
+        group_id: str,
+        member_task_ids: list[str],
+        execution_date: date,
+        duration_minutes: int,
+        expected_task_version: int,
+        operation_id: str,
+        action: str = "save_task_execution_group",
+    ) -> TaskExecutionGroupSaveResultV4 | None:
+        request_hash = self._hash(
+            {
+                "field_id": field_id,
+                "group_id": group_id,
+                "member_task_ids": member_task_ids,
+                "execution_date": execution_date,
+                "duration_minutes": duration_minutes,
+                "expected_task_version": expected_task_version,
+                "action": action,
+            }
+        )
+        with self._connection() as connection:
+            replay = self._replay(
+                connection,
+                operation_id,
+                action,
+                request_hash,
+                "TaskExecutionGroupSaveResultV4",
+            )
+        return TaskExecutionGroupSaveResultV4.model_validate_json(replay) if replay else None
+
+    def save_task_execution_group(
+        self,
+        group: TaskExecutionGroupV4,
+        *,
+        expected_task_version: int,
+        operation_id: str,
+        action: str = "save_task_execution_group",
+    ) -> TaskExecutionGroupSaveResultV4:
+        if not operation_id.strip():
+            raise ValueError("保存合并出行需要操作编号")
+        request_hash = self._hash(
+            {
+                "field_id": group.field_id,
+                "group_id": group.id,
+                "member_task_ids": group.member_task_ids,
+                "execution_date": group.execution_date,
+                "duration_minutes": group.duration_minutes,
+                "expected_task_version": expected_task_version,
+                "action": action,
+            }
+        )
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            replay = self._replay(
+                connection,
+                operation_id,
+                action,
+                request_hash,
+                "TaskExecutionGroupSaveResultV4",
+            )
+            if replay is not None:
+                return TaskExecutionGroupSaveResultV4.model_validate_json(replay)
+            field_row = connection.execute(
+                "SELECT * FROM fields_v3 WHERE id=?", (group.field_id,)
+            ).fetchone()
+            if field_row is None:
+                raise KeyError("找不到合并出行所属地块")
+            state = self._field_from_row(field_row)
+            if state.task_version != expected_task_version:
+                raise ValueError("版本冲突：任务已经变化，请刷新后重新确认合并出行")
+            identity_row = connection.execute(
+                "SELECT field_id FROM task_execution_groups_v4 WHERE id=?", (group.id,)
+            ).fetchone()
+            if identity_row is not None and identity_row["field_id"] != group.field_id:
+                raise ValueError("合并出行编号已被其他地块使用")
+            previous_row = connection.execute(
+                "SELECT payload FROM task_execution_groups_v4 WHERE id=? AND field_id=?",
+                (group.id, group.field_id),
+            ).fetchone()
+            previous = (
+                TaskExecutionGroupV4.model_validate_json(previous_row["payload"])
+                if previous_row
+                else None
+            )
+            if previous is None and group.version != 1:
+                raise ValueError("新合并出行的版本必须从1开始")
+            if previous is not None and group.version != previous.version + 1:
+                raise ValueError("合并出行版本冲突，请重新读取当前分组")
+            existing_rows = connection.execute(
+                "SELECT id, payload FROM task_execution_groups_v4 WHERE field_id=? AND id<>?",
+                (group.field_id, group.id),
+            ).fetchall()
+            for row in existing_rows:
+                existing = TaskExecutionGroupV4.model_validate_json(row["payload"])
+                if existing.status != "cancelled" and group.status != "cancelled":
+                    if set(existing.member_task_ids).intersection(group.member_task_ids):
+                        raise ValueError("任务已属于另一合并出行组")
+            now = self._now()
+            next_task_version = state.task_version + 1
+            if previous is not None:
+                connection.execute(
+                    "INSERT INTO task_execution_group_revisions_v4 "
+                    "(revision_id, group_id, task_version, updated_at, payload) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (
+                        f"{previous.id}:v{next_task_version}",
+                        previous.id,
+                        next_task_version,
+                        now.isoformat(),
+                        self._json(previous),
+                    ),
+                )
+            connection.execute(
+                "INSERT INTO task_execution_groups_v4 (id, field_id, payload) "
+                "VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+                (group.id, group.field_id, self._json(group)),
+            )
+            updated_state = state.model_copy(
+                update={
+                    "task_version": next_task_version,
+                    "plan_stale": bool(state.latest_plan_id),
+                    "updated_at": now,
+                }
+            )
+            connection.execute(
+                "UPDATE fields_v3 SET plan_stale=?, updated_at=?, payload=? WHERE id=?",
+                (
+                    int(updated_state.plan_stale),
+                    now.isoformat(),
+                    self._json(updated_state),
+                    group.field_id,
+                ),
+            )
+            result = TaskExecutionGroupSaveResultV4(
+                field_id=group.field_id,
+                group_id=group.id,
+                group_version=group.version,
+                task_version=next_task_version,
+                updated_at=now,
+            )
+            self._save_operation(
+                connection,
+                operation_id,
+                action,
+                request_hash,
+                result,
+            )
+            return result
+
+    def list_task_series(self, field_id: str) -> list[TaskSeriesV4]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM task_series_v4 WHERE field_id=? ORDER BY created_at, id",
+                (field_id,),
+            ).fetchall()
+        return [TaskSeriesV4.model_validate_json(row["payload"]) for row in rows]
+
+    def list_field_issues(self, field_id: str) -> list[FieldIssueV4]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM field_issues_v4 WHERE field_id=? ORDER BY opened_at, id",
+                (field_id,),
+            ).fetchall()
+        return [FieldIssueV4.model_validate_json(row["payload"]) for row in rows]
+
+    def list_field_issue_events(self, field_id: str) -> list[dict[str, object]]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM field_issue_events_v4 WHERE field_id=? ORDER BY rowid",
+                (field_id,),
+            ).fetchall()
+        return [json.loads(row["payload"]) for row in rows]
+
+    def get_task_series(self, field_id: str, series_id: str) -> TaskSeriesV4:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT payload FROM task_series_v4 WHERE id=? AND field_id=?",
+                (series_id, field_id),
+            ).fetchone()
+        if row is None:
+            raise KeyError("找不到任务周期")
+        return TaskSeriesV4.model_validate_json(row["payload"])
+
+    def update_task_series(
+        self,
+        series: TaskSeriesV4,
+        instances: list[TaskInstanceV4],
+        *,
+        blocked_instance_ids: set[str],
+        expected_draft_version: int,
+        expected_fact_version: int,
+        expected_task_version: int,
+        operation_id: str,
+    ) -> TaskSeriesUpdateResultV4:
+        """Revise only open occurrences; keep completed or observed snapshots unchanged."""
+        if not operation_id.strip():
+            raise ValueError("修改任务周期需要操作编号")
+        if any(
+            instance.series_id != series.id or instance.field_id != series.field_id
+            for instance in instances
+        ):
+            raise ValueError("任务实例与周期编号或地块不一致")
+        request_hash = self._hash(
+            {
+                "series": series.model_dump(mode="json"),
+                "instances": [instance.model_dump(mode="json") for instance in instances],
+                "blocked_instance_ids": sorted(blocked_instance_ids),
+                "expected_draft_version": expected_draft_version,
+                "expected_fact_version": expected_fact_version,
+                "expected_task_version": expected_task_version,
+            }
+        )
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            replay = self._replay(
+                connection,
+                operation_id,
+                "update_task_series",
+                request_hash,
+                "TaskSeriesUpdateResultV4",
+            )
+            if replay is not None:
+                return TaskSeriesUpdateResultV4.model_validate_json(replay)
+            field_row = connection.execute(
+                "SELECT * FROM fields_v3 WHERE id=?", (series.field_id,)
+            ).fetchone()
+            if field_row is None:
+                raise KeyError("找不到周期所属地块")
+            state = self._field_from_row(field_row)
+            if (state.draft_version, state.fact_version, state.task_version) != (
+                expected_draft_version,
+                expected_fact_version,
+                expected_task_version,
+            ):
+                raise ValueError("版本冲突：地块或任务已变化，请刷新后重新修改周期")
+            series_row = connection.execute(
+                "SELECT payload FROM task_series_v4 WHERE id=? AND field_id=?",
+                (series.id, series.field_id),
+            ).fetchone()
+            if series_row is None:
+                raise KeyError("找不到要修改的任务周期")
+            old_series = TaskSeriesV4.model_validate_json(series_row["payload"])
+            if old_series.id != series.id or old_series.field_id != series.field_id:
+                raise ValueError("周期身份不可修改")
+            old_rows = connection.execute(
+                "SELECT id, payload FROM task_instances_v4 "
+                "WHERE series_id=? ORDER BY occurrence_number",
+                (series.id,),
+            ).fetchall()
+            existing = {
+                row["id"]: TaskInstanceV4.model_validate_json(row["payload"]) for row in old_rows
+            }
+            new_by_number = {instance.occurrence_number: instance for instance in instances}
+            blocked_instance_ids = set(blocked_instance_ids)
+            created_ids: list[str] = []
+            updated_ids: list[str] = []
+            superseded_ids: list[str] = []
+            now = self._now()
+            next_version = state.task_version + 1
+            connection.execute(
+                "INSERT INTO task_series_revisions_v4 "
+                "(revision_id, series_id, task_version, updated_at, payload) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    f"{series.id}:v{next_version}",
+                    series.id,
+                    next_version,
+                    now.isoformat(),
+                    self._json(old_series),
+                ),
+            )
+            for old in existing.values():
+                if old.id in blocked_instance_ids:
+                    continue
+                replacement = new_by_number.get(old.occurrence_number)
+                if replacement is None:
+                    replacement = old.model_copy(
+                        update={"status": "superseded", "missing_fields": []}
+                    )
+                    superseded_ids.append(old.id)
+                else:
+                    updated_ids.append(old.id)
+                connection.execute(
+                    "INSERT INTO task_instance_revisions_v4 "
+                    "(revision_id, instance_id, task_version, updated_at, payload) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (
+                        f"{old.id}:v{next_version}",
+                        old.id,
+                        next_version,
+                        now.isoformat(),
+                        self._json(old),
+                    ),
+                )
+                connection.execute(
+                    "UPDATE task_instances_v4 SET occurrence_date=?, payload=? WHERE id=?",
+                    (replacement.occurrence_date.isoformat(), self._json(replacement), old.id),
+                )
+            existing_numbers = {instance.occurrence_number for instance in existing.values()}
+            for instance in instances:
+                if instance.occurrence_number in existing_numbers:
+                    continue
+                connection.execute(
+                    "INSERT INTO task_instances_v4 "
+                    "(id, series_id, field_id, occurrence_number, occurrence_date, payload) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        instance.id,
+                        instance.series_id,
+                        instance.field_id,
+                        instance.occurrence_number,
+                        instance.occurrence_date.isoformat(),
+                        self._json(instance),
+                    ),
+                )
+                created_ids.append(instance.id)
+            if series.template.related_issue_id:
+                self._link_issue_tasks(
+                    connection,
+                    series.field_id,
+                    series.template.related_issue_id,
+                    [*updated_ids, *created_ids],
+                    now,
+                )
+            connection.execute(
+                "UPDATE task_series_v4 SET payload=? WHERE id=?",
+                (self._json(series), series.id),
+            )
+            updated_state = state.model_copy(
+                update={"task_version": next_version, "plan_stale": True, "updated_at": now}
+            )
+            connection.execute(
+                "UPDATE fields_v3 SET plan_stale=1, updated_at=?, payload=? WHERE id=?",
+                (now.isoformat(), self._json(updated_state), series.field_id),
+            )
+            result = TaskSeriesUpdateResultV4(
+                field_id=series.field_id,
+                series_id=series.id,
+                task_version=next_version,
+                updated_instance_ids=updated_ids,
+                created_instance_ids=created_ids,
+                superseded_instance_ids=superseded_ids,
+                updated_at=now,
+            )
+            self._save_operation(
+                connection, operation_id, "update_task_series", request_hash, result
+            )
+            return result
+
+    def get_task_instance(self, field_id: str, task_id: str) -> TaskInstanceV4:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT payload FROM task_instances_v4 WHERE id=? AND field_id=?",
+                (task_id, field_id),
+            ).fetchone()
+        if row is None:
+            raise KeyError("找不到任务实例")
+        return TaskInstanceV4.model_validate_json(row["payload"])
+
+    def update_task_instance(
+        self,
+        instance: TaskInstanceV4,
+        *,
+        expected_task_version: int,
+        operation_id: str,
+    ) -> TaskInstanceUpdateResultV4:
+        if not operation_id.strip():
+            raise ValueError("修改任务需要操作编号")
+        request_hash = self._hash(
+            {
+                "instance": instance.model_dump(mode="json"),
+                "expected_task_version": expected_task_version,
+            }
+        )
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            replay = self._replay(
+                connection,
+                operation_id,
+                "update_task_instance",
+                request_hash,
+                "TaskInstanceUpdateResultV4",
+            )
+            if replay is not None:
+                return TaskInstanceUpdateResultV4.model_validate_json(replay)
+            field_row = connection.execute(
+                "SELECT * FROM fields_v3 WHERE id=?", (instance.field_id,)
+            ).fetchone()
+            if field_row is None:
+                raise KeyError("找不到任务所属地块")
+            state = self._field_from_row(field_row)
+            if state.task_version != expected_task_version:
+                raise ValueError("任务版本冲突，请刷新后重新修改")
+            old_row = connection.execute(
+                "SELECT payload FROM task_instances_v4 WHERE id=? AND field_id=?",
+                (instance.id, instance.field_id),
+            ).fetchone()
+            if old_row is None:
+                raise KeyError("找不到任务实例")
+            old = TaskInstanceV4.model_validate_json(old_row["payload"])
+            if (
+                old.series_id != instance.series_id
+                or old.occurrence_number != instance.occurrence_number
+            ):
+                raise ValueError("任务实例身份不可修改")
+            now = self._now()
+            next_version = state.task_version + 1
+            connection.execute(
+                "INSERT INTO task_instance_revisions_v4 "
+                "(revision_id, instance_id, task_version, updated_at, payload) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    f"{instance.id}:v{next_version}",
+                    instance.id,
+                    next_version,
+                    now.isoformat(),
+                    self._json(old),
+                ),
+            )
+            connection.execute(
+                "UPDATE task_instances_v4 SET occurrence_date=?, payload=? WHERE id=?",
+                (instance.occurrence_date.isoformat(), self._json(instance), instance.id),
+            )
+            updated_state = state.model_copy(
+                update={"task_version": next_version, "plan_stale": True, "updated_at": now}
+            )
+            connection.execute(
+                "UPDATE fields_v3 SET plan_stale=1, updated_at=?, payload=? WHERE id=?",
+                (now.isoformat(), self._json(updated_state), instance.field_id),
+            )
+            result = TaskInstanceUpdateResultV4(
+                field_id=instance.field_id,
+                task_id=instance.id,
+                task_version=next_version,
+                instance=instance,
+                updated_at=now,
+            )
+            self._save_operation(
+                connection, operation_id, "update_task_instance", request_hash, result
+            )
+            return result
+
     def commit_events(
         self,
         field_id: str,
@@ -442,13 +1158,50 @@ class WorkbenchStoreV3:
             next_version = state.fact_version + 1
             now = self._now()
             saved_events: list[FactEventV3] = []
+            completed_in_batch = {
+                event.feedback.task_id
+                for event in events
+                if event.feedback and event.feedback.kind == "completed" and event.feedback.task_id
+            }
             for event in events:
                 if event.feedback and event.feedback.plot_id not in {None, field_id}:
                     raise ValueError("反馈中的地块编号与当前地块不一致")
+                if event.feedback and event.feedback.kind == "task_result":
+                    feedback = event.feedback
+                    if feedback.issue_ids:
+                        raise ValueError("问题编号由系统生成，不能由提交内容指定")
+                    if feedback.resolved_issue_id:
+                        if feedback.task_id not in completed_in_batch:
+                            raise ValueError("关闭问题需要同时确认复查任务已完成")
+                        if any(value != "normal" for value in feedback.result_values.values()):
+                            raise ValueError("本次复查仍发现问题，不能关闭问题记录")
+                        task_row = connection.execute(
+                            "SELECT payload FROM task_instances_v4 WHERE id=? AND field_id=?",
+                            (feedback.task_id, field_id),
+                        ).fetchone()
+                        issue_row = connection.execute(
+                            "SELECT payload FROM field_issues_v4 WHERE id=? AND field_id=?",
+                            (feedback.resolved_issue_id, field_id),
+                        ).fetchone()
+                        if task_row is None or issue_row is None:
+                            raise ValueError("找不到关联的复查任务或问题记录")
+                        task = TaskInstanceV4.model_validate_json(task_row["payload"])
+                        issue = FieldIssueV4.model_validate_json(issue_row["payload"])
+                        if (
+                            task.template.task_type != "follow_up"
+                            or task.template.related_issue_id != issue.id
+                            or issue.status != "open"
+                        ):
+                            raise ValueError("只有关联该未解决问题的复查任务可以关闭问题")
                 if (
                     event.feedback
                     and event.feedback.task_id
                     and not event.feedback.task_id.startswith(f"{field_id}-")
+                    and connection.execute(
+                        "SELECT 1 FROM task_instances_v4 WHERE id=? AND field_id=?",
+                        (event.feedback.task_id, field_id),
+                    ).fetchone()
+                    is None
                 ):
                     raise ValueError("任务编号不属于当前地块")
                 if event.correction_of:
@@ -458,8 +1211,160 @@ class WorkbenchStoreV3:
                     ).fetchone()
                     if target is None:
                         raise ValueError("更正引用的原事件不存在")
+                saved_feedback = event.feedback
+                if saved_feedback and saved_feedback.kind == "task_result":
+                    generated_issue_ids: list[str] = []
+                    for issue_key, value in saved_feedback.result_values.items():
+                        if value != "issue":
+                            continue
+                        open_row = connection.execute(
+                            "SELECT payload FROM field_issues_v4 "
+                            "WHERE field_id=? AND issue_key=? AND status='open' "
+                            "ORDER BY opened_at DESC LIMIT 1",
+                            (field_id, issue_key),
+                        ).fetchone()
+                        if open_row is not None:
+                            issue = FieldIssueV4.model_validate_json(open_row["payload"])
+                            issue = issue.model_copy(
+                                update={
+                                    "source_event_ids": list(
+                                        dict.fromkeys([*issue.source_event_ids, event.event_id])
+                                    ),
+                                    "related_task_ids": list(
+                                        dict.fromkeys(
+                                            [*issue.related_task_ids, saved_feedback.task_id or ""]
+                                        )
+                                    ),
+                                    "description": "；".join(
+                                        part
+                                        for part in dict.fromkeys(
+                                            [issue.description, saved_feedback.result_notes]
+                                        )
+                                        if part
+                                    ),
+                                }
+                            )
+                            event_type = "observation_added"
+                        else:
+                            previous_row = connection.execute(
+                                "SELECT payload FROM field_issues_v4 "
+                                "WHERE field_id=? AND issue_key=? AND status='resolved' "
+                                "ORDER BY opened_at DESC LIMIT 1",
+                                (field_id, issue_key),
+                            ).fetchone()
+                            previous_issue = (
+                                FieldIssueV4.model_validate_json(previous_row["payload"])
+                                if previous_row
+                                else None
+                            )
+                            issue = FieldIssueV4(
+                                id=str(uuid5(NAMESPACE_URL, f"{event.event_id}:{issue_key}")),
+                                field_id=field_id,
+                                issue_key=issue_key,
+                                title=issue_key,
+                                description=saved_feedback.result_notes,
+                                source_task_id=saved_feedback.task_id or "",
+                                source_event_ids=[event.event_id],
+                                related_task_ids=[saved_feedback.task_id or ""],
+                                repeat_of=previous_issue.id if previous_issue else None,
+                                opened_at=saved_feedback.at,
+                            )
+                            connection.execute(
+                                "INSERT INTO field_issues_v4 "
+                                "(id, field_id, issue_key, status, opened_at, payload) "
+                                "VALUES (?, ?, ?, ?, ?, ?)",
+                                (
+                                    issue.id,
+                                    field_id,
+                                    issue.issue_key,
+                                    issue.status,
+                                    issue.opened_at.isoformat(),
+                                    self._json(issue),
+                                ),
+                            )
+                            event_type = "opened"
+                        if open_row is not None:
+                            connection.execute(
+                                "UPDATE field_issues_v4 SET payload=? WHERE id=?",
+                                (self._json(issue), issue.id),
+                            )
+                        issue_event = {
+                            "id": str(uuid4()),
+                            "type": event_type,
+                            "issue_id": issue.id,
+                            "source_event_id": event.event_id,
+                            "task_id": saved_feedback.task_id,
+                            "at": saved_feedback.at.isoformat(),
+                            "description": saved_feedback.result_notes,
+                        }
+                        connection.execute(
+                            "INSERT INTO field_issue_events_v4 "
+                            "(event_id, issue_id, field_id, created_at, payload) "
+                            "VALUES (?, ?, ?, ?, ?)",
+                            (
+                                issue_event["id"],
+                                issue.id,
+                                field_id,
+                                saved_feedback.at.isoformat(),
+                                self._json(issue_event),
+                            ),
+                        )
+                        generated_issue_ids.append(issue.id)
+                    if saved_feedback.resolved_issue_id:
+                        row = connection.execute(
+                            "SELECT payload FROM field_issues_v4 WHERE id=? AND field_id=?",
+                            (saved_feedback.resolved_issue_id, field_id),
+                        ).fetchone()
+                        if row is None:
+                            raise ValueError("找不到待关闭的问题记录")
+                        issue = FieldIssueV4.model_validate_json(row["payload"])
+                        resolved_at = saved_feedback.at
+                        issue = issue.model_copy(
+                            update={
+                                "status": "resolved",
+                                "resolved_at": resolved_at,
+                                "related_task_ids": list(
+                                    dict.fromkeys(
+                                        [*issue.related_task_ids, saved_feedback.task_id or ""]
+                                    )
+                                ),
+                            }
+                        )
+                        connection.execute(
+                            "UPDATE field_issues_v4 SET status='resolved', payload=? WHERE id=?",
+                            (self._json(issue), issue.id),
+                        )
+                        issue_event = {
+                            "id": str(uuid4()),
+                            "type": "resolved",
+                            "issue_id": issue.id,
+                            "source_event_id": event.event_id,
+                            "task_id": saved_feedback.task_id,
+                            "at": resolved_at.isoformat(),
+                            "description": "关联复查任务确认问题已解决",
+                        }
+                        connection.execute(
+                            "INSERT INTO field_issue_events_v4 "
+                            "(event_id, issue_id, field_id, created_at, payload) "
+                            "VALUES (?, ?, ?, ?, ?)",
+                            (
+                                issue_event["id"],
+                                issue.id,
+                                field_id,
+                                resolved_at.isoformat(),
+                                self._json(issue_event),
+                            ),
+                        )
+                    if generated_issue_ids:
+                        saved_feedback = saved_feedback.model_copy(
+                            update={"issue_ids": list(dict.fromkeys(generated_issue_ids))}
+                        )
                 saved = FactEventV3(
-                    **event.model_dump(),
+                    event_id=event.event_id,
+                    feedback=saved_feedback,
+                    source=event.source,
+                    correction_of=event.correction_of,
+                    retracts=event.retracts,
                     field_id=field_id,
                     fact_version=next_version,
                     created_at=now,
@@ -524,6 +1429,8 @@ class WorkbenchStoreV3:
             "fact_version": preview.expected_fact_version,
             "plan_id": preview.expected_plan_id,
         }
+        if preview.expected_task_version:
+            signature["task_version"] = preview.expected_task_version
         if preview.version.plan.reference_version is not None:
             signature["reference_version"] = preview.version.plan.reference_version
         request_hash = self._hash(signature)
@@ -544,9 +1451,15 @@ class WorkbenchStoreV3:
             if row is None:
                 raise KeyError(f"找不到地块 {preview.field_id}")
             state = self._field_from_row(row)
-            if (state.draft_version, state.fact_version, state.latest_plan_id) != (
+            if (
+                state.draft_version,
+                state.fact_version,
+                state.task_version,
+                state.latest_plan_id,
+            ) != (
                 preview.expected_draft_version,
                 preview.expected_fact_version,
+                preview.expected_task_version,
                 preview.expected_plan_id,
             ):
                 raise ValueError("预览依据已变化，请重新计算")
@@ -592,6 +1505,7 @@ class WorkbenchStoreV3:
                 preview.status == "preview"
                 and preview.expected_draft_version == state.draft_version
                 and preview.expected_fact_version == state.fact_version
+                and preview.expected_task_version == state.task_version
                 and preview.expected_plan_id == state.latest_plan_id
             ):
                 return preview
@@ -674,6 +1588,8 @@ class WorkbenchStoreV3:
             if (
                 state.fact_version != expected_fact_version
                 or state.fact_version != preview.expected_fact_version
+                or state.task_version != preview.expected_task_version
+                or preview.version.task_version != state.task_version
                 or state.draft_version != preview.expected_draft_version
                 or state.latest_plan_id != expected_plan_id
                 or preview.expected_plan_id != expected_plan_id

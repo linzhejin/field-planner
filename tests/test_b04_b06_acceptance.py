@@ -95,7 +95,7 @@ def test_b04_b06_fixed_input_is_reproducible(tmp_path) -> None:  # type: ignore[
     assert "单地块；尚未统筹其他地块时间" in markdown
     assert "依据：" in markdown and "任务：" in markdown
     payload = json.loads(service.export_json("field-1"))
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 4
     assert payload["adopted_plan"] is not None
     assert payload["history"]
 
