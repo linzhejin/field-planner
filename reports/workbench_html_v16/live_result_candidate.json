@@ -1,0 +1,36 @@
+{
+  "queried_at": "2026-10-27T05:42:27.649908+00:00",
+  "field_name": "网页验收演示地块",
+  "weather_online_geocoding": true,
+  "weather_forecast_success": true,
+  "forecast_days": 7,
+  "agent_response_received": true,
+  "agent_tool_count": 3,
+  "browser_errors": [],
+  "screenshots": "reports/workbench_html_v16/screenshots-live-candidate",
+  "selected_location_label": "湖北 · 武汉市 · 武汉",
+  "weather_component_state": {
+    "pending_operation_id": "",
+    "action_result_id": "f01f42da-2c65-43d1-a31e-441abbf86e32",
+    "close_button_disabled": false,
+    "close_button_restore_value": ""
+  },
+  "agent_view_state": {
+    "agent_status": "2 次模型请求 · 3 个工具结果 · success",
+    "agent_busy": false,
+    "messages": [
+      {
+        "role": "user",
+        "content_length": 23
+      },
+      {
+        "role": "assistant",
+        "content_length": 29
+      }
+    ]
+  },
+  "agent_reply_nonempty": true,
+  "agent_response_status": "success",
+  "agent_status": "2 次模型请求 · 3 个工具结果 · success",
+  "result": "passed"
+}

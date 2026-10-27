@@ -29,6 +29,7 @@ from nongshi.schema_v3 import (
     PlanVersionV3,
     RuleAdoptionRecordV3,
     TaskActionV3,
+    UIEditorDraftV1,
     WeatherSnapshotV3,
 )
 from nongshi.tasks_v4 import (
@@ -216,6 +217,18 @@ class WorkbenchStoreV3:
                 );
                 CREATE INDEX IF NOT EXISTS field_issue_events_v4_issue
                     ON field_issue_events_v4(issue_id, created_at);
+                CREATE TABLE IF NOT EXISTS ui_editor_drafts_v1 (
+                    mode TEXT NOT NULL,
+                    field_id TEXT NOT NULL,
+                    form_kind TEXT NOT NULL,
+                    subject_id TEXT NOT NULL DEFAULT '',
+                    base_draft_version INTEGER NOT NULL,
+                    base_fact_version INTEGER NOT NULL,
+                    base_task_version INTEGER NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    PRIMARY KEY (mode, field_id, form_kind, subject_id)
+                );
                 """
             )
 
@@ -539,6 +552,108 @@ class WorkbenchStoreV3:
                     (mode,),
                 ).fetchall()
         return [FieldStateV3.model_validate_json(row["payload"]) for row in rows]
+
+    def save_ui_editor_draft(self, draft: UIEditorDraftV1, *, operation_id: str) -> UIEditorDraftV1:
+        """Persist form input separately from facts, tasks, and adopted plans."""
+        if not operation_id.strip():
+            raise ValueError("保存界面草稿需要操作编号")
+        saved = draft.model_copy(update={"updated_at": self._now()})
+        request_hash = self._hash(draft.model_dump(mode="json", exclude={"updated_at"}))
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            replay = self._replay(
+                connection,
+                operation_id,
+                "save_ui_editor_draft",
+                request_hash,
+                "UIEditorDraftV1",
+            )
+            if replay is not None:
+                return UIEditorDraftV1.model_validate_json(replay)
+            field = connection.execute(
+                "SELECT payload FROM fields_v3 WHERE id = ?", (draft.field_id,)
+            ).fetchone()
+            if field is None:
+                current_versions = (0, 0, 0)
+            else:
+                state = self._field_from_row(field)
+                current_versions = (
+                    state.draft_version,
+                    state.fact_version,
+                    state.task_version,
+                )
+            expected_versions = (
+                draft.base_draft_version,
+                draft.base_fact_version,
+                draft.base_task_version,
+            )
+            if current_versions != expected_versions:
+                raise ValueError("地块内容已更新；草稿已保留，请刷新后核对再保存")
+            connection.execute(
+                """INSERT INTO ui_editor_drafts_v1
+                   (mode, field_id, form_kind, subject_id, base_draft_version,
+                    base_fact_version, base_task_version, updated_at, payload)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(mode, field_id, form_kind, subject_id) DO UPDATE SET
+                     base_draft_version=excluded.base_draft_version,
+                     base_fact_version=excluded.base_fact_version,
+                     base_task_version=excluded.base_task_version,
+                     updated_at=excluded.updated_at, payload=excluded.payload""",
+                (
+                    saved.mode,
+                    saved.field_id,
+                    saved.form_kind,
+                    saved.subject_id,
+                    saved.base_draft_version,
+                    saved.base_fact_version,
+                    saved.base_task_version,
+                    saved.updated_at.isoformat(),
+                    self._json(saved),
+                ),
+            )
+            self._save_operation(
+                connection,
+                operation_id,
+                "save_ui_editor_draft",
+                request_hash,
+                saved,
+            )
+        return saved
+
+    def ui_editor_draft(
+        self, mode: str, field_id: str, form_kind: str, subject_id: str = ""
+    ) -> UIEditorDraftV1 | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                """SELECT payload FROM ui_editor_drafts_v1
+                   WHERE mode=? AND field_id=? AND form_kind=? AND subject_id=?""",
+                (mode, field_id, form_kind, subject_id),
+            ).fetchone()
+        return UIEditorDraftV1.model_validate_json(row["payload"]) if row else None
+
+    def ui_editor_drafts(self, mode: str, field_id: str) -> list[UIEditorDraftV1]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                """SELECT payload FROM ui_editor_drafts_v1
+                   WHERE mode=? AND field_id=? ORDER BY updated_at DESC""",
+                (mode, field_id),
+            ).fetchall()
+        return [UIEditorDraftV1.model_validate_json(row["payload"]) for row in rows]
+
+    def latest_unsaved_profile_draft_field_id(self, mode: str) -> str | None:
+        """Find the latest blank-field identity whose profile draft can be resumed."""
+        with self._connection() as connection:
+            row = connection.execute(
+                """SELECT draft.field_id
+                   FROM ui_editor_drafts_v1 AS draft
+                   LEFT JOIN fields_v3 AS field
+                     ON field.id = draft.field_id AND field.mode = draft.mode
+                   WHERE draft.mode = ? AND draft.form_kind = 'profile' AND field.id IS NULL
+                   ORDER BY draft.updated_at DESC
+                   LIMIT 1""",
+                (mode,),
+            ).fetchone()
+        return str(row["field_id"]) if row else None
 
     def save_task_series(
         self,

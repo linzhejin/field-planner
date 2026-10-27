@@ -1,0 +1,3919 @@
+{
+  "schema_version": 4,
+  "field": {
+    "id": "field-1d6ecde107",
+    "mode": "real",
+    "draft_version": 3,
+    "fact_version": 1,
+    "task_version": 2,
+    "draft": {
+      "schema_version": 3,
+      "field_id": "field-1d6ecde107",
+      "mode": "real",
+      "profile": {
+        "id": "field-1d6ecde107",
+        "name": "网页验收演示地块",
+        "province": "湖北省",
+        "province_confirmed": true,
+        "crop": "油菜",
+        "crop_confirmed": true,
+        "stage": "苗期",
+        "stage_confirmed": true,
+        "field_type": null,
+        "rice_stubble": null,
+        "cold_waterlogged": null,
+        "terrain": null,
+        "area_mu": null,
+        "inspection_requested": null,
+        "maintenance_need_confirmed": null,
+        "maintenance_problem_confirmed": null,
+        "maintenance_purpose": null,
+        "moisture": null,
+        "ditch_connectivity": null,
+        "standing_water": null,
+        "leaf_count": null,
+        "pest_signs": null,
+        "missing_seedlings": null,
+        "crowding": null,
+        "actual_rain_observed": null,
+        "winter_before_context_confirmed": null,
+        "workability_by_date": {},
+        "inspection_duration_minutes": 35,
+        "maintenance_duration_minutes": 50,
+        "inspection_priority": 2,
+        "maintenance_priority": 2,
+        "inspection_earliest_date": null,
+        "inspection_due_date": null,
+        "maintenance_earliest_date": null,
+        "maintenance_due_date": null,
+        "maintenance_prerequisites": [],
+        "maintenance_task_id": null,
+        "completed_maintenance_task_ids": [],
+        "observed_at": null,
+        "observation_source": "synthetic"
+      },
+      "location": {
+        "query": "武汉",
+        "display_name": "湖北 · 武汉市 · 武汉",
+        "latitude": 30.58333,
+        "longitude": 114.26667,
+        "timezone": "Asia/Shanghai",
+        "resolution": "city",
+        "administrative_area": [
+          "湖北",
+          "武汉市"
+        ],
+        "geocoding_source": "Open-Meteo Geocoding API"
+      },
+      "start_date": "2026-10-27",
+      "scheduling_preference": "early",
+      "days": [
+        {
+          "day": "2026-10-27",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": 60,
+          "intervals": [
+            {
+              "start": "13:42:00",
+              "end": "14:42:00"
+            }
+          ],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-10-28",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-10-29",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-10-30",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-10-31",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-11-01",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        },
+        {
+          "day": "2026-11-02",
+          "site_workable": null,
+          "weather_workable": null,
+          "weather_source": "synthetic",
+          "weather_snapshot_at": null,
+          "resource_minutes": null,
+          "intervals": [],
+          "confirmation_basis": ""
+        }
+      ],
+      "notes": "",
+      "input_source": "user",
+      "source_plan_id": null
+    },
+    "latest_plan_id": "dc235859-58e0-4897-b032-71a30072d7ef",
+    "plan_stale": true,
+    "updated_at": "2026-10-27T05:42:33.641068Z"
+  },
+  "events": [
+    {
+      "event_id": "bb574873-8d44-4073-a7be-efd8653e12f3",
+      "feedback": {
+        "kind": "task_result",
+        "at": "2026-10-27T05:42:03.773198Z",
+        "task_id": "series-01d2a9103c60:000001",
+        "plot_id": "field-1d6ecde107",
+        "field": null,
+        "value": null,
+        "day": null,
+        "site_workable": null,
+        "weather_workable": null,
+        "intervals": null,
+        "resource_minutes": null,
+        "reason": "",
+        "result_values": {
+          "完成情况": "normal"
+        },
+        "result_notes": "",
+        "issue_ids": [],
+        "resolved_issue_id": null
+      },
+      "source": "user",
+      "correction_of": null,
+      "retracts": false,
+      "field_id": "field-1d6ecde107",
+      "fact_version": 1,
+      "created_at": "2026-10-27T05:42:03.786318Z"
+    },
+    {
+      "event_id": "c3a66cdc-c49e-4a8a-8bdf-99d86ce7940d",
+      "feedback": {
+        "kind": "completed",
+        "at": "2026-10-27T05:42:03.773198Z",
+        "task_id": "series-01d2a9103c60:000001",
+        "plot_id": "field-1d6ecde107",
+        "field": null,
+        "value": null,
+        "day": null,
+        "site_workable": null,
+        "weather_workable": null,
+        "intervals": null,
+        "resource_minutes": null,
+        "reason": "",
+        "result_values": {},
+        "result_notes": "",
+        "issue_ids": [],
+        "resolved_issue_id": null
+      },
+      "source": "user",
+      "correction_of": null,
+      "retracts": false,
+      "field_id": "field-1d6ecde107",
+      "fact_version": 1,
+      "created_at": "2026-10-27T05:42:03.786318Z"
+    }
+  ],
+  "task_series_v4": [
+    {
+      "id": "series-01d2a9103c60",
+      "field_id": "field-1d6ecde107",
+      "template": {
+        "id": "custom-c2057bfa0b8b",
+        "version": 2,
+        "title": "整理采购单据",
+        "task_type": "custom",
+        "category": "offsite",
+        "related_issue_id": null,
+        "purpose": "核对本周采购记录并保存结果",
+        "trigger": "",
+        "necessary_conditions": [],
+        "steps": [],
+        "result_fields": [
+          "完成情况"
+        ],
+        "completion_standard": "采购记录已核对并保存",
+        "follow_up": "",
+        "source_kind": "user_defined",
+        "evidence": [],
+        "agronomic_review_status": "not_assessed"
+      },
+      "recurrence": "interval",
+      "anchor_date": "2026-10-27",
+      "end_date": "2026-11-02",
+      "selected_dates": [],
+      "interval_days": 3,
+      "duration_minutes": 30,
+      "priority": 2,
+      "earliest_date": null,
+      "due_date": null,
+      "prerequisites": [],
+      "conditions_confirmed": null
+    }
+  ],
+  "task_instances_v4": [
+    {
+      "id": "series-01d2a9103c60:000001",
+      "series_id": "series-01d2a9103c60",
+      "field_id": "field-1d6ecde107",
+      "occurrence_number": 1,
+      "occurrence_date": "2026-10-27",
+      "earliest_date": "2026-10-27",
+      "due_date": "2026-10-27",
+      "duration_minutes": 30,
+      "priority": 2,
+      "prerequisites": [],
+      "template": {
+        "id": "custom-c2057bfa0b8b",
+        "version": 1,
+        "title": "整理采购记录",
+        "task_type": "custom",
+        "category": "offsite",
+        "related_issue_id": null,
+        "purpose": "核对本周采购记录并保存结果",
+        "trigger": "",
+        "necessary_conditions": [],
+        "steps": [],
+        "result_fields": [
+          "完成情况"
+        ],
+        "completion_standard": "采购记录已核对并保存",
+        "follow_up": "",
+        "source_kind": "user_defined",
+        "evidence": [],
+        "agronomic_review_status": "not_assessed"
+      },
+      "status": "ready",
+      "missing_fields": []
+    },
+    {
+      "id": "series-01d2a9103c60:000002",
+      "series_id": "series-01d2a9103c60",
+      "field_id": "field-1d6ecde107",
+      "occurrence_number": 2,
+      "occurrence_date": "2026-10-30",
+      "earliest_date": "2026-10-30",
+      "due_date": "2026-10-30",
+      "duration_minutes": 30,
+      "priority": 2,
+      "prerequisites": [],
+      "template": {
+        "id": "custom-c2057bfa0b8b",
+        "version": 2,
+        "title": "整理采购单据",
+        "task_type": "custom",
+        "category": "offsite",
+        "related_issue_id": null,
+        "purpose": "核对本周采购记录并保存结果",
+        "trigger": "",
+        "necessary_conditions": [],
+        "steps": [],
+        "result_fields": [
+          "完成情况"
+        ],
+        "completion_standard": "采购记录已核对并保存",
+        "follow_up": "",
+        "source_kind": "user_defined",
+        "evidence": [],
+        "agronomic_review_status": "not_assessed"
+      },
+      "status": "ready",
+      "missing_fields": []
+    },
+    {
+      "id": "series-01d2a9103c60:000003",
+      "series_id": "series-01d2a9103c60",
+      "field_id": "field-1d6ecde107",
+      "occurrence_number": 3,
+      "occurrence_date": "2026-11-02",
+      "earliest_date": "2026-11-02",
+      "due_date": "2026-11-02",
+      "duration_minutes": 30,
+      "priority": 2,
+      "prerequisites": [],
+      "template": {
+        "id": "custom-c2057bfa0b8b",
+        "version": 2,
+        "title": "整理采购单据",
+        "task_type": "custom",
+        "category": "offsite",
+        "related_issue_id": null,
+        "purpose": "核对本周采购记录并保存结果",
+        "trigger": "",
+        "necessary_conditions": [],
+        "steps": [],
+        "result_fields": [
+          "完成情况"
+        ],
+        "completion_standard": "采购记录已核对并保存",
+        "follow_up": "",
+        "source_kind": "user_defined",
+        "evidence": [],
+        "agronomic_review_status": "not_assessed"
+      },
+      "status": "ready",
+      "missing_fields": []
+    }
+  ],
+  "task_execution_groups_v4": [],
+  "issues_v4": [],
+  "issue_events_v4": [],
+  "adopted_plan": {
+    "schema_version": 3,
+    "id": "dc235859-58e0-4897-b032-71a30072d7ef",
+    "field_id": "field-1d6ecde107",
+    "parent_id": "b433820e-0dd4-44ee-b766-fea64cc752bf",
+    "created_at": "2026-10-27T05:42:05.716508Z",
+    "draft_version": 2,
+    "fact_version": 1,
+    "task_version": 2,
+    "plan": {
+      "schema_version": 4,
+      "id": "2f5025db-03ec-4dcf-b0a1-3cc9f0f0ba74",
+      "parent_id": "e58ae9a7-cecd-4254-a92e-3b89bd95ff5c",
+      "created_at": "2026-10-27T05:42:05.716508Z",
+      "reference_version": null,
+      "not_before": "2026-10-27T13:43:00+08:00",
+      "request": {
+        "schema_version": 4,
+        "id": "2504cf25-25e1-4017-bfd4-16d8c4a7db0d",
+        "start_date": "2026-10-27",
+        "plots": [
+          {
+            "id": "field-1d6ecde107",
+            "name": "网页验收演示地块",
+            "province": "湖北省",
+            "province_confirmed": true,
+            "crop": "油菜",
+            "crop_confirmed": true,
+            "stage": "苗期",
+            "stage_confirmed": true,
+            "field_type": null,
+            "rice_stubble": null,
+            "cold_waterlogged": null,
+            "terrain": null,
+            "area_mu": null,
+            "inspection_requested": null,
+            "maintenance_need_confirmed": null,
+            "maintenance_problem_confirmed": null,
+            "maintenance_purpose": null,
+            "moisture": null,
+            "ditch_connectivity": null,
+            "standing_water": null,
+            "leaf_count": null,
+            "pest_signs": null,
+            "missing_seedlings": null,
+            "crowding": null,
+            "actual_rain_observed": null,
+            "winter_before_context_confirmed": null,
+            "workability_by_date": {},
+            "inspection_duration_minutes": 35,
+            "maintenance_duration_minutes": 50,
+            "inspection_priority": 2,
+            "maintenance_priority": 2,
+            "inspection_earliest_date": null,
+            "inspection_due_date": null,
+            "maintenance_earliest_date": null,
+            "maintenance_due_date": null,
+            "maintenance_prerequisites": [],
+            "maintenance_task_id": null,
+            "completed_maintenance_task_ids": [],
+            "observed_at": null,
+            "observation_source": "synthetic"
+          }
+        ],
+        "days": [
+          {
+            "day": "2026-10-27",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": 60,
+            "intervals": [
+              {
+                "start": "13:42:00",
+                "end": "14:42:00"
+              }
+            ],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-10-28",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-10-29",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-10-30",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-10-31",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-11-01",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          },
+          {
+            "day": "2026-11-02",
+            "site_workable": null,
+            "weather_workable": null,
+            "weather_source": "synthetic",
+            "weather_snapshot_at": null,
+            "resource_minutes": null,
+            "intervals": [],
+            "confirmation_basis": ""
+          }
+        ],
+        "ruleset_version": "融合修订版1.0",
+        "legacy_rule_version": "0.1.0",
+        "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+        "engineering_rules_version": "0.1.0",
+        "engineering_rule_ids": [
+          "D01",
+          "D02",
+          "D03",
+          "D04",
+          "D05",
+          "D06",
+          "D07",
+          "D08",
+          "D09",
+          "D10",
+          "D11",
+          "D12"
+        ],
+        "adoption_profile": "development_validation",
+        "selected_rule_ids": [
+          "C11",
+          "C18",
+          "C19",
+          "C20",
+          "C23",
+          "C24",
+          "C31"
+        ],
+        "scheduling_preference": "early",
+        "synthetic": false,
+        "completed_at": {
+          "series-01d2a9103c60:000001": "2026-10-27T05:42:03.773198Z"
+        },
+        "cancelled_tasks": {},
+        "rule_review_status": {},
+        "task_instances_v4": [
+          {
+            "id": "series-01d2a9103c60:000001",
+            "series_id": "series-01d2a9103c60",
+            "field_id": "field-1d6ecde107",
+            "occurrence_number": 1,
+            "occurrence_date": "2026-10-27",
+            "earliest_date": "2026-10-27",
+            "due_date": "2026-10-27",
+            "duration_minutes": 30,
+            "priority": 2,
+            "prerequisites": [],
+            "template": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed"
+            },
+            "status": "ready",
+            "missing_fields": []
+          },
+          {
+            "id": "series-01d2a9103c60:000002",
+            "series_id": "series-01d2a9103c60",
+            "field_id": "field-1d6ecde107",
+            "occurrence_number": 2,
+            "occurrence_date": "2026-10-30",
+            "earliest_date": "2026-10-30",
+            "due_date": "2026-10-30",
+            "duration_minutes": 30,
+            "priority": 2,
+            "prerequisites": [],
+            "template": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 2,
+              "title": "整理采购单据",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed"
+            },
+            "status": "ready",
+            "missing_fields": []
+          },
+          {
+            "id": "series-01d2a9103c60:000003",
+            "series_id": "series-01d2a9103c60",
+            "field_id": "field-1d6ecde107",
+            "occurrence_number": 3,
+            "occurrence_date": "2026-11-02",
+            "earliest_date": "2026-11-02",
+            "due_date": "2026-11-02",
+            "duration_minutes": 30,
+            "priority": 2,
+            "prerequisites": [],
+            "template": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 2,
+              "title": "整理采购单据",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed"
+            },
+            "status": "ready",
+            "missing_fields": []
+          }
+        ],
+        "execution_groups_v4": []
+      },
+      "items": [
+        {
+          "task_id": "field-1d6ecde107-I",
+          "plot_id": "field-1d6ecde107",
+          "title": "巡田苗情墒情虫情与沟渠检查",
+          "task_type": "inspection",
+          "applicability": "matched",
+          "necessity": "unknown",
+          "window_by_date": {},
+          "schedule_status": "pending",
+          "duration_minutes": 35,
+          "start_at": null,
+          "end_at": null,
+          "completed": false,
+          "reason": "需求或现场问题尚未确认",
+          "reason_code": "necessity_pending",
+          "missing_fields": [
+            "inspection_requested"
+          ],
+          "evidence": [
+            {
+              "rule_id": "C31",
+              "title": "普通巡田的苗情墒情虫情记录",
+              "pack_version": "融合修订版1.0",
+              "evidence_version": "2026-10-17",
+              "source_id": "Z16",
+              "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+              "publisher": "农业农村部办公厅；种植业管理司网站发布",
+              "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+              "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+              "pdf_pages": [
+                1
+              ],
+              "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+              "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+              "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+              "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+              "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+              "runtime_enabled": false,
+              "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+              "usage_role": "limited_support",
+              "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+              "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+            },
+            {
+              "rule_id": "C11",
+              "title": "巡田记录缺苗和拥挤现象",
+              "pack_version": "融合修订版1.0",
+              "evidence_version": "2026-10-17",
+              "source_id": "Z15",
+              "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+              "publisher": "湖北省油菜办公室",
+              "source_date": "2025-11-07",
+              "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+              "pdf_pages": [
+                1
+              ],
+              "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+              "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+              "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+              "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+              "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+              "runtime_enabled": false,
+              "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+              "usage_role": "limited_support",
+              "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+              "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+            },
+            {
+              "rule_id": "C11",
+              "title": "巡田记录缺苗和拥挤现象",
+              "pack_version": "融合修订版1.0",
+              "evidence_version": "2026-10-17",
+              "source_id": "Z09",
+              "source_title": "湖北省油菜冬前田间管理技术指导意见",
+              "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+              "source_date": "2025-12-03",
+              "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+              "pdf_pages": [
+                2
+              ],
+              "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+              "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+              "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+              "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+              "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+              "runtime_enabled": false,
+              "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+              "usage_role": "limited_support",
+              "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+              "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+            }
+          ],
+          "category": "onsite",
+          "priority": null,
+          "earliest_date": null,
+          "due_date": null,
+          "prerequisites": [],
+          "template_snapshot": null,
+          "execution_group_id": null,
+          "group_duration_minutes": null
+        },
+        {
+          "task_id": "field-1d6ecde107-M",
+          "plot_id": "field-1d6ecde107",
+          "title": "既有沟渠维护候选",
+          "task_type": "maintenance",
+          "applicability": "pending",
+          "necessity": "unknown",
+          "window_by_date": {},
+          "schedule_status": "pending",
+          "duration_minutes": 50,
+          "start_at": null,
+          "end_at": null,
+          "completed": false,
+          "reason": "范围信息待确认",
+          "reason_code": "scope_pending",
+          "missing_fields": [
+            "maintenance_problem_confirmed",
+            "ditch_connectivity",
+            "standing_water",
+            "maintenance_need_confirmed",
+            "maintenance_purpose",
+            "field_type"
+          ],
+          "evidence": [
+            {
+              "rule_id": "C23",
+              "title": "沟渠清理需求确认与候选任务",
+              "pack_version": "融合修订版1.0",
+              "evidence_version": "2026-10-17",
+              "source_id": "Z01",
+              "source_title": "2026年全国冬油菜生产技术意见",
+              "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+              "source_date": "2026-09-08",
+              "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+              "pdf_pages": [
+                2
+              ],
+              "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+              "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+              "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+              "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+              "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+              "runtime_enabled": false,
+              "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+              "usage_role": "limited_support",
+              "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+              "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+            },
+            {
+              "rule_id": "C23",
+              "title": "沟渠清理需求确认与候选任务",
+              "pack_version": "融合修订版1.0",
+              "evidence_version": "2026-10-17",
+              "source_id": "Z15",
+              "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+              "publisher": "湖北省油菜办公室",
+              "source_date": "2025-11-07",
+              "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+              "pdf_pages": [
+                1
+              ],
+              "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+              "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+              "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+              "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+              "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+              "runtime_enabled": false,
+              "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+              "usage_role": "limited_support",
+              "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+              "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+            }
+          ],
+          "category": "onsite",
+          "priority": null,
+          "earliest_date": null,
+          "due_date": null,
+          "prerequisites": [],
+          "template_snapshot": null,
+          "execution_group_id": null,
+          "group_duration_minutes": null
+        },
+        {
+          "task_id": "series-01d2a9103c60:000001",
+          "plot_id": "field-1d6ecde107",
+          "title": "整理采购记录",
+          "task_type": "custom",
+          "applicability": "matched",
+          "necessity": "required",
+          "window_by_date": {
+            "2026-10-27": "available"
+          },
+          "schedule_status": "completed",
+          "duration_minutes": 30,
+          "start_at": "2026-10-27T13:42:00+08:00",
+          "end_at": "2026-10-27T14:12:00+08:00",
+          "completed": true,
+          "reason": "已完成；历史事实和原时段锁定",
+          "reason_code": "scheduled",
+          "missing_fields": [],
+          "evidence": [],
+          "category": "offsite",
+          "priority": 2,
+          "earliest_date": "2026-10-27",
+          "due_date": "2026-10-27",
+          "prerequisites": [],
+          "template_snapshot": {
+            "id": "custom-c2057bfa0b8b",
+            "version": 1,
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "category": "offsite",
+            "related_issue_id": null,
+            "purpose": "核对本周采购记录并保存结果",
+            "trigger": "",
+            "necessary_conditions": [],
+            "steps": [],
+            "result_fields": [
+              "完成情况"
+            ],
+            "completion_standard": "采购记录已核对并保存",
+            "follow_up": "",
+            "source_kind": "user_defined",
+            "evidence": [],
+            "agronomic_review_status": "not_assessed",
+            "prerequisites": []
+          },
+          "execution_group_id": null,
+          "group_duration_minutes": null
+        },
+        {
+          "task_id": "series-01d2a9103c60:000002",
+          "plot_id": "field-1d6ecde107",
+          "title": "整理采购单据",
+          "task_type": "custom",
+          "applicability": "matched",
+          "necessity": "required",
+          "window_by_date": {
+            "2026-10-30": "available"
+          },
+          "schedule_status": "pending",
+          "duration_minutes": 30,
+          "start_at": null,
+          "end_at": null,
+          "completed": false,
+          "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+          "reason_code": "resource_pending",
+          "missing_fields": [],
+          "evidence": [],
+          "category": "offsite",
+          "priority": 2,
+          "earliest_date": "2026-10-30",
+          "due_date": "2026-10-30",
+          "prerequisites": [],
+          "template_snapshot": {
+            "id": "custom-c2057bfa0b8b",
+            "version": 2,
+            "title": "整理采购单据",
+            "task_type": "custom",
+            "category": "offsite",
+            "related_issue_id": null,
+            "purpose": "核对本周采购记录并保存结果",
+            "trigger": "",
+            "necessary_conditions": [],
+            "steps": [],
+            "result_fields": [
+              "完成情况"
+            ],
+            "completion_standard": "采购记录已核对并保存",
+            "follow_up": "",
+            "source_kind": "user_defined",
+            "evidence": [],
+            "agronomic_review_status": "not_assessed",
+            "prerequisites": []
+          },
+          "execution_group_id": null,
+          "group_duration_minutes": null
+        },
+        {
+          "task_id": "series-01d2a9103c60:000003",
+          "plot_id": "field-1d6ecde107",
+          "title": "整理采购单据",
+          "task_type": "custom",
+          "applicability": "matched",
+          "necessity": "required",
+          "window_by_date": {
+            "2026-11-02": "available"
+          },
+          "schedule_status": "pending",
+          "duration_minutes": 30,
+          "start_at": null,
+          "end_at": null,
+          "completed": false,
+          "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+          "reason_code": "resource_pending",
+          "missing_fields": [],
+          "evidence": [],
+          "category": "offsite",
+          "priority": 2,
+          "earliest_date": "2026-11-02",
+          "due_date": "2026-11-02",
+          "prerequisites": [],
+          "template_snapshot": {
+            "id": "custom-c2057bfa0b8b",
+            "version": 2,
+            "title": "整理采购单据",
+            "task_type": "custom",
+            "category": "offsite",
+            "related_issue_id": null,
+            "purpose": "核对本周采购记录并保存结果",
+            "trigger": "",
+            "necessary_conditions": [],
+            "steps": [],
+            "result_fields": [
+              "完成情况"
+            ],
+            "completion_standard": "采购记录已核对并保存",
+            "follow_up": "",
+            "source_kind": "user_defined",
+            "evidence": [],
+            "agronomic_review_status": "not_assessed",
+            "prerequisites": []
+          },
+          "execution_group_id": null,
+          "group_duration_minutes": null
+        }
+      ],
+      "changes": [],
+      "feedback": {
+        "kind": "completed",
+        "at": "2026-10-27T05:42:03.773198Z",
+        "task_id": "series-01d2a9103c60:000001",
+        "plot_id": "field-1d6ecde107",
+        "field": null,
+        "value": null,
+        "day": null,
+        "site_workable": null,
+        "weather_workable": null,
+        "intervals": null,
+        "resource_minutes": null,
+        "reason": "",
+        "result_values": {},
+        "result_notes": "",
+        "issue_ids": [],
+        "resolved_issue_id": null
+      }
+    },
+    "weather_snapshot_id": null,
+    "ruleset_version": "融合修订版1.0",
+    "rule_adoption_ids": [],
+    "source": "manual",
+    "changes": [
+      {
+        "task_id": "field-1d6ecde107-I",
+        "kind": "unchanged",
+        "old_start_at": null,
+        "old_end_at": null,
+        "new_start_at": null,
+        "new_end_at": null,
+        "reason": "安排与上一版本相同"
+      },
+      {
+        "task_id": "field-1d6ecde107-M",
+        "kind": "unchanged",
+        "old_start_at": null,
+        "old_end_at": null,
+        "new_start_at": null,
+        "new_end_at": null,
+        "reason": "安排与上一版本相同"
+      },
+      {
+        "task_id": "series-01d2a9103c60:000001",
+        "kind": "unchanged",
+        "old_start_at": "2026-10-27T13:42:00+08:00",
+        "old_end_at": "2026-10-27T14:12:00+08:00",
+        "new_start_at": "2026-10-27T13:42:00+08:00",
+        "new_end_at": "2026-10-27T14:12:00+08:00",
+        "reason": "安排与上一版本相同"
+      },
+      {
+        "task_id": "series-01d2a9103c60:000002",
+        "kind": "content_changed",
+        "old_start_at": null,
+        "old_end_at": null,
+        "new_start_at": null,
+        "new_end_at": null,
+        "reason": "任务内容或排程条件已更新"
+      },
+      {
+        "task_id": "series-01d2a9103c60:000003",
+        "kind": "content_changed",
+        "old_start_at": null,
+        "old_end_at": null,
+        "new_start_at": null,
+        "new_end_at": null,
+        "reason": "任务内容或排程条件已更新"
+      }
+    ],
+    "calculation_basis": [
+      "单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行",
+      "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+      "候选规则处于开发验证阶段，适用性待复核"
+    ]
+  },
+  "history": [
+    {
+      "schema_version": 3,
+      "id": "306067eb-36ea-493b-911d-31362c20222b",
+      "field_id": "field-1d6ecde107",
+      "parent_id": null,
+      "created_at": "2026-10-27T05:40:15.909229Z",
+      "draft_version": 2,
+      "fact_version": 0,
+      "task_version": 1,
+      "plan": {
+        "schema_version": 4,
+        "id": "3e39a9d3-8945-4d52-931e-f72f96aa5e97",
+        "parent_id": null,
+        "created_at": "2026-10-27T05:40:15.908232Z",
+        "reference_version": null,
+        "not_before": "2026-10-27T13:41:00+08:00",
+        "request": {
+          "schema_version": 4,
+          "id": "57366940-ed8e-46a0-ade0-4c1de95e4b85",
+          "start_date": "2026-10-27",
+          "plots": [
+            {
+              "id": "field-1d6ecde107",
+              "name": "网页验收演示地块",
+              "province": "湖北省",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": null,
+              "rice_stubble": null,
+              "cold_waterlogged": null,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": null,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "maintenance_purpose": null,
+              "moisture": null,
+              "ditch_connectivity": null,
+              "standing_water": null,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": null,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 35,
+              "maintenance_duration_minutes": 50,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-27",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 60,
+              "intervals": [
+                {
+                  "start": "13:42:00",
+                  "end": "14:42:00"
+                }
+              ],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-28",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-29",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-30",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-31",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-01",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-02",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "scheduling_preference": "early",
+          "synthetic": false,
+          "completed_at": {},
+          "cancelled_tasks": {},
+          "rule_review_status": {},
+          "task_instances_v4": [
+            {
+              "id": "series-01d2a9103c60:000001",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 1,
+              "occurrence_date": "2026-10-27",
+              "earliest_date": "2026-10-27",
+              "due_date": "2026-10-27",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000002",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 2,
+              "occurrence_date": "2026-10-30",
+              "earliest_date": "2026-10-30",
+              "due_date": "2026-10-30",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000003",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 3,
+              "occurrence_date": "2026-11-02",
+              "earliest_date": "2026-11-02",
+              "due_date": "2026-11-02",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            }
+          ],
+          "execution_groups_v4": []
+        },
+        "items": [
+          {
+            "task_id": "field-1d6ecde107-I",
+            "plot_id": "field-1d6ecde107",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 35,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "需求或现场问题尚未确认",
+            "reason_code": "necessity_pending",
+            "missing_fields": [
+              "inspection_requested"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "field-1d6ecde107-M",
+            "plot_id": "field-1d6ecde107",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 50,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "范围信息待确认",
+            "reason_code": "scope_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose",
+              "field_type"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000001",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-27": "available"
+            },
+            "schedule_status": "scheduled",
+            "duration_minutes": 30,
+            "start_at": "2026-10-27T13:42:00+08:00",
+            "end_at": "2026-10-27T14:12:00+08:00",
+            "completed": false,
+            "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-27",
+            "due_date": "2026-10-27",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000002",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-30": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-30",
+            "due_date": "2026-10-30",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000003",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-11-02": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-11-02",
+            "due_date": "2026-11-02",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          }
+        ],
+        "changes": [],
+        "feedback": null
+      },
+      "weather_snapshot_id": null,
+      "ruleset_version": "融合修订版1.0",
+      "rule_adoption_ids": [],
+      "source": "manual",
+      "changes": [
+        {
+          "task_id": "field-1d6ecde107-I",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "需求或现场问题尚未确认"
+        },
+        {
+          "task_id": "field-1d6ecde107-M",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "范围信息待确认"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000001",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": "2026-10-27T13:42:00+08:00",
+          "new_end_at": "2026-10-27T14:12:00+08:00",
+          "reason": "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000002",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "作业窗口已确认；可用人力分钟数尚未确认"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000003",
+          "kind": "added",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "作业窗口已确认；可用人力分钟数尚未确认"
+        }
+      ],
+      "calculation_basis": [
+        "单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行",
+        "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+        "候选规则处于开发验证阶段，适用性待复核"
+      ]
+    },
+    {
+      "schema_version": 3,
+      "id": "b433820e-0dd4-44ee-b766-fea64cc752bf",
+      "field_id": "field-1d6ecde107",
+      "parent_id": "306067eb-36ea-493b-911d-31362c20222b",
+      "created_at": "2026-10-27T05:42:03.817390Z",
+      "draft_version": 2,
+      "fact_version": 1,
+      "task_version": 1,
+      "plan": {
+        "schema_version": 4,
+        "id": "e58ae9a7-cecd-4254-a92e-3b89bd95ff5c",
+        "parent_id": "3e39a9d3-8945-4d52-931e-f72f96aa5e97",
+        "created_at": "2026-10-27T05:42:03.816387Z",
+        "reference_version": null,
+        "not_before": "2026-10-27T13:43:00+08:00",
+        "request": {
+          "schema_version": 4,
+          "id": "ccc8f32c-7106-40cc-9477-9dcc70d59b60",
+          "start_date": "2026-10-27",
+          "plots": [
+            {
+              "id": "field-1d6ecde107",
+              "name": "网页验收演示地块",
+              "province": "湖北省",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": null,
+              "rice_stubble": null,
+              "cold_waterlogged": null,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": null,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "maintenance_purpose": null,
+              "moisture": null,
+              "ditch_connectivity": null,
+              "standing_water": null,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": null,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 35,
+              "maintenance_duration_minutes": 50,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-27",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 60,
+              "intervals": [
+                {
+                  "start": "13:42:00",
+                  "end": "14:42:00"
+                }
+              ],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-28",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-29",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-30",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-31",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-01",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-02",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "scheduling_preference": "early",
+          "synthetic": false,
+          "completed_at": {
+            "series-01d2a9103c60:000001": "2026-10-27T05:42:03.773198Z"
+          },
+          "cancelled_tasks": {},
+          "rule_review_status": {},
+          "task_instances_v4": [
+            {
+              "id": "series-01d2a9103c60:000001",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 1,
+              "occurrence_date": "2026-10-27",
+              "earliest_date": "2026-10-27",
+              "due_date": "2026-10-27",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000002",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 2,
+              "occurrence_date": "2026-10-30",
+              "earliest_date": "2026-10-30",
+              "due_date": "2026-10-30",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000003",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 3,
+              "occurrence_date": "2026-11-02",
+              "earliest_date": "2026-11-02",
+              "due_date": "2026-11-02",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            }
+          ],
+          "execution_groups_v4": []
+        },
+        "items": [
+          {
+            "task_id": "field-1d6ecde107-I",
+            "plot_id": "field-1d6ecde107",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 35,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "需求或现场问题尚未确认",
+            "reason_code": "necessity_pending",
+            "missing_fields": [
+              "inspection_requested"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "field-1d6ecde107-M",
+            "plot_id": "field-1d6ecde107",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 50,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "范围信息待确认",
+            "reason_code": "scope_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose",
+              "field_type"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000001",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-27": "available"
+            },
+            "schedule_status": "completed",
+            "duration_minutes": 30,
+            "start_at": "2026-10-27T13:42:00+08:00",
+            "end_at": "2026-10-27T14:12:00+08:00",
+            "completed": true,
+            "reason": "已完成；历史事实和原时段锁定",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-27",
+            "due_date": "2026-10-27",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000002",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-30": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-30",
+            "due_date": "2026-10-30",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000003",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-11-02": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-11-02",
+            "due_date": "2026-11-02",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          }
+        ],
+        "changes": [
+          "series-01d2a9103c60:000001：已记录完成，原时段保留"
+        ],
+        "feedback": {
+          "kind": "completed",
+          "at": "2026-10-27T05:42:03.773198Z",
+          "task_id": "series-01d2a9103c60:000001",
+          "plot_id": "field-1d6ecde107",
+          "field": null,
+          "value": null,
+          "day": null,
+          "site_workable": null,
+          "weather_workable": null,
+          "intervals": null,
+          "resource_minutes": null,
+          "reason": "",
+          "result_values": {},
+          "result_notes": "",
+          "issue_ids": [],
+          "resolved_issue_id": null
+        }
+      },
+      "weather_snapshot_id": null,
+      "ruleset_version": "融合修订版1.0",
+      "rule_adoption_ids": [],
+      "source": "manual",
+      "changes": [
+        {
+          "task_id": "field-1d6ecde107-I",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "field-1d6ecde107-M",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000001",
+          "kind": "completed",
+          "old_start_at": "2026-10-27T13:42:00+08:00",
+          "old_end_at": "2026-10-27T14:12:00+08:00",
+          "new_start_at": "2026-10-27T13:42:00+08:00",
+          "new_end_at": "2026-10-27T14:12:00+08:00",
+          "reason": "用户确认完成，历史事实保持锁定"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000002",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000003",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        }
+      ],
+      "calculation_basis": [
+        "单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行",
+        "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+        "候选规则处于开发验证阶段，适用性待复核"
+      ]
+    },
+    {
+      "schema_version": 3,
+      "id": "dc235859-58e0-4897-b032-71a30072d7ef",
+      "field_id": "field-1d6ecde107",
+      "parent_id": "b433820e-0dd4-44ee-b766-fea64cc752bf",
+      "created_at": "2026-10-27T05:42:05.716508Z",
+      "draft_version": 2,
+      "fact_version": 1,
+      "task_version": 2,
+      "plan": {
+        "schema_version": 4,
+        "id": "2f5025db-03ec-4dcf-b0a1-3cc9f0f0ba74",
+        "parent_id": "e58ae9a7-cecd-4254-a92e-3b89bd95ff5c",
+        "created_at": "2026-10-27T05:42:05.716508Z",
+        "reference_version": null,
+        "not_before": "2026-10-27T13:43:00+08:00",
+        "request": {
+          "schema_version": 4,
+          "id": "2504cf25-25e1-4017-bfd4-16d8c4a7db0d",
+          "start_date": "2026-10-27",
+          "plots": [
+            {
+              "id": "field-1d6ecde107",
+              "name": "网页验收演示地块",
+              "province": "湖北省",
+              "province_confirmed": true,
+              "crop": "油菜",
+              "crop_confirmed": true,
+              "stage": "苗期",
+              "stage_confirmed": true,
+              "field_type": null,
+              "rice_stubble": null,
+              "cold_waterlogged": null,
+              "terrain": null,
+              "area_mu": null,
+              "inspection_requested": null,
+              "maintenance_need_confirmed": null,
+              "maintenance_problem_confirmed": null,
+              "maintenance_purpose": null,
+              "moisture": null,
+              "ditch_connectivity": null,
+              "standing_water": null,
+              "leaf_count": null,
+              "pest_signs": null,
+              "missing_seedlings": null,
+              "crowding": null,
+              "actual_rain_observed": null,
+              "winter_before_context_confirmed": null,
+              "workability_by_date": {},
+              "inspection_duration_minutes": 35,
+              "maintenance_duration_minutes": 50,
+              "inspection_priority": 2,
+              "maintenance_priority": 2,
+              "inspection_earliest_date": null,
+              "inspection_due_date": null,
+              "maintenance_earliest_date": null,
+              "maintenance_due_date": null,
+              "maintenance_prerequisites": [],
+              "maintenance_task_id": null,
+              "completed_maintenance_task_ids": [],
+              "observed_at": null,
+              "observation_source": "synthetic"
+            }
+          ],
+          "days": [
+            {
+              "day": "2026-10-27",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": 60,
+              "intervals": [
+                {
+                  "start": "13:42:00",
+                  "end": "14:42:00"
+                }
+              ],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-28",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-29",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-30",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-10-31",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-01",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            },
+            {
+              "day": "2026-11-02",
+              "site_workable": null,
+              "weather_workable": null,
+              "weather_source": "synthetic",
+              "weather_snapshot_at": null,
+              "resource_minutes": null,
+              "intervals": [],
+              "confirmation_basis": ""
+            }
+          ],
+          "ruleset_version": "融合修订版1.0",
+          "legacy_rule_version": "0.1.0",
+          "legacy_mapping_type": "主题对应，非等价替换；原R号不变",
+          "engineering_rules_version": "0.1.0",
+          "engineering_rule_ids": [
+            "D01",
+            "D02",
+            "D03",
+            "D04",
+            "D05",
+            "D06",
+            "D07",
+            "D08",
+            "D09",
+            "D10",
+            "D11",
+            "D12"
+          ],
+          "adoption_profile": "development_validation",
+          "selected_rule_ids": [
+            "C11",
+            "C18",
+            "C19",
+            "C20",
+            "C23",
+            "C24",
+            "C31"
+          ],
+          "scheduling_preference": "early",
+          "synthetic": false,
+          "completed_at": {
+            "series-01d2a9103c60:000001": "2026-10-27T05:42:03.773198Z"
+          },
+          "cancelled_tasks": {},
+          "rule_review_status": {},
+          "task_instances_v4": [
+            {
+              "id": "series-01d2a9103c60:000001",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 1,
+              "occurrence_date": "2026-10-27",
+              "earliest_date": "2026-10-27",
+              "due_date": "2026-10-27",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 1,
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000002",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 2,
+              "occurrence_date": "2026-10-30",
+              "earliest_date": "2026-10-30",
+              "due_date": "2026-10-30",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 2,
+                "title": "整理采购单据",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            },
+            {
+              "id": "series-01d2a9103c60:000003",
+              "series_id": "series-01d2a9103c60",
+              "field_id": "field-1d6ecde107",
+              "occurrence_number": 3,
+              "occurrence_date": "2026-11-02",
+              "earliest_date": "2026-11-02",
+              "due_date": "2026-11-02",
+              "duration_minutes": 30,
+              "priority": 2,
+              "prerequisites": [],
+              "template": {
+                "id": "custom-c2057bfa0b8b",
+                "version": 2,
+                "title": "整理采购单据",
+                "task_type": "custom",
+                "category": "offsite",
+                "related_issue_id": null,
+                "purpose": "核对本周采购记录并保存结果",
+                "trigger": "",
+                "necessary_conditions": [],
+                "steps": [],
+                "result_fields": [
+                  "完成情况"
+                ],
+                "completion_standard": "采购记录已核对并保存",
+                "follow_up": "",
+                "source_kind": "user_defined",
+                "evidence": [],
+                "agronomic_review_status": "not_assessed"
+              },
+              "status": "ready",
+              "missing_fields": []
+            }
+          ],
+          "execution_groups_v4": []
+        },
+        "items": [
+          {
+            "task_id": "field-1d6ecde107-I",
+            "plot_id": "field-1d6ecde107",
+            "title": "巡田苗情墒情虫情与沟渠检查",
+            "task_type": "inspection",
+            "applicability": "matched",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 35,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "需求或现场问题尚未确认",
+            "reason_code": "necessity_pending",
+            "missing_fields": [
+              "inspection_requested"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C31",
+                "title": "普通巡田的苗情墒情虫情记录",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z16",
+                "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+              },
+              {
+                "rule_id": "C11",
+                "title": "巡田记录缺苗和拥挤现象",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z09",
+                "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                "source_date": "2025-12-03",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "field-1d6ecde107-M",
+            "plot_id": "field-1d6ecde107",
+            "title": "既有沟渠维护候选",
+            "task_type": "maintenance",
+            "applicability": "pending",
+            "necessity": "unknown",
+            "window_by_date": {},
+            "schedule_status": "pending",
+            "duration_minutes": 50,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "范围信息待确认",
+            "reason_code": "scope_pending",
+            "missing_fields": [
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose",
+              "field_type"
+            ],
+            "evidence": [
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z01",
+                "source_title": "2026年全国冬油菜生产技术意见",
+                "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                "source_date": "2026-09-08",
+                "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                "pdf_pages": [
+                  2
+                ],
+                "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+              },
+              {
+                "rule_id": "C23",
+                "title": "沟渠清理需求确认与候选任务",
+                "pack_version": "融合修订版1.0",
+                "evidence_version": "2026-10-17",
+                "source_id": "Z15",
+                "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                "publisher": "湖北省油菜办公室",
+                "source_date": "2025-11-07",
+                "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                "pdf_pages": [
+                  1
+                ],
+                "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                "runtime_enabled": false,
+                "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                "usage_role": "limited_support",
+                "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+              }
+            ],
+            "category": "onsite",
+            "priority": null,
+            "earliest_date": null,
+            "due_date": null,
+            "prerequisites": [],
+            "template_snapshot": null,
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000001",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购记录",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-27": "available"
+            },
+            "schedule_status": "completed",
+            "duration_minutes": 30,
+            "start_at": "2026-10-27T13:42:00+08:00",
+            "end_at": "2026-10-27T14:12:00+08:00",
+            "completed": true,
+            "reason": "已完成；历史事实和原时段锁定",
+            "reason_code": "scheduled",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-27",
+            "due_date": "2026-10-27",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 1,
+              "title": "整理采购记录",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000002",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购单据",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-10-30": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-10-30",
+            "due_date": "2026-10-30",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 2,
+              "title": "整理采购单据",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          },
+          {
+            "task_id": "series-01d2a9103c60:000003",
+            "plot_id": "field-1d6ecde107",
+            "title": "整理采购单据",
+            "task_type": "custom",
+            "applicability": "matched",
+            "necessity": "required",
+            "window_by_date": {
+              "2026-11-02": "available"
+            },
+            "schedule_status": "pending",
+            "duration_minutes": 30,
+            "start_at": null,
+            "end_at": null,
+            "completed": false,
+            "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+            "reason_code": "resource_pending",
+            "missing_fields": [],
+            "evidence": [],
+            "category": "offsite",
+            "priority": 2,
+            "earliest_date": "2026-11-02",
+            "due_date": "2026-11-02",
+            "prerequisites": [],
+            "template_snapshot": {
+              "id": "custom-c2057bfa0b8b",
+              "version": 2,
+              "title": "整理采购单据",
+              "task_type": "custom",
+              "category": "offsite",
+              "related_issue_id": null,
+              "purpose": "核对本周采购记录并保存结果",
+              "trigger": "",
+              "necessary_conditions": [],
+              "steps": [],
+              "result_fields": [
+                "完成情况"
+              ],
+              "completion_standard": "采购记录已核对并保存",
+              "follow_up": "",
+              "source_kind": "user_defined",
+              "evidence": [],
+              "agronomic_review_status": "not_assessed",
+              "prerequisites": []
+            },
+            "execution_group_id": null,
+            "group_duration_minutes": null
+          }
+        ],
+        "changes": [],
+        "feedback": {
+          "kind": "completed",
+          "at": "2026-10-27T05:42:03.773198Z",
+          "task_id": "series-01d2a9103c60:000001",
+          "plot_id": "field-1d6ecde107",
+          "field": null,
+          "value": null,
+          "day": null,
+          "site_workable": null,
+          "weather_workable": null,
+          "intervals": null,
+          "resource_minutes": null,
+          "reason": "",
+          "result_values": {},
+          "result_notes": "",
+          "issue_ids": [],
+          "resolved_issue_id": null
+        }
+      },
+      "weather_snapshot_id": null,
+      "ruleset_version": "融合修订版1.0",
+      "rule_adoption_ids": [],
+      "source": "manual",
+      "changes": [
+        {
+          "task_id": "field-1d6ecde107-I",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "field-1d6ecde107-M",
+          "kind": "unchanged",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000001",
+          "kind": "unchanged",
+          "old_start_at": "2026-10-27T13:42:00+08:00",
+          "old_end_at": "2026-10-27T14:12:00+08:00",
+          "new_start_at": "2026-10-27T13:42:00+08:00",
+          "new_end_at": "2026-10-27T14:12:00+08:00",
+          "reason": "安排与上一版本相同"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000002",
+          "kind": "content_changed",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "任务内容或排程条件已更新"
+        },
+        {
+          "task_id": "series-01d2a9103c60:000003",
+          "kind": "content_changed",
+          "old_start_at": null,
+          "old_end_at": null,
+          "new_start_at": null,
+          "new_end_at": null,
+          "reason": "任务内容或排程条件已更新"
+        }
+      ],
+      "calculation_basis": [
+        "单地块独立计划；尚未统筹其他地块时间，不代表合并后可执行",
+        "天气预报仅用于风险展示；现场与天气作业条件仍需分别确认",
+        "候选规则处于开发验证阶段，适用性待复核"
+      ]
+    }
+  ],
+  "weather": {
+    "id": "f057ef77-7495-4fe4-a110-8e80315082ee",
+    "field_id": "field-1d6ecde107",
+    "source": "Open-Meteo Forecast API",
+    "location": {
+      "query": "武汉",
+      "display_name": "湖北 · 武汉市 · 武汉",
+      "latitude": 30.58333,
+      "longitude": 114.26667,
+      "timezone": "Asia/Shanghai",
+      "resolution": "city",
+      "administrative_area": [
+        "湖北",
+        "武汉市"
+      ],
+      "geocoding_source": "Open-Meteo Geocoding API"
+    },
+    "requested_latitude": 30.58333,
+    "requested_longitude": 114.26667,
+    "grid_latitude": 30.615112,
+    "grid_longitude": 114.27562,
+    "timezone": "Asia/Shanghai",
+    "fetched_at": "2026-10-27T05:42:34.480413Z",
+    "coverage_start": "2026-10-27",
+    "coverage_end": "2026-11-02",
+    "units": {
+      "time": "iso8601",
+      "weather_code": "wmo code",
+      "temperature_2m_max": "°C",
+      "temperature_2m_min": "°C",
+      "precipitation_sum": "mm",
+      "rain_sum": "mm",
+      "showers_sum": "mm",
+      "wind_speed_10m_max": "km/h"
+    },
+    "days": [
+      {
+        "day": "2026-10-27",
+        "weather_code": 51,
+        "temperature_max": 21.0,
+        "temperature_min": 16.4,
+        "precipitation_sum": 1.2,
+        "rain_sum": 1.2,
+        "showers_sum": 0.0,
+        "wind_speed_max": 16.9
+      },
+      {
+        "day": "2026-10-28",
+        "weather_code": 51,
+        "temperature_max": 20.6,
+        "temperature_min": 15.4,
+        "precipitation_sum": 0.7,
+        "rain_sum": 0.2,
+        "showers_sum": 0.5,
+        "wind_speed_max": 8.3
+      },
+      {
+        "day": "2026-10-29",
+        "weather_code": 51,
+        "temperature_max": 20.7,
+        "temperature_min": 15.3,
+        "precipitation_sum": 1.1,
+        "rain_sum": 0.8,
+        "showers_sum": 0.3,
+        "wind_speed_max": 6.9
+      },
+      {
+        "day": "2026-10-30",
+        "weather_code": 45,
+        "temperature_max": 23.0,
+        "temperature_min": 13.0,
+        "precipitation_sum": 0.0,
+        "rain_sum": 0.0,
+        "showers_sum": 0.0,
+        "wind_speed_max": 6.1
+      },
+      {
+        "day": "2026-10-31",
+        "weather_code": 3,
+        "temperature_max": 27.0,
+        "temperature_min": 18.3,
+        "precipitation_sum": 0.0,
+        "rain_sum": 0.0,
+        "showers_sum": 0.0,
+        "wind_speed_max": 11.9
+      },
+      {
+        "day": "2026-11-01",
+        "weather_code": 80,
+        "temperature_max": 22.4,
+        "temperature_min": 14.0,
+        "precipitation_sum": 9.3,
+        "rain_sum": 5.7,
+        "showers_sum": 3.6,
+        "wind_speed_max": 24.7
+      },
+      {
+        "day": "2026-11-02",
+        "weather_code": 51,
+        "temperature_max": 20.6,
+        "temperature_min": 13.6,
+        "precipitation_sum": 0.3,
+        "rain_sum": 0.0,
+        "showers_sum": 0.3,
+        "wind_speed_max": 7.2
+      }
+    ],
+    "cache_expires_at": "2026-10-27T11:42:34.480413Z",
+    "is_stale": false
+  },
+  "rule_adoptions": [],
+  "workflow_runs": [
+    {
+      "id": "5031715e-c667-4f8a-b6bf-4d4207d4a6a6",
+      "field_id": "field-1d6ecde107",
+      "model": "deepseek-flash",
+      "started_at": "2026-10-27T13:42:36.522996+08:00",
+      "elapsed_ms": 3256,
+      "request_count": 2,
+      "tool_count": 3,
+      "status": "success",
+      "prompt_tokens": 14485,
+      "completion_tokens": 320,
+      "tools": [
+        "declare_request",
+        "read_field",
+        "evaluate_field"
+      ],
+      "tool_metrics": [
+        {
+          "name": "declare_request",
+          "status": "success",
+          "elapsed_ms": 1
+        },
+        {
+          "name": "read_field",
+          "status": "success",
+          "elapsed_ms": 6
+        },
+        {
+          "name": "evaluate_field",
+          "status": "success",
+          "elapsed_ms": 24
+        }
+      ],
+      "tool_traces": [
+        {
+          "name": "declare_request",
+          "status": "success",
+          "elapsed_ms": 1,
+          "result_summary": "已完成本地查询",
+          "arguments": {
+            "field_id": "field-1d6ecde107",
+            "actions": [
+              "query"
+            ],
+            "missing": []
+          },
+          "result": {
+            "field_id": "field-1d6ecde107",
+            "actions": [
+              "query"
+            ],
+            "missing": []
+          }
+        },
+        {
+          "name": "read_field",
+          "status": "success",
+          "elapsed_ms": 6,
+          "result_summary": "已完成本地查询",
+          "arguments": {
+            "field_id": "field-1d6ecde107"
+          },
+          "result": {
+            "id": "field-1d6ecde107",
+            "mode": "real",
+            "draft_version": 3,
+            "fact_version": 1,
+            "task_version": 2,
+            "draft": {
+              "schema_version": 3,
+              "field_id": "field-1d6ecde107",
+              "mode": "real",
+              "profile": {
+                "id": "field-1d6ecde107",
+                "name": "网页验收演示地块",
+                "province": "湖北省",
+                "province_confirmed": true,
+                "crop": "油菜",
+                "crop_confirmed": true,
+                "stage": "苗期",
+                "stage_confirmed": true,
+                "field_type": null,
+                "rice_stubble": null,
+                "cold_waterlogged": null,
+                "terrain": null,
+                "area_mu": null,
+                "inspection_requested": null,
+                "maintenance_need_confirmed": null,
+                "maintenance_problem_confirmed": null,
+                "maintenance_purpose": null,
+                "moisture": null,
+                "ditch_connectivity": null,
+                "standing_water": null,
+                "leaf_count": null,
+                "pest_signs": null,
+                "missing_seedlings": null,
+                "crowding": null,
+                "actual_rain_observed": null,
+                "winter_before_context_confirmed": null,
+                "workability_by_date": {},
+                "inspection_duration_minutes": 35,
+                "maintenance_duration_minutes": 50,
+                "inspection_priority": 2,
+                "maintenance_priority": 2,
+                "inspection_earliest_date": null,
+                "inspection_due_date": null,
+                "maintenance_earliest_date": null,
+                "maintenance_due_date": null,
+                "maintenance_prerequisites": [],
+                "maintenance_task_id": null,
+                "completed_maintenance_task_ids": [],
+                "observed_at": null,
+                "observation_source": "synthetic"
+              },
+              "location": {
+                "query": "武汉",
+                "display_name": "湖北 · 武汉市 · 武汉",
+                "latitude": 30.58333,
+                "longitude": 114.26667,
+                "timezone": "Asia/Shanghai",
+                "resolution": "city",
+                "administrative_area": [
+                  "湖北",
+                  "武汉市"
+                ],
+                "geocoding_source": "Open-Meteo Geocoding API"
+              },
+              "start_date": "2026-10-27",
+              "scheduling_preference": "early",
+              "days": [
+                {
+                  "day": "2026-10-27",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": 60,
+                  "intervals": [
+                    {
+                      "start": "13:42:00",
+                      "end": "14:42:00"
+                    }
+                  ],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-10-28",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-10-29",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-10-30",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-10-31",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-11-01",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                },
+                {
+                  "day": "2026-11-02",
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "weather_source": "synthetic",
+                  "weather_snapshot_at": null,
+                  "resource_minutes": null,
+                  "intervals": [],
+                  "confirmation_basis": ""
+                }
+              ],
+              "notes": "",
+              "input_source": "user",
+              "source_plan_id": null
+            },
+            "latest_plan_id": "dc235859-58e0-4897-b032-71a30072d7ef",
+            "plan_stale": true,
+            "updated_at": "2026-10-27T05:42:33.641068Z",
+            "current_tasks": [
+              {
+                "task_id": "field-1d6ecde107-I",
+                "task_type": "inspection",
+                "schedule_status": "pending",
+                "completed": false,
+                "start_at": null,
+                "end_at": null
+              },
+              {
+                "task_id": "field-1d6ecde107-M",
+                "task_type": "maintenance",
+                "schedule_status": "pending",
+                "completed": false,
+                "start_at": null,
+                "end_at": null
+              },
+              {
+                "task_id": "series-01d2a9103c60:000001",
+                "task_type": "custom",
+                "schedule_status": "completed",
+                "completed": true,
+                "start_at": "2026-10-27T13:42:00+08:00",
+                "end_at": "2026-10-27T14:12:00+08:00"
+              },
+              {
+                "task_id": "series-01d2a9103c60:000002",
+                "task_type": "custom",
+                "schedule_status": "pending",
+                "completed": false,
+                "start_at": null,
+                "end_at": null
+              },
+              {
+                "task_id": "series-01d2a9103c60:000003",
+                "task_type": "custom",
+                "schedule_status": "pending",
+                "completed": false,
+                "start_at": null,
+                "end_at": null
+              }
+            ],
+            "recent_facts": [
+              {
+                "event_id": "bb574873-8d44-4073-a7be-efd8653e12f3",
+                "feedback": {
+                  "kind": "task_result",
+                  "at": "2026-10-27T05:42:03.773198Z",
+                  "task_id": "series-01d2a9103c60:000001",
+                  "plot_id": "field-1d6ecde107",
+                  "field": null,
+                  "value": null,
+                  "day": null,
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "intervals": null,
+                  "resource_minutes": null,
+                  "reason": "",
+                  "result_values": {
+                    "完成情况": "normal"
+                  },
+                  "result_notes": "",
+                  "issue_ids": [],
+                  "resolved_issue_id": null
+                }
+              },
+              {
+                "event_id": "c3a66cdc-c49e-4a8a-8bdf-99d86ce7940d",
+                "feedback": {
+                  "kind": "completed",
+                  "at": "2026-10-27T05:42:03.773198Z",
+                  "task_id": "series-01d2a9103c60:000001",
+                  "plot_id": "field-1d6ecde107",
+                  "field": null,
+                  "value": null,
+                  "day": null,
+                  "site_workable": null,
+                  "weather_workable": null,
+                  "intervals": null,
+                  "resource_minutes": null,
+                  "reason": "",
+                  "result_values": {},
+                  "result_notes": "",
+                  "issue_ids": [],
+                  "resolved_issue_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "evaluate_field",
+          "status": "success",
+          "elapsed_ms": 24,
+          "result_summary": "返回 5 个候选事项",
+          "arguments": {
+            "field_id": "field-1d6ecde107"
+          },
+          "result": {
+            "field_id": "field-1d6ecde107",
+            "draft_version": 3,
+            "fact_version": 1,
+            "task_version": 2,
+            "evaluated_at": "2026-10-27T05:42:37.859995Z",
+            "profile_ready": true,
+            "items": [
+              {
+                "task_id": "field-1d6ecde107-I",
+                "plot_id": "field-1d6ecde107",
+                "title": "巡田苗情墒情虫情与沟渠检查",
+                "task_type": "inspection",
+                "applicability": "matched",
+                "necessity": "unknown",
+                "window_by_date": {},
+                "schedule_status": "pending",
+                "duration_minutes": 35,
+                "start_at": null,
+                "end_at": null,
+                "completed": false,
+                "reason": "需求或现场问题尚未确认",
+                "reason_code": "necessity_pending",
+                "missing_fields": [
+                  "inspection_requested"
+                ],
+                "evidence": [
+                  {
+                    "rule_id": "C31",
+                    "title": "普通巡田的苗情墒情虫情记录",
+                    "pack_version": "融合修订版1.0",
+                    "evidence_version": "2026-10-17",
+                    "source_id": "Z16",
+                    "source_title": "农业农村部办公厅关于大力开发冬闲田积极扩种冬油菜的通知",
+                    "publisher": "农业农村部办公厅；种植业管理司网站发布",
+                    "source_date": "2020-11-24（网页）；2020-11-05（文件落款）",
+                    "source_url": "https://zzys.moa.gov.cn/gzdt/202011/t20201124_6356875.htm",
+                    "pdf_pages": [
+                      1
+                    ],
+                    "quote": "组织专家和农技人员深入一线，开展查苗情、查墒情、查虫情，推进油菜生产关键技术措施落实。",
+                    "applicability_text": "2020年扩种冬油菜通知；借鉴为湖北已确认苗期的小型田块巡田清单，属于项目设计。",
+                    "condition_text": "用户有检查需求，或其他卡片提出检查候选；不要求检查前已经知道目标农情。",
+                    "limits": "不推出固定频率、标准工时或病害诊断；普通巡田不等于C04专业监测。",
+                    "source_sha256": "b5e850077800773f4c2a8f827ac0af198c5e7cc7e0cd3bbf422cec6da64e601e",
+                    "runtime_enabled": false,
+                    "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                    "usage_role": "limited_support",
+                    "source_context_summary": "2020年冬油菜扩种通知；原文要求专家和农技人员调查苗情、墒情、虫情",
+                    "project_use_limit": "项目仅借用观察主题供用户自述；不将专业调查改称普通用户诊断能力"
+                  },
+                  {
+                    "rule_id": "C11",
+                    "title": "巡田记录缺苗和拥挤现象",
+                    "pack_version": "融合修订版1.0",
+                    "evidence_version": "2026-10-17",
+                    "source_id": "Z15",
+                    "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                    "publisher": "湖北省油菜办公室",
+                    "source_date": "2025-11-07",
+                    "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                    "pdf_pages": [
+                      1
+                    ],
+                    "quote": "在油菜3-5叶期，采取人工或机械中耕等方式及时清理窝堆苗、拥挤苗，去密留稀、去弱留壮、移密补稀，做到叶不搭叶。",
+                    "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                    "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                    "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                    "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                    "runtime_enabled": false,
+                    "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                    "usage_role": "limited_support",
+                    "source_context_summary": "2025年湖北苗期偏湿、迟晚播指导；原文讨论3至5叶期间苗处置",
+                    "project_use_limit": "仅借用叶龄、缺苗、拥挤等观察项目；不自动生成间苗、移栽或药肥任务"
+                  },
+                  {
+                    "rule_id": "C11",
+                    "title": "巡田记录缺苗和拥挤现象",
+                    "pack_version": "融合修订版1.0",
+                    "evidence_version": "2026-10-17",
+                    "source_id": "Z09",
+                    "source_title": "湖北省油菜冬前田间管理技术指导意见",
+                    "publisher": "湖北省油菜办公室、湖北省油菜大面积单产提升专家指导组",
+                    "source_date": "2025-12-03",
+                    "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202512/t20251203_5825918.shtml",
+                    "pdf_pages": [
+                      2
+                    ],
+                    "quote": "在追肥、化调等田管措施之前采取人工或机械中耕等方式及时间苗",
+                    "applicability_text": "2025年湖北苗期指导；当前湖北苗期巡田借鉴观察项。",
+                    "condition_text": "已确认苗期且存在检查需求；3～5叶是原文处置阶段，不是巡田门槛。",
+                    "limits": "Z09另述冬前先间苗再追肥化调；两文条件不能无说明拼接成统一硬约束。",
+                    "source_sha256": "1d51f472885ce30219e48011f13eb539fce5599cd1edba31529fe36801040dca",
+                    "runtime_enabled": false,
+                    "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                    "usage_role": "limited_support",
+                    "source_context_summary": "2025年湖北冬前群体管理；原文讨论间苗与追肥、化调的先后",
+                    "project_use_limit": "仅借用巡田观察对象；冬前处置顺序不成为普通检查的强制前置"
+                  }
+                ],
+                "category": "onsite",
+                "priority": null,
+                "earliest_date": null,
+                "due_date": null,
+                "prerequisites": [],
+                "template_snapshot": null,
+                "execution_group_id": null,
+                "group_duration_minutes": null
+              },
+              {
+                "task_id": "field-1d6ecde107-M",
+                "plot_id": "field-1d6ecde107",
+                "title": "既有沟渠维护候选",
+                "task_type": "maintenance",
+                "applicability": "pending",
+                "necessity": "unknown",
+                "window_by_date": {},
+                "schedule_status": "pending",
+                "duration_minutes": 50,
+                "start_at": null,
+                "end_at": null,
+                "completed": false,
+                "reason": "范围信息待确认",
+                "reason_code": "scope_pending",
+                "missing_fields": [
+                  "maintenance_problem_confirmed",
+                  "ditch_connectivity",
+                  "standing_water",
+                  "maintenance_need_confirmed",
+                  "maintenance_purpose",
+                  "field_type"
+                ],
+                "evidence": [
+                  {
+                    "rule_id": "C23",
+                    "title": "沟渠清理需求确认与候选任务",
+                    "pack_version": "融合修订版1.0",
+                    "evidence_version": "2026-10-17",
+                    "source_id": "Z01",
+                    "source_title": "2026年全国冬油菜生产技术意见",
+                    "publisher": "农业农村部油菜专家指导组、全国农业技术推广服务中心",
+                    "source_date": "2026-09-08",
+                    "source_url": "https://www.moa.gov.cn/gk/nszd_1/2026n/202609/t20260908_6487368.htm",
+                    "pdf_pages": [
+                      2
+                    ],
+                    "quote": "播种后提前清除外排沟、厢沟、腰沟、围沟中的杂物，重点是确保外排沟的疏通，保证沟沟畅通。",
+                    "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                    "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                    "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                    "source_sha256": "a720a486303196d045f89eba69033dd2e4eb6f8888da05b5687a567f2afa6864",
+                    "runtime_enabled": false,
+                    "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                    "usage_role": "limited_support",
+                    "source_context_summary": "长江流域播后既有沟渠清理指导；原首发日期及全文版本待核实",
+                    "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不自动新开或加深"
+                  },
+                  {
+                    "rule_id": "C23",
+                    "title": "沟渠清理需求确认与候选任务",
+                    "pack_version": "融合修订版1.0",
+                    "evidence_version": "2026-10-17",
+                    "source_id": "Z15",
+                    "source_title": "2025年湖北省油菜苗期田间管理技术指导意见",
+                    "publisher": "湖北省油菜办公室",
+                    "source_date": "2025-11-07",
+                    "source_url": "https://nyt.hubei.gov.cn/bmdt/yw/ywtz/sycbgs_9005/202511/t20251107_5807293.shtml",
+                    "pdf_pages": [
+                      1
+                    ],
+                    "quote": "当前油菜田普遍湿度偏大，要及时清理疏通“三沟”",
+                    "applicability_text": "长江流域播后管理；首版限定湖北已确认进入苗期的地块。",
+                    "condition_text": "发现堵塞、连通问题或其他明确维护事实；也可接收用户已确认的维护需求。",
+                    "limits": "播种后不是所有田间作业的前置约束；已有充分田况不强制再巡田一次。",
+                    "source_sha256": "06e6278356917900f1c0d4be755dcf763a00355d53fefa2cb382adaa32193f71",
+                    "runtime_enabled": false,
+                    "status_label": "当前限用途依据（AI辅助复核已交付，正式采用待确认）",
+                    "usage_role": "limited_support",
+                    "source_context_summary": "2025年湖北苗期偏湿田况下的清沟指导",
+                    "project_use_limit": "仅支持已确认问题、目的及需求的既有沟渠清理候选；不套用到偏干田"
+                  }
+                ],
+                "category": "onsite",
+                "priority": null,
+                "earliest_date": null,
+                "due_date": null,
+                "prerequisites": [],
+                "template_snapshot": null,
+                "execution_group_id": null,
+                "group_duration_minutes": null
+              },
+              {
+                "task_id": "series-01d2a9103c60:000001",
+                "plot_id": "field-1d6ecde107",
+                "title": "整理采购记录",
+                "task_type": "custom",
+                "applicability": "matched",
+                "necessity": "required",
+                "window_by_date": {
+                  "2026-10-27": "available"
+                },
+                "schedule_status": "completed",
+                "duration_minutes": 30,
+                "start_at": "2026-10-27T13:42:00+08:00",
+                "end_at": "2026-10-27T14:12:00+08:00",
+                "completed": true,
+                "reason": "已完成；历史事实和原时段锁定",
+                "reason_code": "scheduled",
+                "missing_fields": [],
+                "evidence": [],
+                "category": "offsite",
+                "priority": 2,
+                "earliest_date": "2026-10-27",
+                "due_date": "2026-10-27",
+                "prerequisites": [],
+                "template_snapshot": {
+                  "id": "custom-c2057bfa0b8b",
+                  "version": 1,
+                  "title": "整理采购记录",
+                  "task_type": "custom",
+                  "category": "offsite",
+                  "related_issue_id": null,
+                  "purpose": "核对本周采购记录并保存结果",
+                  "trigger": "",
+                  "necessary_conditions": [],
+                  "steps": [],
+                  "result_fields": [
+                    "完成情况"
+                  ],
+                  "completion_standard": "采购记录已核对并保存",
+                  "follow_up": "",
+                  "source_kind": "user_defined",
+                  "evidence": [],
+                  "agronomic_review_status": "not_assessed",
+                  "prerequisites": []
+                },
+                "execution_group_id": null,
+                "group_duration_minutes": null
+              },
+              {
+                "task_id": "series-01d2a9103c60:000002",
+                "plot_id": "field-1d6ecde107",
+                "title": "整理采购单据",
+                "task_type": "custom",
+                "applicability": "matched",
+                "necessity": "required",
+                "window_by_date": {
+                  "2026-10-30": "available"
+                },
+                "schedule_status": "pending",
+                "duration_minutes": 30,
+                "start_at": null,
+                "end_at": null,
+                "completed": false,
+                "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+                "reason_code": "resource_pending",
+                "missing_fields": [],
+                "evidence": [],
+                "category": "offsite",
+                "priority": 2,
+                "earliest_date": "2026-10-30",
+                "due_date": "2026-10-30",
+                "prerequisites": [],
+                "template_snapshot": {
+                  "id": "custom-c2057bfa0b8b",
+                  "version": 2,
+                  "title": "整理采购单据",
+                  "task_type": "custom",
+                  "category": "offsite",
+                  "related_issue_id": null,
+                  "purpose": "核对本周采购记录并保存结果",
+                  "trigger": "",
+                  "necessary_conditions": [],
+                  "steps": [],
+                  "result_fields": [
+                    "完成情况"
+                  ],
+                  "completion_standard": "采购记录已核对并保存",
+                  "follow_up": "",
+                  "source_kind": "user_defined",
+                  "evidence": [],
+                  "agronomic_review_status": "not_assessed",
+                  "prerequisites": []
+                },
+                "execution_group_id": null,
+                "group_duration_minutes": null
+              },
+              {
+                "task_id": "series-01d2a9103c60:000003",
+                "plot_id": "field-1d6ecde107",
+                "title": "整理采购单据",
+                "task_type": "custom",
+                "applicability": "matched",
+                "necessity": "required",
+                "window_by_date": {
+                  "2026-11-02": "available"
+                },
+                "schedule_status": "pending",
+                "duration_minutes": 30,
+                "start_at": null,
+                "end_at": null,
+                "completed": false,
+                "reason": "作业窗口已确认；可用人力分钟数尚未确认",
+                "reason_code": "resource_pending",
+                "missing_fields": [],
+                "evidence": [],
+                "category": "offsite",
+                "priority": 2,
+                "earliest_date": "2026-11-02",
+                "due_date": "2026-11-02",
+                "prerequisites": [],
+                "template_snapshot": {
+                  "id": "custom-c2057bfa0b8b",
+                  "version": 2,
+                  "title": "整理采购单据",
+                  "task_type": "custom",
+                  "category": "offsite",
+                  "related_issue_id": null,
+                  "purpose": "核对本周采购记录并保存结果",
+                  "trigger": "",
+                  "necessary_conditions": [],
+                  "steps": [],
+                  "result_fields": [
+                    "完成情况"
+                  ],
+                  "completion_standard": "采购记录已核对并保存",
+                  "follow_up": "",
+                  "source_kind": "user_defined",
+                  "evidence": [],
+                  "agronomic_review_status": "not_assessed",
+                  "prerequisites": []
+                },
+                "execution_group_id": null,
+                "group_duration_minutes": null
+              }
+            ],
+            "missing_fields": [
+              "inspection_requested",
+              "maintenance_problem_confirmed",
+              "ditch_connectivity",
+              "standing_water",
+              "maintenance_need_confirmed",
+              "maintenance_purpose",
+              "field_type"
+            ],
+            "clarification_questions": [
+              "是否需要巡田",
+              "沟渠有需要处理的堵塞或排水问题吗？",
+              "沟渠是否通畅"
+            ],
+            "ruleset_version": "融合修订版1.0",
+            "status_label": "开发验证，适用性待复核"
+          }
+        }
+      ],
+      "workflow_version": "open-ga-reliability-v1",
+      "workflow_actions": [
+        "query"
+      ],
+      "steps": [
+        {
+          "stage": "understanding",
+          "status": "success",
+          "name": "",
+          "elapsed_ms": 1169
+        },
+        {
+          "stage": "tool",
+          "status": "success",
+          "name": "declare_request",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "tool",
+          "status": "success",
+          "name": "read_field",
+          "elapsed_ms": 6
+        },
+        {
+          "stage": "tool",
+          "status": "success",
+          "name": "evaluate_field",
+          "elapsed_ms": 24
+        },
+        {
+          "stage": "understanding",
+          "status": "success",
+          "name": "",
+          "elapsed_ms": 2031
+        },
+        {
+          "stage": "finished",
+          "status": "success",
+          "name": "",
+          "elapsed_ms": 3256
+        }
+      ],
+      "error_category": null,
+      "request_ids": []
+    }
+  ],
+  "agent_proposals": []
+}

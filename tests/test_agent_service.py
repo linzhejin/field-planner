@@ -666,6 +666,83 @@ def test_declared_resource_flow_does_not_call_weather(tmp_path: Path) -> None:
     agent.close()
 
 
+def test_explicit_read_only_query_is_not_misclassified_as_a_change(tmp_path: Path) -> None:
+    responses = iter(
+        [
+            tool_call_response("declare_request", '{"field_id":"field-1","actions":["query"]}'),
+            {
+                "id": "chat-read-tools",
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": "read-field",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "read_field",
+                                        "arguments": '{"field_id":"field-1"}',
+                                    },
+                                },
+                                {
+                                    "id": "evaluate-field",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "evaluate_field",
+                                        "arguments": '{"field_id":"field-1"}',
+                                    },
+                                },
+                            ],
+                        },
+                    }
+                ],
+            },
+            final_response("今天的安排和待确认事项已核对。"),
+        ]
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=next(responses)))
+
+    result = agent.run(
+        "field-1",
+        "请读取当前地块的已采用安排，简要解释今天的任务和仍待确认的事项；"
+        "这是只读查询，不要提出或保存修改。",
+    )
+
+    assert result.status == "success"
+    assert result.workflow_actions == ["query"]
+    assert len(result.tools) == 3
+    assert result.request_count == 3
+    agent.close()
+
+
+def test_read_only_query_completes_status_checks_when_model_splits_tool_calls(
+    tmp_path: Path,
+) -> None:
+    responses = iter(
+        [
+            tool_call_response("declare_request", '{"field_id":"field-1","actions":["query"]}'),
+            tool_call_response("read_field", '{"field_id":"field-1"}'),
+            final_response("已核对当前安排和待确认事项。"),
+        ]
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=next(responses)))
+
+    result = agent.run("field-1", "查看当前地块的计划和待确认事项")
+
+    assert result.status == "success"
+    assert result.request_count == 3
+    assert [trace.name for trace in result.tools] == [
+        "declare_request",
+        "read_field",
+        "evaluate_field",
+    ]
+    assert all(trace.status == "success" for trace in result.tools)
+    agent.close()
+
+
 def test_vague_afternoon_resource_proposal_is_rejected(tmp_path: Path) -> None:
     arguments = json.dumps(
         {

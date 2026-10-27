@@ -6,3 +6,4 @@ import pytest
 @pytest.fixture(autouse=True)
 def _legacy_real_workspace(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NONGSHI_DEFAULT_MODE", "real")
+    monkeypatch.setenv("NONGSHI_LAYOUT", "classic")

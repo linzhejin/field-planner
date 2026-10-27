@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
@@ -68,6 +68,23 @@ class FieldStateV3(BaseModel):
     draft: FieldDraftV3
     latest_plan_id: str | None = None
     plan_stale: bool = False
+    updated_at: AwareDatetime
+
+
+class UIEditorDraftV1(BaseModel):
+    """A recoverable interface draft that has not entered field facts or a plan."""
+
+    schema_version: Literal[1] = 1
+    mode: FieldMode
+    field_id: str = Field(min_length=1)
+    form_kind: Literal[
+        "profile", "schedule", "task", "result", "outing", "series", "resource", "follow_up"
+    ]
+    subject_id: str = ""
+    base_draft_version: int = Field(ge=0)
+    base_fact_version: int = Field(ge=0)
+    base_task_version: int = Field(ge=0)
+    payload: dict[str, Any] = Field(default_factory=dict)
     updated_at: AwareDatetime
 
 

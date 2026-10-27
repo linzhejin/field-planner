@@ -1,0 +1,33 @@
+{
+  "result": "passed",
+  "fixture": "两个公开模拟巡田任务由服务层创建；分组合并、采用、取消和释放均由页面真实操作",
+  "field_id": "field-execution-group-browser",
+  "task_ids": [
+    "group-browser-series-1:000001",
+    "group-browser-series-2:000001"
+  ],
+  "task_date": "2026-10-28",
+  "execution_group_id": "outing-b2fcb7f77f35",
+  "confirmed_group_duration_minutes": 45,
+  "member_schedule_after_group": [
+    "2026-10-28T08:00:00+08:00",
+    "2026-10-28T08:00:00+08:00"
+  ],
+  "member_schedule_after_cancellation": [
+    "2026-10-28T08:00:00+08:00",
+    "2026-10-28T08:30:00+08:00"
+  ],
+  "history_versions": [
+    1,
+    2,
+    3
+  ],
+  "mobile_dimensions": {
+    "client": 390,
+    "scroll": 390,
+    "document": 390
+  },
+  "browser_errors": [],
+  "screenshots": "reports/workbench_html_v16/screenshots-execution-group-final",
+  "database": "external temporary SQLite database; not distributed"
+}

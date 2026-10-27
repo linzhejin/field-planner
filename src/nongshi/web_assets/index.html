@@ -1,0 +1,60 @@
+<div class="webapp" data-app>
+  <header class="topbar">
+    <a class="brand" href="#" data-action="home" aria-label="农时窗口首页">
+      <span class="brand-mark" aria-hidden="true">田</span><span>农时窗口</span>
+    </a>
+    <div class="top-context"><span class="eyebrow">油菜苗期 · 单地块工作台</span><strong data-title>今日，把农事安排清楚</strong></div>
+    <div class="top-actions">
+      <button class="quiet-button mode-button" data-action="mode-menu" aria-haspopup="menu"><span data-mode>真实地块</span><span aria-hidden="true">⌄</span></button>
+      <button class="icon-button" data-action="history" aria-label="查看历史版本" title="历史版本">◷</button>
+      <button class="icon-button" data-action="export" aria-label="导出计划" title="导出计划">↓</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="rail field-rail" data-rail="fields">
+      <div class="rail-heading"><div><span class="eyebrow">你的农场</span><h2>地块与资源</h2></div><button class="add-icon" data-action="new-field" aria-label="新增地块">＋</button></div>
+      <div class="field-picker" data-fields></div>
+      <div class="field-summary" data-field-summary></div>
+      <div class="rail-divider"></div>
+      <div class="section-heading"><h3>可用时间</h3><button class="text-button" data-action="edit-schedule">调整</button></div>
+      <div class="resource-summary" data-resource></div>
+      <div class="rail-divider"></div>
+      <div class="section-heading"><h3>天气与依据</h3><span class="mini-mark">↗</span></div>
+      <div class="weather-summary" data-weather></div>
+      <button class="outline-button full-button" data-action="weather">地点与七天天气</button>
+      <button class="outline-button full-button" data-action="evidence">查看安排依据</button>
+      <div class="left-footer"><span class="leaf-dot"></span>未知信息会保留待确认</div>
+    </aside>
+    <section class="main-rail" data-rail="schedule">
+      <div class="plan-heading">
+        <div><span class="eyebrow" data-date-range>本周安排</span><h1 data-field-title>先从一块地开始</h1></div>
+        <div class="plan-state" data-plan-status><i></i><span>等待地块信息</span></div>
+      </div>
+      <div class="day-strip" data-days role="tablist" aria-label="未来七天"></div>
+      <div class="day-toolbar"><div><h2 data-day-title>今天的安排</h2><span class="muted" data-day-subtitle></span></div><div class="toolbar-actions"><button class="text-button" data-action="week">整周清单</button><button class="primary-button small-primary" data-action="preview">生成安排预览 <span aria-hidden="true">↗</span></button></div></div>
+      <div class="inline-notice" data-notice hidden></div>
+      <div class="preview-panel" data-preview hidden></div>
+      <div class="task-list" data-tasks></div>
+      <div class="pending-panel" data-pending hidden></div>
+      <div class="week-panel" data-week hidden></div>
+      <div class="schedule-footer"><span>单地块独立安排</span><span>尚未统筹其他地块时间</span><div class="schedule-footer-actions"><button class="text-button" data-action="task-management">周期与合并出行</button><button class="text-button" data-action="task">＋ 添加农事待办</button></div></div>
+    </section>
+    <aside class="rail assistant-rail" data-rail="assistant">
+      <div class="assistant-head"><div class="assistant-avatar" aria-hidden="true">禾</div><div><span class="eyebrow">农时窗口助手</span><h2>一起核对农事</h2></div><button class="icon-button more-button" data-action="assistant-help" aria-label="助手说明">···</button></div>
+      <div class="assistant-context" data-assistant-context></div>
+      <div class="messages" data-messages aria-live="polite"></div>
+      <div class="proposal-list" data-proposals></div>
+      <div class="quick-actions"><button data-action="observation">记录现场情况</button><button data-action="resource">修改人员时间</button></div>
+      <form class="composer" data-form="message">
+        <label class="sr-only" for="message-input">告诉助手现场变化或时间安排</label>
+        <textarea id="message-input" name="message" rows="2" maxlength="2000" placeholder="例如：明天下午才能去巡田"></textarea>
+        <div class="composer-bottom"><span>发送后会先核对修改内容</span><button class="send-button" type="submit" aria-label="发送消息">↑</button></div>
+      </form>
+      <details class="tech-details"><summary>处理进度与技术详情</summary><div data-agent-status></div></details>
+    </aside>
+  </main>
+  <nav class="mobile-nav" aria-label="工作台页面"><button data-action="tab-schedule" aria-current="page">安排</button><button data-action="tab-fields">地块</button><button data-action="tab-assistant">助手</button></nav>
+  <dialog class="work-dialog" data-dialog aria-labelledby="dialog-title"><div class="dialog-head"><div><span class="eyebrow" data-dialog-eyebrow></span><h2 id="dialog-title" data-dialog-title></h2></div><button class="icon-button" data-action="close-dialog" aria-label="关闭">×</button></div><div class="dialog-body" data-dialog-body></div></dialog>
+  <div class="toast" data-toast role="status" aria-live="polite"></div>
+  <footer class="app-footer"><span>候选规则处于开发验证阶段，适用性待复核</span><a href="?layout=classic" target="_self">打开经典工作台</a></footer>
+</div>

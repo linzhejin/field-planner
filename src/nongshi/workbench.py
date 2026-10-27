@@ -453,8 +453,12 @@ def _saved_fields(service: WorkbenchServiceV3, mode: str) -> list[FieldStateV3]:
     return service.list_fields(mode=mode)
 
 
-def _active_field_id(mode: str) -> str:
-    return st.session_state.setdefault(f"new_field_id:{mode}", f"field-{uuid4().hex[:10]}")
+def _active_field_id(mode: str, service: WorkbenchServiceV3) -> str:
+    key = f"new_field_id:{mode}"
+    if key not in st.session_state:
+        saved_draft_id = service.store.latest_unsaved_profile_draft_field_id(mode)
+        st.session_state[key] = saved_draft_id or f"field-{uuid4().hex[:10]}"
+    return st.session_state[key]
 
 
 def _field_state(service: WorkbenchServiceV3, field_id: str) -> FieldStateV3 | None:
@@ -478,7 +482,7 @@ def _select_field(service: WorkbenchServiceV3, mode: str) -> tuple[str, FieldSta
     elif st.session_state.get(key) not in valid | {NEW_FIELD}:
         st.session_state[key] = fields[-1].id
     selected = st.session_state.get(key)
-    field_id = _active_field_id(mode) if selected == NEW_FIELD else selected
+    field_id = _active_field_id(mode, service) if selected == NEW_FIELD else selected
     return field_id, _field_state(service, field_id)
 
 
@@ -511,7 +515,7 @@ def _render_field_selector(service: WorkbenchServiceV3, mode: str) -> None:
         )
     if st.button("+ 新增地块", key=f"add_field:{mode}", width="stretch"):
         st.session_state[f"previous_field:{mode}"] = st.session_state.get(key)
-        if not _has_unsaved_edits(_active_field_id(mode)):
+        if not _has_unsaved_edits(_active_field_id(mode, service)):
             st.session_state[f"new_field_id:{mode}"] = f"field-{uuid4().hex[:10]}"
         st.session_state[f"pending_field_selection:{mode}"] = NEW_FIELD
         st.rerun()
@@ -3692,11 +3696,13 @@ def _start_agent_job(agent: AgentServiceV3, field_id: str, message: str, history
         return background_agent
 
     st.session_state[f"agent_last_message:{field_id}"] = message
+    st.session_state.pop(f"agent_result:{field_id}", None)
     st.session_state["active_agent_job"] = AgentJob(
         factory, field_id, message, conversation=history, received_at=_now()
     )
     st.session_state["active_agent_database"] = str(database)
     st.session_state.pop(f"agent_job_error:{field_id}", None)
+    st.session_state[f"agent_job_status:{field_id}"] = "正在处理，完成后会在当前对话显示结果。"
 
 
 def _render_chat_input(agent: AgentServiceV3, field_id: str, history: list[dict[str, str]]) -> None:
@@ -4090,7 +4096,7 @@ def _render_rule_reviews(service: WorkbenchServiceV3, field_id: str, state: Fiel
             st.error(f"复核记录未保存：{error}")
 
 
-def main() -> None:
+def _legacy_main() -> None:
     st.set_page_config(
         page_title="农时窗口 · 农事工作台",
         page_icon="🌱",
@@ -4306,9 +4312,9 @@ def main() -> None:
         job.field_id != initial_id or st.session_state.get("active_agent_database") != str(database)
     ):
         job.cancel()
-        st.session_state[f"agent_job_error:{job.field_id}"] = (
-            "已切换地块，刚才的等待已停止。已保存的内容还在。"
-        )
+        cancellation_message = "已切换地块，刚才的等待已停止。已保存的内容还在。"
+        st.session_state[f"agent_job_error:{job.field_id}"] = cancellation_message
+        st.session_state[f"agent_job_status:{job.field_id}"] = cancellation_message
         st.session_state.pop("active_agent_job", None)
     if initial_state is None or initial_state.draft.profile is None:
         with st.container(key="field_onboarding", border=True):
@@ -4454,6 +4460,57 @@ def _render_agent_job_progress(field_id: str) -> None:
     if st.button("退出等待", key=f"cancel_agent:{field_id}"):
         job.cancel()
         st.rerun()
+
+
+def main() -> None:
+    """Run the current HTML workbench, with the previous Streamlit UI as fallback."""
+    if st.query_params.get("layout") == "classic" or os.getenv("NONGSHI_LAYOUT") == "classic":
+        _legacy_main()
+        return
+
+    st.set_page_config(
+        page_title="农时窗口 · 农事工作台",
+        page_icon="🌱",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+    st.markdown(
+        """<style>
+        [data-testid="stHeader"], [data-testid="stToolbar"] { display: none; }
+        [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: none !important; }
+        [data-testid="stAppViewContainer"] { background: #f3f6f2; }
+        </style>""",
+        unsafe_allow_html=True,
+    )
+
+    from nongshi.workbench_web import render_html_workbench
+
+    requested_mode = st.query_params.get("mode")
+    if "workspace_mode" not in st.session_state:
+        if requested_mode in {"real", "demo"}:
+            st.session_state["workspace_mode"] = (
+                "真实地块" if requested_mode == "real" else "独立模拟示例"
+            )
+        else:
+            configured = os.getenv("NONGSHI_DEFAULT_MODE", "real")
+            st.session_state["workspace_mode"] = (
+                "独立模拟示例" if configured == "demo" else "真实地块"
+            )
+
+    mode = "real" if st.session_state["workspace_mode"] == "真实地块" else "demo"
+    service, agent, database = _context(mode)
+    field_id, state = _select_field(service, mode)
+    render_html_workbench(
+        service,
+        agent,
+        database,
+        mode,
+        field_id,
+        state,
+        today=_today(),
+        now=_now(),
+        session=st.session_state,
+    )
 
 
 if __name__ == "__main__":

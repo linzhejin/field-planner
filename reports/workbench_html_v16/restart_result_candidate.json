@@ -1,0 +1,15 @@
+{
+  "result": "passed",
+  "restarted_app": true,
+  "field_name": "网页验收演示地块",
+  "history_versions": [
+    1,
+    2,
+    3
+  ],
+  "plan_stale_after_weather_refresh": true,
+  "json_export": "reports/workbench_html_v16/restart_result_candidate_export.json",
+  "markdown_export": "reports/workbench_html_v16/restart_result_candidate_export.md",
+  "browser_errors": [],
+  "screenshots": "reports/workbench_html_v16/screenshots-restart-candidate"
+}

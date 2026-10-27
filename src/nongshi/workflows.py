@@ -52,7 +52,11 @@ CAPABILITIES: dict[str, Capability] = {
         "declare",
     ),
     "read_field": Capability(
-        "read_field", "读取当前地块已保存状态、任务和事实。", frozenset(), "read", True
+        "read_field",
+        "读取当前地块已保存状态、任务和事实；只读查询计划时，与 evaluate_field 同轮调用。",
+        frozenset(),
+        "read",
+        True,
     ),
     "search_rules": Capability(
         "search_rules",
@@ -63,7 +67,7 @@ CAPABILITIES: dict[str, Capability] = {
     ),
     "evaluate_field": Capability(
         "evaluate_field",
-        "计算当前候选事项、状态和缺项。",
+        "计算当前候选事项、状态和缺项；只读查询计划时，与 read_field 同轮调用。",
         frozenset({"query", "preview", "field_update"}),
         "read",
         True,

@@ -502,7 +502,14 @@ class AgentServiceV3:
             return finish("invalid_response", error_message="请输入要处理的内容。")
         # “预览调整”描述的是查看已保存改动；“调整到明天”才是新的写入请求。
         intent_text = re.sub(r"(?:预览调整|调整预览)(?=$|[。！？.!?，,]|后)", "预览", user_message)
-        change_requested = bool(
+        read_only_requested = bool(
+            re.search(
+                r"只读|仅(?:查询|查看)|只(?:查询|查看)|查看即可|"
+                r"(?:不要|不必|无需|不需要|暂不|先不).{0,12}(?:修改|调整|重排|保存.*修改|提出.*修改)",
+                user_message,
+            )
+        )
+        change_requested = not read_only_requested and bool(
             re.search(
                 r"(?<!已)(?<!已经)(?<!刚)保存|记录|改为|改成|变为|做完了|完成了|已完成|发现|确认.*清理|"
                 r"调整|修改|重排|(?:只有|仅有|只剩|有空).*?(?:上午|下午|晚上|\d{1,2}点)",
@@ -830,6 +837,27 @@ class AgentServiceV3:
                     )
                 return finish("success", text=self._safe_explanation(message.content.strip()))
 
+            calls_to_process = list(message.tool_calls)
+            query_status_tools = {"read_field", "evaluate_field"}
+            if (
+                workflow_actions == {"query"}
+                and request_count < MAX_MODEL_REQUESTS
+                and any(call.function.name in query_status_tools for call in calls_to_process)
+            ):
+                requested_status_tools = {call.function.name for call in calls_to_process}
+                missing_status_tool = query_status_tools - requested_status_tools
+                if len(missing_status_tool) == 1:
+                    companion_name = missing_status_tool.pop()
+                    calls_to_process.append(
+                        ModelToolCall(
+                            id=f"query-context-{request_count}-{companion_name}",
+                            function=ModelFunction(
+                                name=companion_name,
+                                arguments=json.dumps({"field_id": field_id}),
+                            ),
+                        )
+                    )
+
             messages.append(
                 {
                     "role": "assistant",
@@ -843,11 +871,10 @@ class AgentServiceV3:
                                 "arguments": call.function.arguments,
                             },
                         }
-                        for call in message.tool_calls
+                        for call in calls_to_process
                     ],
                 }
             )
-            calls_to_process = list(message.tool_calls)
             generated_call_ids: set[str] = set()
             for call_index, call in enumerate(calls_to_process):
                 if cancellation is not None:
@@ -2168,6 +2195,9 @@ class AgentServiceV3:
             "首轮必须调用 declare_request，列出本轮每个用户动作和具体缺项；"
             "声明与参数提取在同一轮，不额外请求分类。"
             "先读取或核对状态，再按需调用地点搜索、天气、规则、评估或计划预览工具。"
+            "只读查询当前计划或待确认事项时，在同一轮工具调用中同时调用 "
+            "read_field 和 evaluate_field；"
+            "不要把这两项只读核对拆成连续的模型请求。"
             "查询天气优先用 query_current_weather，不要猜测起止日期。"
             "用户要求记录完成、现场观察或修改可用时间时，必须调用 propose_feedback；"
             "可用时段属于 resource，不属于 workability。多事项应逐项提出同一批事实。"

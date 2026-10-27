@@ -37,6 +37,7 @@ from nongshi.schema_v3 import (
     PlanVersionV3,
     RuleAdoptionRecordV3,
     TaskActionV3,
+    UIEditorDraftV1,
     WeatherSnapshotV3,
 )
 from nongshi.tasks_v4 import (
@@ -190,6 +191,14 @@ class WorkbenchServiceV3:
 
     def list_fields(self, *, mode: Literal["real", "demo"] | None = None) -> list[FieldStateV3]:
         return self.store.list_fields(mode=mode)
+
+    def save_ui_editor_draft(self, draft: UIEditorDraftV1, *, operation_id: str) -> UIEditorDraftV1:
+        return self.store.save_ui_editor_draft(draft, operation_id=operation_id)
+
+    def ui_editor_draft(
+        self, mode: Literal["real", "demo"], field_id: str, form_kind: str, subject_id: str = ""
+    ) -> UIEditorDraftV1 | None:
+        return self.store.ui_editor_draft(mode, field_id, form_kind, subject_id)
 
     def list_events(self, field_id: str):  # type: ignore[no-untyped-def]
         return self.store.list_events(field_id)
