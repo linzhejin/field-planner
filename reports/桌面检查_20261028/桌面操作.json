@@ -1,0 +1,57 @@
+{
+  "result": "passed",
+  "flow": [
+    "关闭未保存表单时保存草稿，刷新后恢复并完成建档",
+    "通过三个确认框保存省份、作物、生育期和任务时长",
+    "V1 预览与采用",
+    "首次采用前候选事项不显示为已安排或可记录",
+    "保存周期非现场待办",
+    "从任务卡记录完成结果并采用 V2",
+    "修改后续周期并采用 V3",
+    "刷新恢复"
+  ],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "documentWidth": 1440,
+      "documentScrollWidth": 1440,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 1158,
+      "height": 714,
+      "scrollWidth": 1158,
+      "documentWidth": 1158,
+      "documentScrollWidth": 1158,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 900,
+      "height": 844,
+      "scrollWidth": 900,
+      "documentWidth": 900,
+      "documentScrollWidth": 900,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "documentWidth": 390,
+      "documentScrollWidth": 390,
+      "horizontal_overflow": false
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "scrollWidth": 360,
+      "documentWidth": 360,
+      "documentScrollWidth": 360,
+      "horizontal_overflow": false
+    }
+  ],
+  "browser_errors": [],
+  "screenshots": "desktop-current1158"
+}

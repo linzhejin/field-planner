@@ -211,8 +211,27 @@ def main() -> int:
             assert initial_date and next_date and initial_date != next_date
             date_buttons.nth(1).click()
             assert date_buttons.nth(1).get_attribute("aria-selected") == "true"
+            next_day = datetime.fromisoformat(next_date)
+            next_label = f"{next_day.month}/{next_day.day}"
+            assert next_label in page.locator("[data-day-title]").inner_text(), (
+                "选择日期后，下方安排未切换到所选日期"
+            )
+            expected_titles = page.locator("[data-app]").evaluate(
+                "(app, date) => (app._workbenchData.days.find(day => day.date === date)"
+                "?.items || []).map(item => item.title)",
+                next_date,
+            )
+            actual_titles = page.locator("[data-tasks] .task-title").all_text_contents()
+            assert sorted(actual_titles) == sorted(expected_titles), (
+                "选择日期后，任务列表与所选日期不一致"
+            )
             date_buttons.first.click()
             assert date_buttons.first.get_attribute("aria-selected") == "true"
+            first_day = datetime.fromisoformat(initial_date)
+            assert (
+                f"{first_day.month}/{first_day.day}"
+                in page.locator("[data-day-title]").inner_text()
+            )
             page.locator('[data-action="week"]').click()
             assert page.locator("[data-week]").is_visible()
             page.locator('[data-action="week"]').click()

@@ -78,7 +78,6 @@ export default function(component) {
   const pendingCount = currentItems.filter(i => i.status === 'pending').length;
   const scheduledCount = currentItems.filter(i => i.status === 'scheduled').length;
   const unscheduledCount = currentItems.filter(i => i.status === 'unscheduled').length;
-  const selectedDay = dates.find(d => d.date === selectedDate) || dates[0] || {date:'', items:[]};
   const allItems = data.items || currentItems;
   const renderStatus = (status) => `<span class="status-pill" data-tone="${toneFor(status)}">${escape(statusLabel[status] || status)}</span>`;
   const renderFieldRail = () => {
@@ -126,6 +125,7 @@ export default function(component) {
     node.innerHTML = `<div class="preview-top"><div><span class="eyebrow">调整预览 · 尚未采用</span><h3>核对这次安排变化</h3><p class="muted-copy">地块 v${field?.draft_version} · 现场记录 v${field?.fact_version} · 任务 v${field?.task_version}</p></div><span class="status-pill" data-tone="amber">待你确认</span></div><div>${changes.length ? changes.map(c=>`<div class="preview-change"><strong>${escape(c.title)}</strong> · ${escape(c.kind_label)}：${escape(c.old_time || '未安排')} → ${escape(c.new_time || '未排入')}<br><span class="muted-copy">${escape(c.reason)}</span></div>`).join('') : '<p class="muted-copy">首次预览；请核对下方七天安排。</p>'}</div><div class="preview-actions"><button class="primary-button" data-action="adopt" data-preview-id="${escape(data.preview.id)}">采用这版安排</button><button class="outline-button" data-action="cancel-preview" data-preview-id="${escape(data.preview.id)}">暂不采用</button></div>`;
   };
   const renderSchedule = () => {
+    const selectedDay = dates.find(d => d.date === selectedDate) || dates[0] || {date:'', items:[]};
     app.querySelector('[data-field-title]').textContent = field?.profile?.name || '先从一块地开始';
     app.querySelector('[data-date-range]').textContent = data.date_range || '未来七天';
     const state = app.querySelector('[data-plan-status]');

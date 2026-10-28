@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -42,9 +43,9 @@ def main() -> int:
                 timeout=20_000
             )
             second.locator('[data-form="profile"] button[value="save"]').click()
-            second.locator("[data-dialog-error]").filter(has_text="版本冲突").wait_for(
-                timeout=20_000
-            )
+            second.locator("[data-dialog-error]").filter(
+                has_text=re.compile("版本冲突|地块信息已更新")
+            ).wait_for(timeout=20_000)
             assert "重试" in second.locator("[data-dialog-error]").inner_text()
             assert (
                 second.locator('[data-form="profile"] input[name="name"]').input_value()

@@ -1,0 +1,20 @@
+{
+  "result": "passed",
+  "steps": [
+    "时间已保存",
+    "非现场页面说明正确",
+    "两种导出说明正确"
+  ],
+  "date": "2026-10-30",
+  "offsite_reason": "非现场事项；按可用时间和任务约束安排",
+  "day_conditions": "待确认",
+  "exports": [
+    "计划导出.json",
+    "计划导出.md"
+  ],
+  "screenshots": [
+    "七天安排.png",
+    "计划历史.png",
+    "修改提案.png"
+  ]
+}

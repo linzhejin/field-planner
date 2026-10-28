@@ -130,6 +130,7 @@ def test_custom_offsite_task_uses_time_without_requiring_field_workability() -> 
     assert planned["A-I"].schedule_status == "pending"
     assert planned[instance.id].schedule_status == "scheduled"
     assert planned[instance.id].category == "offsite"
+    assert "现场与天气均已确认" not in planned[instance.id].reason
     assert planned[instance.id].template_snapshot["purpose"] == "整理已经获得的现场记录"
 
 

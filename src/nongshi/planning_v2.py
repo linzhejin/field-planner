@@ -1076,7 +1076,11 @@ def build_plan_v2(
                         )
                         item.schedule_status = "scheduled"
                         item.reason_code = "scheduled"
-                        item.reason = "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+                        item.reason = (
+                            "非现场事项；按可用时间和任务约束安排"
+                            if item.category == "offsite"
+                            else "现场与天气均已确认；按用户期限、优先级和任务编号排入最早时段"
+                        )
                         placed = True
                         made_progress = True
                         break
