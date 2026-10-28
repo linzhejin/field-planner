@@ -10,6 +10,7 @@ from typing import Literal
 from uuid import uuid4
 
 from nongshi.planning_v2 import apply_feedback_v2, build_plan_v2
+from nongshi.presentation import issue_title
 from nongshi.repository_v3 import WorkbenchStoreV3
 from nongshi.rules import RuleCatalog, load_rule_catalog
 from nongshi.schema_v2 import (
@@ -1417,7 +1418,8 @@ class WorkbenchServiceV3:
                 group.model_dump(mode="json") for group in self.list_task_execution_groups(field_id)
             ],
             "issues_v4": [
-                issue.model_dump(mode="json") for issue in self.store.list_field_issues(field_id)
+                issue.model_copy(update={"title": issue_title(issue.title)}).model_dump(mode="json")
+                for issue in self.store.list_field_issues(field_id)
             ],
             "issue_events_v4": self.store.list_field_issue_events(field_id),
             "adopted_plan": version.model_dump(mode="json") if version else None,
@@ -1466,7 +1468,8 @@ class WorkbenchServiceV3:
             if issues:
                 lines.extend(["", "## 问题与复查", ""])
                 lines.extend(
-                    f"- {issue.title}｜{'待处理' if issue.status == 'open' else '已解决'}｜"
+                    f"- {issue_title(issue.title)}｜"
+                    f"{'待处理' if issue.status == 'open' else '已解决'}｜"
                     f"首次记录 {issue.opened_at.astimezone(LOCAL_ZONE):%Y-%m-%d}｜"
                     f"关联任务：{'、'.join(issue.related_task_ids) or '无'}"
                     for issue in issues
@@ -1555,7 +1558,8 @@ class WorkbenchServiceV3:
         lines.extend(["", "## 问题与复查", ""])
         if issues:
             lines.extend(
-                f"- {issue.title}｜{'待处理' if issue.status == 'open' else '已解决'}｜"
+                f"- {issue_title(issue.title)}｜"
+                f"{'待处理' if issue.status == 'open' else '已解决'}｜"
                 f"首次记录 {issue.opened_at.astimezone(LOCAL_ZONE):%Y-%m-%d}｜"
                 f"来源记录 {len(issue.source_event_ids)} 次｜"
                 f"关联任务：{'、'.join(issue.related_task_ids) or '无'}"

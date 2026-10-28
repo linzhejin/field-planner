@@ -367,6 +367,7 @@ class FeedbackV2(BaseModel):
     weather_workable: bool | None = None
     intervals: list[TimeWindow] | None = None
     resource_minutes: int | None = Field(default=None, ge=0)
+    resource_unknown: bool = False
     reason: str = ""
     result_values: dict[str, Literal["normal", "issue", "unable", "unknown", "not_checked"]] = (
         Field(default_factory=dict)
@@ -389,8 +390,16 @@ class FeedbackV2(BaseModel):
             raise ValueError("现场反馈需要地块和观察项")
         if self.kind == "workability" and not (self.plot_id and self.day):
             raise ValueError("作业条件反馈需要地块和日期")
-        if self.kind == "resource" and (self.day is None or self.intervals is None):
-            raise ValueError("人员反馈需要日期和可用时段")
+        if self.resource_unknown and (
+            self.kind != "resource"
+            or self.intervals is not None
+            or self.resource_minutes is not None
+        ):
+            raise ValueError("设为未知时不能同时填写人员时段或分钟数")
+        if self.kind == "resource" and (
+            self.day is None or (self.intervals is None and not self.resource_unknown)
+        ):
+            raise ValueError("人员反馈需要日期和可用时段，或明确设为未知")
         if self.kind == "task_result":
             if not self.task_id or not self.plot_id:
                 raise ValueError("执行结果需要地块和任务编号")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import date, datetime, timedelta
 from importlib.resources import files
 from typing import Any, Literal
@@ -14,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from nongshi.agent import AgentServiceV3
 from nongshi.presentation import (
     CHANGE_LABELS,
+    issue_title,
     proposal_change_rows,
     task_series_confirmation_rows,
     task_title,
@@ -96,6 +98,15 @@ def _tri(value: bool | None, yes: str, no: str) -> str:
 
 def _checked(value: Any) -> bool:
     return value is True or value == 1 or str(value).strip().lower() in {"true", "on", "1"}
+
+
+def _safe_error(error: Exception) -> str:
+    if isinstance(error, sqlite3.Error):
+        return "本地数据暂时无法读取或写入"
+    message = str(error)
+    if "版本冲突" in message or "地块信息已更新" in message:
+        return f"{message}。请先记录当前输入，重新打开表单核对后重试。"
+    return message
 
 
 def _template(item: Any) -> dict[str, Any]:
@@ -242,19 +253,34 @@ def build_workbench_view(
     selected = adopted
     source_items = selected.items if selected else evaluation.items if evaluation else []
     items = [_item_view(item, now=now) for item in source_items]
+    if not adopted:
+        # Evaluation may calculate possible slots, but only adoption makes them executable.
+        for item in items:
+            if item["status"] == "scheduled":
+                item.update(
+                    status="pending",
+                    start="",
+                    end="",
+                    date="",
+                    date_label="尚未采用安排",
+                    time_label="",
+                    can_record=False,
+                    reason="安排尚未采用，请先核对并采用预览。",
+                )
     if state and state.draft.profile is None:
         items = []
     days = []
-    draft_days = {d.day: d for d in (state.draft.days if state else [])}
+    # Use the same fact-projected inputs as the scheduler, including confirmed feedback.
+    effective_request = (
+        service._build_request(state)[0] if state and state.draft.profile is not None else None
+    )
+    effective_profile = effective_request.plots[0] if effective_request else None
+    draft_days = {d.day: d for d in (effective_request.days if effective_request else [])}
     for index in range(7):
         day = start + timedelta(days=index)
         row = draft_days.get(day)
         day_items = [item for item in items if item["date"] == day.isoformat()]
-        confirmation = (
-            state.draft.profile.workability_by_date.get(day)
-            if state and state.draft.profile
-            else None
-        )
+        confirmation = effective_profile.workability_by_date.get(day) if effective_profile else None
         site = confirmation.site if confirmation else row.site_workable if row else None
         weather = confirmation.weather if confirmation else row.weather_workable if row else None
         if site is False or weather is False:
@@ -535,7 +561,7 @@ def build_workbench_view(
         issues = [
             {
                 "id": issue.id,
-                "title": issue.title,
+                "title": issue_title(issue.title),
                 "description": issue.description,
                 "status": issue.status,
                 "status_label": "待解决" if issue.status == "open" else "已确认解决",
@@ -623,16 +649,16 @@ def build_workbench_view(
                 "saved_at": draft.updated_at.isoformat(),
             }
     schedule = {}
-    if state:
-        for row in state.draft.days:
+    if effective_request:
+        for row in effective_request.days:
             schedule[row.day.isoformat()] = {
                 "site_workable": row.site_workable,
                 "weather_workable": row.weather_workable,
                 "resource_minutes": row.resource_minutes,
                 "intervals": ";".join(f"{w.start:%H:%M}-{w.end:%H:%M}" for w in row.intervals),
             }
-        if profile:
-            for day, confirmation in profile.workability_by_date.items():
+        if effective_profile:
+            for day, confirmation in effective_profile.workability_by_date.items():
                 schedule.setdefault(day.isoformat(), {}).update(
                     {"site_workable": confirmation.site, "weather_workable": confirmation.weather}
                 )
@@ -951,20 +977,73 @@ def dispatch_ui_action(
                         intervals=intervals,
                     )
                 )
-            draft = current_state.draft.model_copy(update={"start_date": start, "days": days})
-            service.save_field_draft(
-                draft,
-                expected_version=current_state.draft_version,
-                operation_id=action.operation_id,
-            )
+            effective, _ = service._build_request(current_state)
+            prior_days = {day.day: day for day in effective.days}
+            profile = effective.plots[0]
+            changed_conditions = []
+            for index, day in enumerate(days):
+                previous = prior_days[day.day]
+                confirmation = profile.workability_by_date.get(day.day)
+                old_site = confirmation.site if confirmation else previous.site_workable
+                old_weather = confirmation.weather if confirmation else previous.weather_workable
+                if (day.site_workable, day.weather_workable) != (old_site, old_weather):
+                    changed_conditions.append(index)
+            now = datetime.now().astimezone(ZONE)
+            events = []
+            # A condition change invalidates following days; explicitly restore the
+            # later values the user confirmed in this same form.
+            if changed_conditions:
+                for day in days[min(changed_conditions) :]:
+                    events.append(
+                        FactEventInputV3(
+                            feedback=FeedbackV2(
+                                kind="workability",
+                                plot_id=action.field_id,
+                                at=now,
+                                day=day.day,
+                                site_workable=day.site_workable,
+                                weather_workable=day.weather_workable,
+                            )
+                        )
+                    )
+            for day in days:
+                previous = prior_days[day.day]
+                if (day.resource_minutes, day.intervals) == (
+                    previous.resource_minutes,
+                    previous.intervals,
+                ):
+                    continue
+                unknown = day.resource_minutes is None and not day.intervals
+                events.append(
+                    FactEventInputV3(
+                        feedback=FeedbackV2(
+                            kind="resource",
+                            plot_id=action.field_id,
+                            at=now,
+                            day=day.day,
+                            intervals=None if unknown else day.intervals,
+                            resource_minutes=day.resource_minutes,
+                            resource_unknown=unknown,
+                        )
+                    )
+                )
+            if events:
+                service.commit_events(
+                    action.field_id,
+                    events,
+                    operation_id=action.operation_id,
+                    expected_fact_version=current_state.fact_version,
+                    expected_draft_version=current_state.draft_version,
+                    expected_task_version=current_state.task_version,
+                )
             try:
                 service.preview_plan(action.field_id, operation_id=f"{action.operation_id}-preview")
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"七天条件和人员时间已保存，但安排待更新：{error}。可重新计算。",
+                    f"七天条件和人员时间已保存，但安排待更新：{_safe_error(error)}。可重新计算。",
                     "saved",
                 )
             return _operation_feedback(
@@ -1121,12 +1200,12 @@ def dispatch_ui_action(
                     f"待办已保存，七天安排预览已生成（{len(result.created_instance_ids)} 项）。",
                     "preview_ready",
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"待办已保存，但安排还没更新：{error}。可重新计算。",
+                    f"待办已保存，但安排还没更新：{_safe_error(error)}。可重新计算。",
                     "saved",
                 )
         if action.kind == "save_follow_up":
@@ -1158,7 +1237,7 @@ def dispatch_ui_action(
                 field_id=action.field_id,
                 template=TaskTemplateV4(
                     id=f"template-follow-up-{uuid4().hex[:12]}",
-                    title=str(payload.get("title") or f"复查：{issue.title}").strip(),
+                    title=str(payload.get("title") or f"复查：{issue_title(issue.title)}").strip(),
                     task_type="follow_up",
                     category="onsite",
                     related_issue_id=issue.id,
@@ -1192,12 +1271,12 @@ def dispatch_ui_action(
                     "复查任务已保存并关联现场问题，新的安排预览已生成。",
                     "preview_ready",
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"复查任务已保存并关联现场问题，但安排待更新：{error}。可重新计算。",
+                    f"复查任务已保存并关联现场问题，但安排待更新：{_safe_error(error)}。可重新计算。",
                     "saved",
                 )
         if action.kind == "update_task_series":
@@ -1287,12 +1366,12 @@ def dispatch_ui_action(
                     "安排预览已生成。",
                     "preview_ready",
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"后续周期已更新，但安排待重算：{error}。可以重新计算。",
+                    f"后续周期已更新，但安排待重算：{_safe_error(error)}。可以重新计算。",
                     "saved",
                 )
         if action.kind == "save_execution_group":
@@ -1316,12 +1395,12 @@ def dispatch_ui_action(
                 return _operation_feedback(
                     session, action, True, "合并出行已保存，新的安排预览已生成。", "preview_ready"
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"合并出行已保存，但安排待重算：{error}。可以重新计算。",
+                    f"合并出行已保存，但安排待重算：{_safe_error(error)}。可以重新计算。",
                     "saved",
                 )
         if action.kind == "cancel_execution_group":
@@ -1340,12 +1419,12 @@ def dispatch_ui_action(
                     "这次合并出行已取消，独立排程预览已生成。",
                     "preview_ready",
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"合并出行已取消，但安排待重算：{error}。可以重新计算。",
+                    f"合并出行已取消，但安排待重算：{_safe_error(error)}。可以重新计算。",
                     "saved",
                 )
         if action.kind == "cancel_task":
@@ -1396,12 +1475,12 @@ def dispatch_ui_action(
                     "本次任务取消原因已保存，新的安排预览已生成。",
                     "preview_ready",
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"取消记录已保存，但安排待更新：{error}。可以重新计算。",
+                    f"取消记录已保存，但安排待更新：{_safe_error(error)}。可以重新计算。",
                     "saved",
                 )
         if action.kind == "record_result":
@@ -1449,12 +1528,12 @@ def dispatch_ui_action(
                 preview = service.preview_plan(
                     action.field_id, operation_id=f"{action.operation_id}-preview"
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
                     session,
                     action,
                     True,
-                    f"现场结果已保存，但安排待更新：{error}。可重新计算。",
+                    f"现场结果已保存，但安排待更新：{_safe_error(error)}。可重新计算。",
                     "saved",
                 )
             return _operation_feedback(
@@ -1515,9 +1594,13 @@ def dispatch_ui_action(
                 return _operation_feedback(
                     session, action, True, "现场观察已保存，新的安排预览已生成。", "preview_ready"
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
-                    session, action, True, f"现场观察已保存，安排待更新：{error}", "saved"
+                    session,
+                    action,
+                    True,
+                    f"现场观察已保存，安排待更新：{_safe_error(error)}",
+                    "saved",
                 )
         if action.kind == "record_resource":
             day = date.fromisoformat(str(payload["day"]))
@@ -1548,9 +1631,13 @@ def dispatch_ui_action(
                 return _operation_feedback(
                     session, action, True, "人员时间已保存，新的安排预览已生成。", "preview_ready"
                 )
-            except (ValueError, KeyError, RuntimeError) as error:
+            except (ValueError, KeyError, RuntimeError, sqlite3.Error) as error:
                 return _operation_feedback(
-                    session, action, True, f"人员时间已保存，安排待更新：{error}", "saved"
+                    session,
+                    action,
+                    True,
+                    f"人员时间已保存，安排待更新：{_safe_error(error)}",
+                    "saved",
                 )
         if action.kind == "search_location":
             query = str(payload.get("query", "")).strip()
@@ -1630,9 +1717,15 @@ def dispatch_ui_action(
         if action.kind == "export_plan":
             return _operation_feedback(session, action, True, "导出内容已准备。", "saved")
         raise ValueError("当前操作不受支持")
+    except sqlite3.Error:
+        message = "没有保存：本地数据暂时无法保存，请稍后重试；已输入的信息仍保留。"
+        result = _operation_feedback(session, action, False, message)
+        session[f"web_notice:{current_field_id}"] = message
+        return result
     except (ValueError, KeyError, ValidationError, WeatherServiceError, RuntimeError) as error:
-        result = _operation_feedback(session, action, False, str(error))
-        session[f"web_notice:{current_field_id}"] = str(error)
+        message = _safe_error(error)
+        result = _operation_feedback(session, action, False, message)
+        session[f"web_notice:{current_field_id}"] = message
         return result
 
 
@@ -1673,12 +1766,13 @@ def render_html_workbench(
             )
             st.rerun()
         except (ValueError, KeyError, ValidationError) as error:
-            session[f"web_notice:{field_id}"] = str(error)
+            message = _safe_error(error)
+            session[f"web_notice:{field_id}"] = message
             if isinstance(action_value, dict) and action_value.get("operation_id"):
                 session["web_action_result"] = UIActionResult(
                     operation_id=str(action_value["operation_id"]),
                     success=False,
-                    message=str(error),
+                    message=message,
                     outcome="error",
                 ).model_dump(mode="json")
             st.rerun()

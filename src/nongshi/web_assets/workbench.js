@@ -50,6 +50,8 @@ export default function(component) {
       ui.pendingOperationId = ''; ui.pendingAt = 0; persistUI();
     }
     if (ui.pendingOperationId) return toast('上一项操作还在保存，请稍候片刻。');
+    const dialogError = app.querySelector('[data-dialog-error]');
+    if (dialogError) { dialogError.hidden = true; dialogError.textContent = ''; }
     const operationId = crypto.randomUUID();
     ui.pendingOperationId = operationId; ui.pendingAt = Date.now(); persistUI(); setBusy(true);
     const action = {
@@ -182,6 +184,11 @@ export default function(component) {
     app.querySelectorAll('.mobile-nav button').forEach(b=>b.setAttribute('aria-current', b.dataset.action === `tab-${tab}` ? 'page' : 'false'));
     const toastText = data.action_result?.message || '';
     if (toastText) toast(toastText);
+    const dialogError = app.querySelector('[data-dialog-error]');
+    if (dialogError && app.querySelector('[data-dialog]').open && data.action_result && !data.action_result.success) {
+      dialogError.textContent = data.action_result.message || '操作没有完成，请核对后重试。';
+      dialogError.hidden = false;
+    }
     setBusy(Boolean(ui.pendingOperationId));
     if (refreshWeatherPanel) {
       const body = app.querySelector('[data-dialog-body]');
@@ -248,6 +255,8 @@ export default function(component) {
     body.insertAdjacentHTML('afterbegin',`<section class="unsaved-prompt" data-unsaved-prompt role="alertdialog" aria-label="未保存内容"><strong>这份内容还没有保存</strong><p>保存草稿后可在此地块继续填写；放弃后，这些输入不会进入计划或现场记录。</p><div class="unsaved-actions">${canSave?'<button class="primary-button" data-action="unsaved-save">保存草稿并关闭</button>':''}<button class="outline-button" data-action="unsaved-discard">放弃修改</button><button class="text-button" data-action="unsaved-continue">继续编辑</button></div></section>`);
   };
   const showPanel = (kind, itemId='') => {
+    const dialogError = app.querySelector('[data-dialog-error]');
+    if (dialogError) { dialogError.hidden = true; dialogError.textContent = ''; }
     app._panelDirty=false;
     panel = kind; ui.panel = kind; ui.panel_subject = itemId; persistUI();
     const dialog = app.querySelector('[data-dialog]');

@@ -1208,16 +1208,18 @@ def apply_feedback_v2(
             weather_snapshot_at=feedback.at if feedback.weather_workable is not None else None,
         )
     elif feedback.kind == "resource":
-        if feedback.day is None or feedback.intervals is None:
+        if feedback.day is None or (feedback.intervals is None and not feedback.resource_unknown):
             raise ValueError("人员变化需要日期和可用时段")
         day = next((day for day in request.days if day.day == feedback.day), None)
         if day is None:
             raise ValueError("人员变化日期不在当前七天内")
-        day.intervals = feedback.intervals
+        day.intervals = feedback.intervals or []
         day.resource_minutes = (
-            feedback.resource_minutes
+            None
+            if feedback.resource_unknown
+            else feedback.resource_minutes
             if feedback.resource_minutes is not None
-            else sum(interval.minutes for interval in feedback.intervals)
+            else sum(interval.minutes for interval in day.intervals)
         )
     elif feedback.kind == "task_result":
         # The detailed result is an immutable event; it does not rewrite the

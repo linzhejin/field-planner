@@ -58,6 +58,11 @@ CHANGE_LABELS = {
 }
 
 
+def issue_title(value: str) -> str:
+    """Give the legacy default result key a readable label without changing history."""
+    return "任务结果" if value == "task_result" else value
+
+
 def missing_label(value: str) -> str:
     parts = value.rsplit(":", 1)
     label = FIELD_LABELS.get(parts[-1], "其他待核对信息")

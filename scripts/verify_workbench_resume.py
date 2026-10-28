@@ -23,6 +23,8 @@ def main() -> int:
     parser.add_argument("--field-name", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--screenshots", type=Path, required=True)
+    parser.add_argument("--width", type=int, default=1440)
+    parser.add_argument("--height", type=int, default=900)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.screenshots.mkdir(parents=True, exist_ok=True)
@@ -30,10 +32,12 @@ def main() -> int:
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="msedge", headless=True)
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = browser.new_page(viewport={"width": args.width, "height": args.height})
         page.on("pageerror", lambda error: browser_errors.append(str(error)))
         page.goto(args.url, wait_until="domcontentloaded")
         page.locator("[data-app]").wait_for(timeout=20_000)
+        if args.field_name not in page.locator("[data-field-title]").inner_text():
+            page.locator('[data-action="select-field"]').filter(has_text=args.field_name).click()
         page.locator("[data-field-title]").filter(has_text=args.field_name).wait_for(timeout=15_000)
         state = page.locator("[data-app]").evaluate(
             """app => ({

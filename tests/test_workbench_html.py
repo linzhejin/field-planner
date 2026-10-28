@@ -33,6 +33,76 @@ def test_blank_first_view_does_not_require_a_saved_field(tmp_path) -> None:
     assert len(view.days) == 7
 
 
+def test_html_profile_save_database_error_returns_retryable_result(tmp_path) -> None:
+    import sqlite3
+
+    class LockedService:
+        def save_field_draft(self, *_args, **_kwargs):
+            raise sqlite3.OperationalError("database is locked")
+
+    result = dispatch_ui_action(
+        UIAction(
+            operation_id="locked-profile-001",
+            kind="save_profile",
+            field_id="field-locked",
+            payload={"name": "待保存地块"},
+        ),
+        service=LockedService(),
+        agent=None,
+        mode="real",
+        database=tmp_path / "locked.sqlite3",
+        current_field_id="field-locked",
+        current_state=None,
+        session={},
+    )
+    assert not result.success
+    assert "无法保存" in result.message and "重试" in result.message
+    assert "database is locked" not in result.message
+
+
+def test_schedule_preview_database_error_keeps_saved_fact(tmp_path, monkeypatch) -> None:
+    import sqlite3
+
+    service = _service(tmp_path)
+    state = _save_field(service, "field-preview-locked")
+    day = date.today() + timedelta(days=1)
+
+    def fail_preview(*_args, **_kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(service, "preview_plan", fail_preview)
+    result = dispatch_ui_action(
+        UIAction(
+            operation_id="locked-preview-001",
+            kind="save_schedule",
+            field_id=state.id,
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            expected_task_version=state.task_version,
+            payload={
+                "rows": [
+                    {
+                        "date": (day + timedelta(days=offset)).isoformat(),
+                        "resource_minutes": "60" if offset == 0 else "",
+                        "intervals": "14:00-15:00" if offset == 0 else "",
+                    }
+                    for offset in range(7)
+                ]
+            },
+        ),
+        service=service,
+        agent=None,
+        mode="real",
+        database=tmp_path / "workbench.sqlite3",
+        current_field_id=state.id,
+        current_state=state,
+        session={},
+    )
+    assert result.success and "已保存" in result.message and "待更新" in result.message
+    assert "database is locked" not in result.message
+    assert service.get_field(state.id).fact_version == state.fact_version + 1
+
+
 def test_unsaved_profile_draft_is_restored_for_blank_field(tmp_path) -> None:
     service = _service(tmp_path)
     session = {}
@@ -875,6 +945,207 @@ def test_preview_labels_new_task_with_its_title_before_adoption(tmp_path) -> Non
 
     assert view.preview is not None
     assert any(change["title"] == "巡田核对田角积水" for change in view.preview["changes"])
+
+
+def test_unadopted_preview_never_appears_as_executable_schedule(tmp_path) -> None:
+    from datetime import time
+    from zoneinfo import ZoneInfo
+
+    from nongshi.schema_v2 import DayWindow, TimeWindow
+    from nongshi.schema_v3 import FieldDraftV3
+
+    day = date(2026, 10, 28)
+    now = datetime.combine(day, time(9), tzinfo=ZoneInfo("Asia/Shanghai"))
+    service = WorkbenchServiceV3(
+        WorkbenchStoreV3(tmp_path / "unadopted.sqlite3"), today=lambda: day, now=lambda: now
+    )
+    state = service.save_field_draft(
+        FieldDraftV3(
+            field_id="field-preview",
+            profile={"id": "field-preview", "name": "待采用地块"},
+            start_date=day,
+            days=[
+                DayWindow(
+                    day=day + timedelta(days=offset),
+                    site_workable=True,
+                    weather_workable=True,
+                    resource_minutes=120,
+                    intervals=[TimeWindow(start=time(9), end=time(11))],
+                )
+                for offset in range(7)
+            ],
+        ),
+        expected_version=None,
+        operation_id="preview-field-001",
+    )
+    service.save_task_series(
+        TaskSeriesV4(
+            id="series-preview",
+            field_id=state.id,
+            template=TaskTemplateV4(
+                id="template-preview",
+                title="整理采购记录",
+                task_type="custom",
+                category="offsite",
+                purpose="核对采购记录",
+                completion_standard="采购记录已核对",
+                source_kind="user_defined",
+            ),
+            recurrence="once",
+            anchor_date=day,
+            duration_minutes=30,
+            earliest_date=day,
+            due_date=day,
+            conditions_confirmed=True,
+        ),
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        expected_task_version=state.task_version,
+        operation_id="preview-task-001",
+    )
+    preview = service.preview_plan(state.id, operation_id="preview-first-001")
+    assert any(item.schedule_status == "scheduled" for item in preview.version.items), [
+        (item.schedule_status, item.reason, item.missing_fields) for item in preview.version.items
+    ]
+
+    state = service.get_field(state.id)
+    view = build_workbench_view(service, "real", state.id, state, today=day, now=now, session={})
+    assert view.preview is not None and view.plan is None
+    assert all(item["status"] != "scheduled" and not item["can_record"] for item in view.items)
+    assert all(not row["items"] for row in view.days)
+
+    service.adopt_plan(
+        preview.id,
+        expected_fact_version=state.fact_version,
+        expected_plan_id=None,
+        operation_id="adopt-first-001",
+    )
+    view = build_workbench_view(
+        service, "real", state.id, service.get_field(state.id), today=day, now=now, session={}
+    )
+    assert any(item["status"] == "scheduled" for item in view.items)
+
+
+def test_confirmed_resource_and_later_form_edit_match_effective_schedule(tmp_path) -> None:
+    from datetime import time
+    from zoneinfo import ZoneInfo
+
+    from nongshi.schema_v2 import FeedbackV2, TimeWindow
+    from nongshi.schema_v3 import FactEventInputV3, FieldDraftV3
+
+    day = date(2026, 10, 29)
+    now = datetime(2026, 10, 28, 10, tzinfo=ZoneInfo("Asia/Shanghai"))
+    service = WorkbenchServiceV3(
+        WorkbenchStoreV3(tmp_path / "resource.sqlite3"), today=lambda: now.date(), now=lambda: now
+    )
+    state = service.save_field_draft(
+        FieldDraftV3(
+            field_id="field-resource",
+            profile={"id": "field-resource", "name": "时间验收地块"},
+            start_date=day,
+        ),
+        expected_version=None,
+        operation_id="resource-field-001",
+    )
+    service.commit_events(
+        state.id,
+        [
+            FactEventInputV3(
+                feedback=FeedbackV2(
+                    kind="resource",
+                    plot_id=state.id,
+                    at=now,
+                    day=day,
+                    intervals=[TimeWindow(start=time(13), end=time(15))],
+                    resource_minutes=120,
+                )
+            )
+        ],
+        operation_id="resource-event-001",
+        expected_fact_version=state.fact_version,
+    )
+    state = service.get_field(state.id)
+    view = build_workbench_view(
+        service, "real", state.id, state, today=now.date(), now=now, session={}
+    )
+    assert view.schedule[day.isoformat()]["intervals"] == "13:00-15:00"
+    assert view.days[0]["resource_label"] == "120 分钟可用"
+
+    rows = [
+        {
+            "date": (day + timedelta(days=offset)).isoformat(),
+            "site_workable": "",
+            "weather_workable": "",
+            "resource_minutes": "60" if offset == 0 else "",
+            "intervals": "14:00-15:00" if offset == 0 else "",
+        }
+        for offset in range(7)
+    ]
+    action = UIAction(
+        operation_id="resource-form-001",
+        kind="save_schedule",
+        field_id=state.id,
+        expected_draft_version=state.draft_version,
+        expected_fact_version=state.fact_version,
+        expected_task_version=state.task_version,
+        payload={"rows": rows},
+    )
+    session = {}
+    result = dispatch_ui_action(
+        action,
+        service=service,
+        agent=None,
+        mode="real",
+        database=tmp_path / "resource.sqlite3",
+        current_field_id=state.id,
+        current_state=state,
+        session=session,
+    )
+    assert result.success
+    effective, _ = service._build_request(service.get_field(state.id))
+    assert effective.days[0].resource_minutes == 60
+    assert effective.days[0].intervals == [TimeWindow(start=time(14), end=time(15))]
+    event_count = len(service.list_events(state.id))
+    assert dispatch_ui_action(
+        action,
+        service=service,
+        agent=None,
+        mode="real",
+        database=tmp_path / "resource.sqlite3",
+        current_field_id=state.id,
+        current_state=service.get_field(state.id),
+        session=session,
+    ).success
+    assert len(service.list_events(state.id)) == event_count
+
+    rows[0].update(resource_minutes="", intervals="", site_workable="true", weather_workable="true")
+    rows[1].update(site_workable="true", weather_workable="true")
+    state = service.get_field(state.id)
+    cleared = dispatch_ui_action(
+        UIAction(
+            operation_id="resource-form-002",
+            kind="save_schedule",
+            field_id=state.id,
+            expected_draft_version=state.draft_version,
+            expected_fact_version=state.fact_version,
+            expected_task_version=state.task_version,
+            payload={"rows": rows},
+        ),
+        service=service,
+        agent=None,
+        mode="real",
+        database=tmp_path / "resource.sqlite3",
+        current_field_id=state.id,
+        current_state=state,
+        session=session,
+    )
+    assert cleared.success
+    effective, _ = service._build_request(service.get_field(state.id))
+    assert effective.days[0].resource_minutes is None and not effective.days[0].intervals
+    assert all(
+        effective.plots[0].workability_by_date[day + timedelta(days=offset)].site is True
+        for offset in (0, 1)
+    )
 
 
 def test_html_bridge_cancels_one_task_instance_without_changing_its_sibling(tmp_path) -> None:

@@ -666,6 +666,35 @@ def test_declared_resource_flow_does_not_call_weather(tmp_path: Path) -> None:
     agent.close()
 
 
+def test_unconfirmed_profile_change_uses_user_facing_label(tmp_path: Path) -> None:
+    responses = iter(
+        [
+            tool_call_response(
+                "declare_request",
+                json.dumps(
+                    {
+                        "field_id": "field-1",
+                        "actions": ["field_update"],
+                        "field_changes": {"province": "湖北", "province_confirmed": True},
+                        "field_change_quotes": {
+                            "province": "湖北",
+                            "province_confirmed": "我确认这个信息",
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+            final_response("请补充确认信息。"),
+            final_response("请补充确认信息。"),
+        ]
+    )
+    agent, _, _ = make_agent(tmp_path, lambda _: httpx.Response(200, json=next(responses)))
+    result = agent.run("field-1", "请修改省份为湖北，我确认这个信息。")
+    assert "province_confirmed" not in result.text
+    assert "省份" in result.text
+    agent.close()
+
+
 def test_explicit_read_only_query_is_not_misclassified_as_a_change(tmp_path: Path) -> None:
     responses = iter(
         [

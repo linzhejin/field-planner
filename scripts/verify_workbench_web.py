@@ -28,6 +28,8 @@ def main() -> int:
     parser.add_argument("--screenshots", type=Path, required=True)
     parser.add_argument("--field-name", default="网页验收演示地块")
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--width", type=int, default=1440)
+    parser.add_argument("--height", type=int, default=900)
     args = parser.parse_args()
     args.screenshots.mkdir(parents=True, exist_ok=True)
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -38,7 +40,7 @@ def main() -> int:
     browser_errors: list[str] = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="msedge", headless=True)
-        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page = browser.new_page(viewport={"width": args.width, "height": args.height})
         page.on("pageerror", lambda error: browser_errors.append(str(error)))
         page.goto(args.url, wait_until="domcontentloaded")
         page.locator("[data-app]").wait_for(timeout=20_000)
@@ -123,6 +125,14 @@ def main() -> int:
             timeout=15_000
         )
         page.locator("[data-preview] [data-action=adopt]").wait_for(timeout=15_000)
+        before_adoption = page.locator("[data-app]").evaluate(
+            "app => ({plan: app._workbenchData.plan, items: app._workbenchData.items, "
+            "days: app._workbenchData.days})"
+        )
+        assert before_adoption["plan"] is None
+        assert all(item["status"] != "scheduled" for item in before_adoption["items"])
+        assert all(not day["items"] for day in before_adoption["days"])
+        assert page.locator("[data-tasks] [data-action=open-result]").count() == 0
         page.screenshot(path=args.screenshots / "plan-preview.png", full_page=True)
         page.locator("[data-preview] [data-action=adopt]").click()
         page.get_by_text("已采用 · V1", exact=True).wait_for(timeout=15_000)
@@ -232,6 +242,7 @@ def main() -> int:
                 "关闭未保存表单时保存草稿，刷新后恢复并完成建档",
                 "通过三个确认框保存省份、作物、生育期和任务时长",
                 "V1 预览与采用",
+                "首次采用前候选事项不显示为已安排或可记录",
                 "保存周期非现场待办",
                 "从任务卡记录完成结果并采用 V2",
                 "修改后续周期并采用 V3",

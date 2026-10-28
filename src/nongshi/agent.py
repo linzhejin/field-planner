@@ -19,6 +19,7 @@ from nongshi.agent_jobs import AgentCancellation, AgentProgress
 from nongshi.config import Settings
 from nongshi.feedback_time import ground_completed_time
 from nongshi.model_http import ModelBudgetExceeded, post_model_json
+from nongshi.presentation import FIELD_LABELS
 from nongshi.rule_retrieval import RuleRetrieverV3
 from nongshi.schema_v2 import LOCAL_ZONE, TimeWindow
 from nongshi.schema_v3 import (
@@ -1044,7 +1045,7 @@ class AgentServiceV3:
                                     accepted_changes[key] = normalized
                             for key in changes.keys() - accepted_changes.keys():
                                 runtime_missing[f"field:{key}"] = (
-                                    f"请确认地块档案字段 {key} 的具体改动"
+                                    f"请确认{FIELD_LABELS.get(key, '相关地块信息')}的具体改动"
                                 )
                             for key in accepted_changes:
                                 runtime_missing.pop(f"field:{key}", None)
@@ -1226,7 +1227,7 @@ class AgentServiceV3:
                                 runtime_missing.pop(f"field:{key}", None)
                             else:
                                 runtime_missing[f"field:{key}"] = (
-                                    f"请确认地块档案字段 {key} 的具体改动"
+                                    f"请确认{FIELD_LABELS.get(key, '相关地块信息')}的具体改动"
                                 )
                         if grounded_changes:
                             generated.append(
