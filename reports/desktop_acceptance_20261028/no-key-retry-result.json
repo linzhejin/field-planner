@@ -1,0 +1,6 @@
+{
+  "result": "passed",
+  "model_status": "助手暂时不可用：还没配置模型密钥。你可以手动填写。 · 0 次模型请求 · 0 个工具结果 · missing_credentials",
+  "structured_task_saved": true,
+  "browser_errors": []
+}

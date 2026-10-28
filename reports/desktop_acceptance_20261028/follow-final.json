@@ -1,0 +1,25 @@
+{
+  "result": "passed",
+  "fixture": "公开模拟现场问题；通过服务层预先生成一次问题，页面操作仅负责创建和采用复查",
+  "field_id": "field-follow-up-browser",
+  "issue_id": "e3484b3a-26e0-59fa-b430-fb7470bcc976",
+  "follow_up": {
+    "id": "follow-up-6d88856e4da2:000001",
+    "title": "复查：积水情况",
+    "type": "follow_up",
+    "related_issue_id": "e3484b3a-26e0-59fa-b430-fb7470bcc976",
+    "duration": 35
+  },
+  "adopted_history_versions": [
+    1,
+    2
+  ],
+  "mobile_dimensions": {
+    "client": 390,
+    "scroll": 390,
+    "document": 390
+  },
+  "browser_errors": [],
+  "screenshots": "follow-final-screens",
+  "database": "external temporary SQLite database; not distributed"
+}

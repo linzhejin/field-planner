@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T14:52:21.350187+08:00",
+  "updated_at": "2026-10-28T16:39:42.590713+08:00",
   "evaluation": {
-    "run_id": "sealed-internal-regression-v16-20261027",
-    "sealed_at": "2026-10-27T06:17:09.385966+00:00",
-    "code_commit": "91dac5ba33c1f215c7325d55ab218ccd8c6b9501",
+    "run_id": "sealed-internal-regression-v17-20261028",
+    "sealed_at": "2026-10-28T08:16:23.524116+00:00",
+    "code_commit": "ac0c8b02fa7135d3726593f727b3792e9ad67ba8",
     "classification": "internal_regression_after_v1",
-    "report": "reports/internal_regression_v16_20261027.md",
+    "report": "reports/internal_regression_v17_20261028.md",
     "expected": {
-      "conclusion": "passed",
+      "conclusion": "failed",
       "main": {
         "g1": {
           "trials": 30,
@@ -22,13 +22,15 @@
           "trials": 30,
           "verdicts": {
             "passed": 7,
-            "failed": 23
+            "failed": 22,
+            "insufficient_evidence": 1
           }
         },
         "g3": {
           "trials": 30,
           "verdicts": {
-            "passed": 30
+            "passed": 29,
+            "failed": 1
           }
         }
       },
@@ -41,16 +43,16 @@
       "hard_violations": 0
     },
     "artifacts": {
-      "seal.json": "53d4e8a84cfd9c1804e8a001054d9fc1f2a56f85411ba654a7335c786830491c",
-      "first_attempts.json": "142d416db9e57789b3f48a4c81b8f53cd6089740109f89b888519563aa8e094b",
-      "first_scores.json": "a86a18cc50c8e8c0cf968f2e6c6039c5069930bbb9714ef231a450610d3783af",
-      "private_group_map.json": "a5f4628f1aefdc4b89e537fd411f0fcc3997685dc94e0ff8f17d0adb17e266ee",
-      "run_integrity.json": "f5ba1346857cf10fe839974145ed50f041efe9bdaa9a8644c9d24fc6ea5364fa",
-      "semantic_reviews.json": "a88525a9351d4868400036989ee4cb0b2e7ef39eee6bd9b5bd1a801bd2e9df8f",
-      "semantic_blind.jsonl": "dca8f9f62a46b8f10181e63ddb2c5497feab461b096fd3ad17d660e90d0f3c0f",
-      "first_attempts.partial.jsonl": "058f336a2204686771f14f8a63f8eb0fe72786cba31376cecda99f47f736e1b5",
-      "private_group_map.partial.jsonl": "a33c09efaa9223fd7c2c32a34e6465314c92f7f8dbba9f0c1b3c53265b93f29e",
-      "semantic_reviews.partial.jsonl": "afbaf2c4f1176f0e92f284a5b295989e081b9b3f0219f228d7ab262f2c8db476"
+      "seal.json": "fa7ecc797b7ed9658e71feb363ef9ca0112753733d525e74fe01b74e844b06c1",
+      "first_attempts.json": "819eefdc64d321336ae270b0971677de6d4af2140bdc193204512b8e8398f090",
+      "first_scores.json": "060002d36f8ec12c0a784eddf05d3fe8b13983c7d6deada8de52a40fd56f1325",
+      "private_group_map.json": "bbc3d122b386011addbc0a3276f1426ebeab2b1b23419bfe6596f1b34b28bdb7",
+      "run_integrity.json": "e8e401f91d019dd479fae6896d28dc22620658ead23812337f9679e2a4520e24",
+      "semantic_reviews.json": "4d0c795e24266c0c3fd035d16e3618fb4595f516839e43198c0de19b2883a789",
+      "semantic_blind.jsonl": "af956eb097dd716a9ac7a009c25df1bbc2e69da6ab37ffb4819568d3ea183491",
+      "first_attempts.partial.jsonl": "6d78f6852c5f71207d6c2f6a5dac0ddc2f586bbf2691289b7b6108d0b48dc067",
+      "private_group_map.partial.jsonl": "9af6557f3eba5867dbb206756395d873ce5ac24f99949a7f5f9028df85af6f5d",
+      "semantic_reviews.partial.jsonl": "934f60a02ffade13f85df5b917ddca9577216cfe8049b291111d7f5c4b1cfc11"
     }
   },
   "public_artifacts": {
@@ -67,15 +69,18 @@
     "reports/product_acceptance_20261027/performance_v15.json": "50ab34edb2677b58ccbbb37be474050851770d8cf1e50f4caaee9091639a4ef1",
     "reports/product_acceptance_20261027/merge_outing_ui_result.json": "ef4dec253d328e6f24bf3b0439b08c162d5bac2278d0c82b891335e310c704a4",
     "reports/internal_regression_v16_20261027.md": "66e230e33e77e4d6ce9fe24b9d413b1ad6d990d53f443f57b4b331b84d3cb943",
-    "reports/workbench_html_v16/acceptance_summary.md": "d2cde336dde12f81fbc1500fc76c7ed23c066a678e6cb353236fe5e49909176c",
-    "reports/README.md": "180225a8793d0989ad8aa60d7b9d87f789438df21dea4496b4878916c270a15d"
+    "reports/workbench_html_v16/acceptance_summary.md": "038677d9b6eb435658c9c8afc53e9736715c3c25b822fcd1e6406a1d32271825",
+    "reports/README.md": "db70cfff2a0f897c13ec3cd659ca3b0b5df32be33f15eba0a6d0200845c8ea2e",
+    "reports/internal_regression_v17_20261028.md": "dfad24eebba0533f40b4910cac2b9c31773f8bc940f7c597105583554a4c3308",
+    "reports/desktop_acceptance_20261028.md": "70f765c43b005cc3c5b3208e1d906a1bc3cc0c5c24d90632700dd5ce0a2fd809",
+    "reports/农时窗口_Agent开发交接_20261028.md": "e7829b5c0bdb20ec2f138c8be71e66b305e9d3b1a17f0f9aff8bb083d03a3337"
   },
   "source_tests": {
-    "passed": 670,
-    "code_commit": "91dac5ba33c1f215c7325d55ab218ccd8c6b9501",
-    "date": "2026-10-27",
-    "report": "reports/workbench_html_v16/acceptance_summary.md",
-    "verification": "full pytest -q on frozen v16 candidate; Ruff, formatting, compileall, environment, JavaScript syntax and wheel checks passed"
+    "passed": 675,
+    "code_commit": "ac0c8b02fa7135d3726593f727b3792e9ad67ba8",
+    "date": "2026-10-28",
+    "report": "reports/desktop_acceptance_20261028.md",
+    "verification": "full pytest -q on candidate ac0c8b0; Ruff, formatting, environment, JavaScript syntax and diff checks passed"
   },
   "scope": {
     "independent_holdout": false,
@@ -114,6 +119,11 @@
       "date": "2026-10-27",
       "report": "reports/workbench_html_v16/acceptance_summary.md",
       "scope": "HTML workbench implementation, real API UI flow, five viewports, restart/export, follow-up and outing UI checks; not full product acceptance"
+    },
+    {
+      "date": "2026-10-28",
+      "report": "reports/desktop_acceptance_20261028.md",
+      "scope": "desktop flows and CSS follow-up; v17 failed, some required UI checks remain"
     }
   ]
 }

@@ -1,0 +1,57 @@
+{
+  "result": "passed",
+  "checks": {
+    "keyboard_focus_entered_dialog": true,
+    "keyboard_focus_returned_to_trigger": true,
+    "visible_text_contrast_minimum": 5.44,
+    "visible_text_contrast_rows": [
+      {
+        "selector": ".eyebrow",
+        "text": "油菜苗期 · 单地块工作台",
+        "contrast": 6.16
+      },
+      {
+        "selector": ".day-week",
+        "text": "周三 · 10/28",
+        "contrast": 5.44
+      },
+      {
+        "selector": ".day-count",
+        "text": "3项 · 1分钟",
+        "contrast": 5.44
+      },
+      {
+        "selector": ".task-purpose",
+        "text": "本次目的：复查“任务结果”的当前情况",
+        "contrast": 6.16
+      },
+      {
+        "selector": ".task-time small",
+        "text": "1 分钟",
+        "contrast": 6.16
+      },
+      {
+        "selector": ".composer-bottom",
+        "text": "发送后会先核对修改内容↑",
+        "contrast": 6.16
+      },
+      {
+        "selector": "textarea::placeholder",
+        "contrast": 6.16
+      }
+    ],
+    "zoom_200_dimensions": {
+      "client": 1440,
+      "scroll": 1440
+    },
+    "zoom_200_horizontal_overflow": false,
+    "mobile_390_dimensions": {
+      "client": 390,
+      "scroll": 390,
+      "document": 390
+    },
+    "mobile_horizontal_overflow": false
+  },
+  "browser_errors": [],
+  "screenshots": "access-release-screens"
+}

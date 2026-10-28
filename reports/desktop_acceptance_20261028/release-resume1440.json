@@ -1,0 +1,21 @@
+{
+  "result": "passed",
+  "restarted_app": true,
+  "field_name": "完整农事流程模拟地块",
+  "history_versions": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "plan_stale_after_weather_refresh": false,
+  "json_export": "release-resume1440_export.json",
+  "markdown_export": "release-resume1440_export.md",
+  "browser_errors": [],
+  "screenshots": "release-resume1440"
+}

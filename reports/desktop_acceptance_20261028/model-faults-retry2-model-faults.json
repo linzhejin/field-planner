@@ -1,0 +1,26 @@
+[
+  {
+    "case": "auth",
+    "result": "passed",
+    "visible_message": "模型认证失败",
+    "field_recovered": true
+  },
+  {
+    "case": "rate",
+    "result": "passed",
+    "visible_message": "模型服务限流",
+    "field_recovered": true
+  },
+  {
+    "case": "timeout",
+    "result": "passed",
+    "visible_message": "助手响应超时",
+    "field_recovered": true
+  },
+  {
+    "case": "connection",
+    "result": "passed",
+    "visible_message": "助手暂时连不上",
+    "field_recovered": true
+  }
+]

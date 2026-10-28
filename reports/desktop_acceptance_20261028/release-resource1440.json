@@ -1,0 +1,24 @@
+{
+  "result": "passed",
+  "date": "2026-10-29",
+  "initial_task_time": "2026-10-29T09:00:00+08:00",
+  "proposal_text": "请核对这次修改\n将 2026-10-29 的人员可用时间改为 13:00–15:00，120 分钟（2026-10-28 16:14）\n确认并保存\n放弃",
+  "before_fact_version": 11,
+  "after_fact_version": 12,
+  "preview_generated": true,
+  "schedule_for_date": {
+    "site_workable": null,
+    "weather_workable": null,
+    "resource_minutes": 120,
+    "intervals": "13:00-15:00"
+  },
+  "adopted_task_time": "2026-10-29T13:00:00+08:00",
+  "schedule_after_form_edit_and_reload": {
+    "site_workable": null,
+    "weather_workable": null,
+    "resource_minutes": 60,
+    "intervals": "14:00-15:00"
+  },
+  "reloaded_task_time": "2026-10-29T14:00:00+08:00",
+  "browser_errors": []
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "case": "timeout",
+    "result": "passed",
+    "visible_message": "天气查询超时",
+    "no_facts_created": true
+  },
+  {
+    "case": "missing",
+    "result": "passed",
+    "visible_message": "天气预报缺少日期",
+    "no_facts_created": true
+  }
+]
