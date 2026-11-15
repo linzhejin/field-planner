@@ -847,7 +847,7 @@ def test_html_bridge_updates_future_series_and_preserves_series_identity(tmp_pat
 def test_html_bridge_saves_execution_group_and_preview_from_selected_members(tmp_path) -> None:
     service = _service(tmp_path)
     _save_field(service)
-    task_date = date(2026, 10, 29)
+    task_date = date.today() + timedelta(days=1)
     first = _save_inspection_series(service, "field-a", "series-a", task_date)
     state = service.get_field("field-a")
     second = _save_inspection_series(service, "field-a", "series-b", task_date)
@@ -887,8 +887,8 @@ def test_html_bridge_saves_execution_group_and_preview_from_selected_members(tmp
         "real",
         "field-a",
         service.get_field("field-a"),
-        today=date(2026, 10, 27),
-        now=datetime(2026, 10, 27, 8, tzinfo=UTC),
+        today=date.today(),
+        now=datetime.now(UTC),
         session={},
     )
     assert {row["id"] for row in view.task_series} == {"series-a", "series-b"}
@@ -1152,6 +1152,8 @@ def test_html_bridge_cancels_one_task_instance_without_changing_its_sibling(tmp_
     service = _service(tmp_path)
     _save_field(service)
     state = service.get_field("field-a")
+    first_day = date.today() + timedelta(days=1)
+    second_day = first_day + timedelta(days=1)
     series = TaskSeriesV4(
         id="series-dates",
         field_id="field-a",
@@ -1164,12 +1166,12 @@ def test_html_bridge_cancels_one_task_instance_without_changing_its_sibling(tmp_
             result_fields=["完成情况"],
         ),
         recurrence="dates",
-        anchor_date=date(2026, 10, 29),
-        end_date=date(2026, 10, 30),
-        selected_dates=[date(2026, 10, 29), date(2026, 10, 30)],
+        anchor_date=first_day,
+        end_date=second_day,
+        selected_dates=[first_day, second_day],
         duration_minutes=30,
-        earliest_date=date(2026, 10, 29),
-        due_date=date(2026, 10, 30),
+        earliest_date=first_day,
+        due_date=second_day,
     )
     created = service.save_task_series(
         series,
